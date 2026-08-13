@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const timestamps = {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -96,12 +96,16 @@ export const tasks = sqliteTable("tasks", {
   sprintId: integer("sprint_id").references(() => sprints.id, { onDelete: "set null" }),
   sprintWeekId: integer("sprint_week_id").references(() => sprintWeeks.id, { onDelete: "set null" }),
   date: text("date").notNull(),
+  anytimeWeekStart: text("anytime_week_start"),
   priority: text("priority", { enum: ["high", "normal", "low"] }).notNull().default("normal"),
-  status: text("status", { enum: ["not_started", "in_progress", "completed", "skipped"] })
+  status: text("status", { enum: ["not_started", "in_progress", "on_hold", "done", "completed", "skipped"] })
     .notNull()
     .default("not_started"),
   position: integer("position").notNull().default(0),
   estimatedMinutes: integer("estimated_minutes"),
   completedAt: text("completed_at"),
   ...timestamps,
-});
+}, (table) => ({
+  dateStatus: index("tasks_date_status_idx").on(table.date, table.status),
+  anytimeWeekStatus: index("tasks_anytime_week_status_idx").on(table.anytimeWeekStart, table.status),
+}));

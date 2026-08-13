@@ -5,7 +5,7 @@ import type { Route } from "next";
 import { Menu, PanelLeftClose, PanelLeftOpen, Plane, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { primaryNavigation, secondaryNavigation, utilityNavigation, type NavigationItem } from "@/src/lib/navigation";
+import { primaryNavigation, utilityNavigation, type NavigationItem } from "@/src/lib/navigation";
 import { ThemeToggle } from "./theme-toggle";
 
 function NavigationGroup({ label, items, onNavigate }: { label?: string; items: NavigationItem[]; onNavigate: () => void }) {
@@ -40,7 +40,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const closeMobile = () => setMobileOpen(false);
-  const placeholderPage = pathname !== "/" && !pathname.startsWith("/today");
 
   return (
     <div className="min-h-screen bg-background text-foreground lg:p-3">
@@ -53,9 +52,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button type="button" aria-label="Close navigation" className="ml-auto rounded-md p-1.5 text-muted-foreground hover:bg-muted lg:hidden" onClick={closeMobile}><X size={17} /></button>
         </div>
 
-        <div className="sidebar-navigation space-y-7">
+        <div className="sidebar-navigation">
           <NavigationGroup items={primaryNavigation} onNavigate={closeMobile} />
-          <NavigationGroup label="Later" items={secondaryNavigation} onNavigate={closeMobile} />
         </div>
 
         <div className="sidebar-footer mt-auto">
@@ -73,7 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="workspace-header sticky top-0 z-20 flex h-14 items-center justify-between bg-card/60 px-4 backdrop-blur-2xl lg:hidden">
           <button type="button" aria-label="Open navigation" className="rounded-md p-2 text-muted-foreground hover:bg-muted lg:hidden" onClick={() => { setSidebarCollapsed(false); setMobileOpen(true); }}><Menu size={18} /></button>
         </header>
-        <main className={`content-surface w-full px-4 py-7 sm:px-6 lg:px-8 lg:py-9 xl:px-10 xl:py-10 ${placeholderPage ? "placeholder-surface" : ""}`}><div key={pathname} className="page-transition">{children}</div></main>
+        <main className="content-surface w-full px-4 py-7 sm:px-6 lg:px-8 lg:py-9 xl:px-10 xl:py-10"><div key={pathname} className="page-transition">{children}</div></main>
       </div>
       </div>
     </div>

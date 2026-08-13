@@ -5,7 +5,7 @@ import { addDays, format, isValid, parseISO } from "date-fns";
 import { z } from "zod";
 import { db } from "@/src/db/client";
 import { dailyFocus, tasks } from "@/src/db/schema";
-import { taskCategories, taskPriorities } from "@/src/lib/today";
+import { taskCategories, taskPriorities, taskStatuses } from "@/src/lib/today";
 import { revalidatePath } from "next/cache";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -14,6 +14,7 @@ const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => isV
 const idSchema = z.coerce.number().int().positive();
 const categorySchema = z.enum(taskCategories);
 const prioritySchema = z.enum(taskPriorities);
+const statusSchema = z.enum(taskStatuses);
 
 const optionalText = (max: number) => z.preprocess(
   (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
@@ -32,6 +33,7 @@ const taskInputSchema = z.object({
   priority: prioritySchema,
   date: dateSchema,
   estimatedMinutes: optionalMinutes,
+  anytimeWeekStart: z.preprocess((value) => value === "" ? undefined : value, dateSchema.optional()),
 });
 
 const taskIdSchema = z.object({ id: idSchema });
@@ -41,6 +43,7 @@ const reorderSchema = z.object({
   category: categorySchema,
   direction: z.enum(["up", "down"]),
 });
+const workflowSchema = z.object({ id: idSchema, status: statusSchema });
 
 function formValue(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -55,6 +58,7 @@ function taskInput(formData: FormData) {
     priority: formValue(formData, "priority"),
     date: formValue(formData, "date"),
     estimatedMinutes: formValue(formData, "estimatedMinutes"),
+    anytimeWeekStart: formValue(formData, "anytimeWeekStart"),
   });
 }
 
@@ -99,7 +103,8 @@ export async function createTask(formData: FormData): Promise<ActionResult> {
       ...parsed.data,
       position: nextPosition(parsed.data.date),
     }).run();
-    revalidatePath("/today");
+    revalidatePath("/week");
+    revalidatePath("/");
     return { ok: true };
   } catch (error) {
     return resultFromError(error);
@@ -126,7 +131,8 @@ export async function updateTask(formData: FormData): Promise<ActionResult> {
       normalizePositions(parsed.data.date);
     }
 
-    revalidatePath("/today");
+    revalidatePath("/week");
+    revalidatePath("/");
     return { ok: true };
   } catch (error) {
     return resultFromError(error);
@@ -151,7 +157,8 @@ export async function toggleTask(formData: FormData): Promise<ActionResult> {
       .where(eq(tasks.id, parsed.data.id))
       .run();
 
-    revalidatePath("/today");
+    revalidatePath("/week");
+    revalidatePath("/");
     return { ok: true };
   } catch (error) {
     return resultFromError(error);
@@ -167,7 +174,8 @@ export async function deleteTask(formData: FormData): Promise<ActionResult> {
     if (!existing) return { ok: false, error: "That task no longer exists." };
     db.delete(tasks).where(eq(tasks.id, parsed.data.id)).run();
     normalizePositions(existing.date);
-    revalidatePath("/today");
+    revalidatePath("/week");
+    revalidatePath("/");
     return { ok: true };
   } catch (error) {
     return resultFromError(error);
@@ -189,7 +197,8 @@ export async function moveTaskToTomorrow(formData: FormData): Promise<ActionResu
       .where(eq(tasks.id, parsed.data.id))
       .run();
     normalizePositions(existing.date);
-    revalidatePath("/today");
+    revalidatePath("/week");
+    revalidatePath("/");
     return { ok: true };
   } catch (error) {
     return resultFromError(error);
@@ -224,7 +233,8 @@ export async function reorderTask(formData: FormData): Promise<ActionResult> {
       });
     });
 
-    revalidatePath("/today");
+    revalidatePath("/week");
+    revalidatePath("/");
     return { ok: true };
   } catch (error) {
     return resultFromError(error);
@@ -259,7 +269,41 @@ export async function saveDailyFocus(formData: FormData): Promise<ActionResult> 
       })
       .run();
 
-    revalidatePath("/today");
+    revalidatePath("/week");
+    revalidatePath("/");
+    return { ok: true };
+  } catch (error) {
+    return resultFromError(error);
+  }
+}
+
+export async function setTaskWorkflow(formData: FormData): Promise<ActionResult> {
+  const parsed = workflowSchema.safeParse({ id: formValue(formData, "id"), status: formValue(formData, "status") });
+  if (!parsed.success) return resultFromError(parsed.error);
+  if (parsed.data.status === "completed") return { ok: false, error: "Confirm completion from Done." };
+
+  try {
+    const existing = db.select().from(tasks).where(eq(tasks.id, parsed.data.id)).limit(1).get();
+    if (!existing) return { ok: false, error: "That task no longer exists." };
+    db.update(tasks).set({ status: parsed.data.status, completedAt: null, updatedAt: new Date().toISOString() }).where(eq(tasks.id, existing.id)).run();
+    revalidatePath("/week");
+    revalidatePath("/");
+    return { ok: true };
+  } catch (error) {
+    return resultFromError(error);
+  }
+}
+
+export async function confirmTaskCompletion(formData: FormData): Promise<ActionResult> {
+  const parsed = taskIdSchema.safeParse({ id: formValue(formData, "id") });
+  if (!parsed.success) return resultFromError(parsed.error);
+  try {
+    const existing = db.select().from(tasks).where(eq(tasks.id, parsed.data.id)).limit(1).get();
+    if (!existing) return { ok: false, error: "That task no longer exists." };
+    if (existing.status !== "done") return { ok: false, error: "Move the task to Done before confirming completion." };
+    db.update(tasks).set({ status: "completed", completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }).where(eq(tasks.id, existing.id)).run();
+    revalidatePath("/week");
+    revalidatePath("/");
     return { ok: true };
   } catch (error) {
     return resultFromError(error);

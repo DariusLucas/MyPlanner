@@ -40,6 +40,7 @@ When the current phase appears complete:
 2. Run all relevant:
    - tests
    - type checking
+   - css rendering checks
    - linting
    - migrations
    - manual verification where appropriate.

@@ -1,0 +1,1 @@
+CREATE INDEX `tasks_date_status_idx` ON `tasks` (`date`,`status`);

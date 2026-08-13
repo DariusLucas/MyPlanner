@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CalendarDays, Check, ChevronDown, Clock3, MoreHorizontal, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CalendarDays, Check, Clock3, MoreHorizontal, Plus, Trash2, X } from "lucide-react";
 import { addDays, format, isToday, parseISO } from "date-fns";
-import { createTask, deleteTask, moveTaskToTomorrow, reorderTask, saveDailyFocus, toggleTask, updateTask, type ActionResult } from "@/src/app/today/actions";
+import { createTask, deleteTask, moveTaskToTomorrow, reorderTask, toggleTask, updateTask, type ActionResult } from "@/src/app/today/actions";
 import type { TodayData, TodayTask, TaskCategory, TaskPriority } from "@/src/lib/today";
 
 const categoryLabels: Record<TaskCategory, string> = { career: "Career", content: "Content", other: "Other" };
@@ -22,7 +22,6 @@ export function TodayView({ data }: { data: TodayData }) {
   const previousDate = format(addDays(selectedDate, -1), "yyyy-MM-dd");
   const nextDate = format(addDays(selectedDate, 1), "yyyy-MM-dd");
   const progress = data.total === 0 ? 0 : Math.round((data.completed / data.total) * 100);
-  const hasFocus = Boolean(data.focus?.careerMission || data.focus?.contentMission);
 
   async function runAction(key: string, action: (formData: FormData) => Promise<ActionResult>, formData: FormData, onSuccess?: () => void) {
     setPending(key);
@@ -65,15 +64,6 @@ export function TodayView({ data }: { data: TodayData }) {
         </div>
       </section>
 
-      <details className="group overflow-hidden rounded-[22px] border border-border bg-card/75 shadow-sm backdrop-blur-xl" open={hasFocus}>
-        <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-semibold"><span>Daily focus <span className="ml-1 text-xs font-normal text-muted-foreground">(optional)</span></span><ChevronDown size={16} className="text-muted-foreground transition-transform group-open:rotate-180" /></summary>
-        <form className="grid gap-3 border-t border-border p-4 sm:grid-cols-2" action={(formData) => runAction("focus", saveDailyFocus, formData)}>
-          <input type="hidden" name="date" value={data.date} />
-          <label className="space-y-1.5"><span className="text-xs font-medium text-muted-foreground">Career focus</span><textarea name="careerMission" defaultValue={data.focus?.careerMission ?? ""} rows={2} placeholder="What would make career progress today?" className={inputClass} /></label>
-          <label className="space-y-1.5"><span className="text-xs font-medium text-muted-foreground">Content focus</span><textarea name="contentMission" defaultValue={data.focus?.contentMission ?? ""} rows={2} placeholder="What would make content progress today?" className={inputClass} /></label>
-          <div className="sm:col-span-2"><button type="submit" className={quietButton} disabled={pending === "focus"}>{pending === "focus" ? "Saving…" : "Save focus"}</button></div>
-        </form>
-      </details>
     </div>
   );
 }
