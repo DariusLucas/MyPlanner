@@ -22,12 +22,12 @@ export type NavigationItem = {
 
 export const primaryNavigation: NavigationItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Today", href: "/today", icon: CalendarCheck2, phase: "Phase 2" },
-  { label: "Goals", href: "/goals", icon: Target, phase: "Phase 3" },
-  { label: "Plan", href: "/plan", icon: NotebookTabs, phase: "Phase 3" },
+  { label: "Today", href: "/today", icon: CalendarCheck2 },
 ];
 
 export const secondaryNavigation: NavigationItem[] = [
+  { label: "Goals", href: "/goals", icon: Target, phase: "Phase 3" },
+  { label: "Plan", href: "/plan", icon: NotebookTabs, phase: "Phase 3" },
   { label: "Career", href: "/career", icon: Compass, phase: "Phase 4" },
   { label: "Content", href: "/content", icon: Sparkles, phase: "Phase 5" },
   { label: "Progress", href: "/progress", icon: ChartNoAxesCombined, phase: "Phase 6" },

@@ -1,76 +1,73 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import type { Route } from "next";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Menu, PanelLeftClose, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { primaryNavigation, secondaryNavigation, utilityNavigation, type NavigationItem } from "@/src/lib/navigation";
 import { ThemeToggle } from "./theme-toggle";
 
-function NavigationLinks({ items, collapsed, onNavigate }: { items: NavigationItem[]; collapsed: boolean; onNavigate: () => void }) {
+function NavigationGroup({ label, items, onNavigate }: { label?: string; items: NavigationItem[]; onNavigate: () => void }) {
   const pathname = usePathname();
 
   return (
-    <nav className="space-y-1" aria-label="Application navigation">
-      {items.map(({ label, href, icon: Icon, phase }) => {
+    <div className="space-y-1">
+      {label && <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>}
+      {items.map(({ label: itemLabel, href, icon: Icon }) => {
         const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
-
         return (
           <Link
             key={href}
             href={href as Route}
             onClick={onNavigate}
-            title={collapsed ? `${label}${phase ? ` · ${phase}` : ""}` : undefined}
-            className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-              active ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            className={`flex h-9 items-center gap-3 rounded-lg px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              active ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
-            <Icon size={17} strokeWidth={1.8} className="shrink-0" />
-            {!collapsed && <span className="flex min-w-0 flex-1 items-center justify-between gap-2"><span>{label}</span>{phase && <span className={active ? "text-background/60 text-[10px]" : "text-[10px] text-muted-foreground"}>{phase}</span>}</span>}
+            <Icon size={16} strokeWidth={1.8} />
+            <span className="min-w-0 flex-1">{itemLabel}</span>
           </Link>
         );
       })}
-    </nav>
+    </div>
   );
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const closeMobile = () => setMobileOpen(false);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <button type="button" className="fixed inset-0 z-30 bg-black/30 md:hidden" aria-label="Close navigation" hidden={!mobileOpen} onClick={() => setMobileOpen(false)} />
-      <aside className={`fixed inset-y-0 left-0 z-40 flex w-[272px] flex-col border-r border-border bg-sidebar px-4 py-5 transition-transform md:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"} ${collapsed ? "md:w-[76px]" : ""}`}>
-        <div className={`mb-8 flex items-center ${collapsed ? "justify-center" : "justify-between"}`}>
-          <Link href="/" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <span className="grid size-9 place-items-center rounded-xl bg-foreground text-background text-sm font-semibold">MP</span>
-            {!collapsed && <span><span className="block text-sm font-semibold tracking-tight">My Planner</span><span className="block text-xs text-muted-foreground">Personal progress system</span></span>}
+      {mobileOpen && <button type="button" aria-label="Close navigation" className="fixed inset-0 z-30 bg-foreground/20 backdrop-blur-[1px] md:hidden" onClick={closeMobile} />}
+      <aside className={`fixed inset-y-0 left-0 z-40 flex w-[240px] flex-col border-r border-border bg-sidebar px-3 py-4 transition-transform md:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <div className="mb-6 flex items-center justify-between px-2">
+          <Link href="/" onClick={closeMobile} className="flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <span className="grid size-8 place-items-center rounded-lg bg-foreground text-[11px] font-bold text-background">MP</span>
+            <span className="text-sm font-semibold tracking-tight">My Planner</span>
           </Link>
-          {!collapsed && <button type="button" className="hidden rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground md:block" onClick={() => setCollapsed(true)} aria-label="Collapse sidebar"><PanelLeftClose size={17} /></button>}
+          <button type="button" aria-label="Close navigation" className="rounded-md p-1.5 text-muted-foreground hover:bg-muted md:hidden" onClick={closeMobile}><X size={17} /></button>
         </div>
-
-        {collapsed && <button type="button" className="mb-4 hidden self-center rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground md:block" onClick={() => setCollapsed(false)} aria-label="Expand sidebar"><PanelLeftOpen size={17} /></button>}
 
         <div className="space-y-6">
-          <NavigationLinks items={primaryNavigation} collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
-          <div className="border-t border-border pt-5"><NavigationLinks items={secondaryNavigation} collapsed={collapsed} onNavigate={() => setMobileOpen(false)} /></div>
+          <NavigationGroup items={primaryNavigation} onNavigate={closeMobile} />
+          <NavigationGroup label="Later" items={secondaryNavigation} onNavigate={closeMobile} />
         </div>
 
-        <div className="mt-auto space-y-4">
-          <NavigationLinks items={utilityNavigation} collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
-          {!collapsed && <p className="px-3 text-[11px] leading-5 text-muted-foreground">Local-first. No analytics, tracking, or cloud sync.</p>}
+        <div className="mt-auto border-t border-border pt-3">
+          <NavigationGroup items={utilityNavigation} onNavigate={closeMobile} />
+          <p className="px-3 pt-3 text-[11px] leading-4 text-muted-foreground">Private, local, and yours.</p>
         </div>
       </aside>
 
-      <div className={`min-h-screen transition-[padding] md:pl-[272px] ${collapsed ? "md:pl-[76px]" : ""}`}>
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border/80 bg-background/95 px-5 backdrop-blur md:px-8">
-          <button type="button" className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground md:hidden" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><PanelLeftOpen size={19} /></button>
-          <div className="hidden md:block" />
+      <div className="min-h-screen md:pl-[240px]">
+        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur md:px-7">
+          <button type="button" aria-label="Open navigation" className="rounded-md p-2 text-muted-foreground hover:bg-muted md:hidden" onClick={() => setMobileOpen(true)}><Menu size={18} /></button>
+          <div className="hidden items-center gap-2 text-xs text-muted-foreground md:flex"><PanelLeftClose size={14} /> Personal workspace</div>
           <ThemeToggle />
         </header>
-        <main className="mx-auto w-full max-w-[1440px] px-5 py-8 md:px-8 lg:py-10">{children}</main>
+        <main className="mx-auto w-full max-w-[1080px] px-4 py-6 sm:px-6 md:px-8 md:py-8">{children}</main>
       </div>
     </div>
   );
