@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/src/components/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "My Planner",
+  title: "Planner",
   description: "A local-first personal progress system.",
 };
 

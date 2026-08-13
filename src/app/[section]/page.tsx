@@ -7,7 +7,7 @@ const sections: Record<string, { title: string; phase: string; description: stri
   content: { title: "Content", phase: "Phase 5", description: "The content pipeline will be added after the foundation and planning layers are complete." },
   progress: { title: "Progress", phase: "Phase 6", description: "Progress calculations and visualizations will be derived from real activity after those activity systems exist." },
   review: { title: "Review", phase: "Phase 7", description: "Daily and weekly reflection workflows will be added after the execution and progress layers." },
-  settings: { title: "Settings", phase: "Phase 1", description: "Theme preferences are available in the top-right control. More settings will be added only when their underlying behavior exists." },
+  settings: { title: "Settings", phase: "Phase 1", description: "Theme preferences are available in the sidebar. More settings will be added only when their underlying behavior exists." },
 };
 
 export default async function SectionPage({ params }: { params: Promise<{ section: string }> }) {

@@ -1,16 +1,16 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  CalendarCheck2,
-  ChartNoAxesCombined,
+  BriefcaseBusiness,
+  CalendarDays,
+  ChartSpline,
+  Clapperboard,
   CircleCheck,
-  Compass,
-  FileText,
+  Crosshair,
   Flag,
-  LayoutDashboard,
-  MonitorCog,
-  NotebookTabs,
-  Sparkles,
-  Target,
+  House,
+  ListTodo,
+  NotebookPen,
+  Settings2,
 } from "lucide-react";
 
 export type NavigationItem = {
@@ -21,21 +21,21 @@ export type NavigationItem = {
 };
 
 export const primaryNavigation: NavigationItem[] = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Today", href: "/today", icon: CalendarCheck2 },
+  { label: "Dashboard", href: "/", icon: House },
+  { label: "Today", href: "/today", icon: CalendarDays },
 ];
 
 export const secondaryNavigation: NavigationItem[] = [
-  { label: "Goals", href: "/goals", icon: Target, phase: "Phase 3" },
-  { label: "Plan", href: "/plan", icon: NotebookTabs, phase: "Phase 3" },
-  { label: "Career", href: "/career", icon: Compass, phase: "Phase 4" },
-  { label: "Content", href: "/content", icon: Sparkles, phase: "Phase 5" },
-  { label: "Progress", href: "/progress", icon: ChartNoAxesCombined, phase: "Phase 6" },
-  { label: "Review", href: "/review", icon: FileText, phase: "Phase 7" },
+  { label: "Goals", href: "/goals", icon: Crosshair, phase: "Phase 3" },
+  { label: "Plan", href: "/plan", icon: ListTodo, phase: "Phase 3" },
+  { label: "Career", href: "/career", icon: BriefcaseBusiness, phase: "Phase 4" },
+  { label: "Content", href: "/content", icon: Clapperboard, phase: "Phase 5" },
+  { label: "Progress", href: "/progress", icon: ChartSpline, phase: "Phase 6" },
+  { label: "Review", href: "/review", icon: NotebookPen, phase: "Phase 7" },
 ];
 
 export const utilityNavigation: NavigationItem[] = [
-  { label: "Settings", href: "/settings", icon: MonitorCog },
+  { label: "Settings", href: "/settings", icon: Settings2 },
 ];
 
 export const foundationStats = [
