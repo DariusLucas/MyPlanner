@@ -59,14 +59,18 @@ input, textarea, select { font: inherit; }
 .week-glow-card, .week-anytime-card { border-color: color-mix(in srgb, var(--orange) 30%, var(--border)); background: radial-gradient(circle at 85% 15%, var(--orange-soft), transparent 44%), var(--card); }
 .week-anytime-card { padding: 1rem; border: 1px solid color-mix(in srgb, var(--orange) 30%, var(--border)); border-radius: 22px; box-shadow: 0 10px 28px color-mix(in srgb, var(--orange) 10%, transparent); }
 .week-sunday-card { grid-column: 1 / -1; min-height: 190px; }
-.week-task-card { padding: .75rem; border: 1px solid var(--border); border-radius: 16px; background: color-mix(in srgb, var(--background) 45%, transparent); transition: border-color .16s ease, box-shadow .16s ease; }
+.week-task-card { padding: .75rem; border: 1px solid var(--border); border-radius: 16px; background: color-mix(in srgb, var(--background) 45%, transparent); transition: border-color .22s ease, box-shadow .22s ease, background-color .22s ease, opacity .22s ease; }
 .week-task-card:hover { border-color: color-mix(in srgb, var(--orange) 36%, var(--border)); box-shadow: 0 4px 14px color-mix(in srgb, var(--foreground) 7%, transparent); }
 .task-check { display: grid; place-items: center; width: 20px; height: 20px; flex: 0 0 auto; margin-top: 2px; border: 1px solid color-mix(in srgb, var(--muted-foreground) 60%, transparent); border-radius: 999px; transition: border-color .16s ease, background .16s ease; }
 .task-check:hover { border-color: var(--orange); background: var(--orange-soft); }
 .task-check span { width: 7px; height: 7px; border-radius: 999px; background: var(--orange); }
-.task-check-completed { border-color: var(--orange); background: var(--orange); color: white; animation: task-complete-pop 420ms cubic-bezier(.16,1,.3,1); }
-.week-task-completed { opacity: .72; background: color-mix(in srgb, var(--muted) 58%, transparent); animation: task-complete-settle 420ms cubic-bezier(.16,1,.3,1); }
-.week-task-completed p:first-child { text-decoration: line-through; text-decoration-color: var(--orange); text-decoration-thickness: 1.5px; animation: task-text-complete 280ms ease-out both; }
+.task-check-completed { border-color: var(--orange); background: var(--orange); color: white; }
+.task-check-animate-complete { animation: task-check-complete 360ms cubic-bezier(.16,1,.3,1); }
+.task-check-animate-reopen { animation: task-check-reopen 280ms cubic-bezier(.16,1,.3,1); }
+.week-task-completed { opacity: .72; background: color-mix(in srgb, var(--muted) 58%, transparent); }
+.week-task-completed p:first-child { text-decoration: line-through; text-decoration-color: var(--orange); text-decoration-thickness: 1.5px; }
+.week-task-checking-complete { animation: task-card-complete 360ms ease-out; }
+.week-task-checking-reopen { animation: task-card-reopen 280ms ease-out; }
 .progress-ring { --ring-progress: 0; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 999px; background: conic-gradient(var(--orange) calc(var(--ring-progress) * 1turn), var(--muted) 0); transition: --ring-progress 760ms cubic-bezier(.22,1,.36,1); }
 .progress-ring > div { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 999px; background: var(--card); color: var(--muted-foreground); font-size: 10px; font-weight: 600; }
 .kanban-column { min-height: 14rem; padding: .75rem; border: 1px solid var(--border); border-radius: 22px; background: color-mix(in srgb, var(--card) 70%, transparent); }
@@ -87,9 +91,10 @@ input, textarea, select { font: inherit; }
 @keyframes composer-in { from { opacity: 0; transform: translateY(14px) scale(.975); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes composer-out { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(8px) scale(.985); } }
 @keyframes week-view-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-@keyframes task-complete-pop { 0% { transform: scale(.7); } 65% { transform: scale(1.22); } 100% { transform: scale(1); } }
-@keyframes task-complete-settle { from { transform: translateX(8px); opacity: 0; } to { transform: none; opacity: .72; } }
-@keyframes task-text-complete { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes task-check-complete { 0% { transform: scale(.82); } 58% { transform: scale(1.1); } 100% { transform: scale(1); } }
+@keyframes task-check-reopen { 0% { transform: scale(1.08); } 100% { transform: scale(1); } }
+@keyframes task-card-complete { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--orange) 0%, transparent); } 45% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--orange) 14%, transparent); } 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--orange) 0%, transparent); } }
+@keyframes task-card-reopen { 0% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--orange) 10%, transparent); } 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--orange) 0%, transparent); } }
 @property --ring-progress { syntax: "<number>"; inherits: false; initial-value: 0; }
 
 @media (min-width: 1024px) {
@@ -198,7 +203,7 @@ input, textarea, select { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .page-transition { animation: none; }
   .workspace-frame, .sidebar-panel, .brand-mark, .sidebar-toggle, .sidebar-top-brand, .sidebar-brand-copy, .nav-label, .nav-group-label, .nav-item, .theme-slot { transition: none !important; }
-  .task-composer, .week-view-switch, .task-check-completed, .week-task-completed, .modal-backdrop { animation: none !important; }
+  .task-composer, .week-view-switch, .task-check-completed, .week-task-completed, .week-task-checking-complete, .week-task-checking-reopen, .task-check-animate-complete, .task-check-animate-reopen, .modal-backdrop { animation: none !important; }
 }
 
 @media (min-width: 1024px) and (max-height: 720px) {
