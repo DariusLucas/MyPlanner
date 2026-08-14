@@ -1,44 +1,52 @@
-# Phase 3B — Weekly Recurrence
+# Phase 4 — Dashboard Today System
 
 ## Objective
 
-Add a simple, reliable “X times per week” recurrence workflow to This Week.
+Refactor the Dashboard around one unified Today system that makes active work,
+overdue work, completion, and daily momentum visible at a glance.
 
 ## Required Behavior
 
-- Let users define a task recurrence by count per week without forcing
-  particular weekdays.
-- Generate the intended instances in Anytime This Week.
-- Preserve recurrence state after reload.
-- Generate exactly the intended number of new-week instances without
-  duplication.
-- Ensure incomplete past occurrences do not accumulate indefinitely.
+- Show today's active tasks.
+- Carry overdue incomplete tasks into Today.
+- Show tasks completed today.
+- Show completed and remaining counts.
+- Allow task completion directly from the Dashboard.
+- Preserve the approximately four-second completion undo window.
+- Show a daily streak with a restrained visual temperature/state.
+- Support a Quick Thought capture flow.
+- Show latest thoughts and provide View All thoughts.
+- Allow thoughts to be edited and deleted.
+- Keep the Dashboard focused; do not fill remaining space with filler.
 
 ## Implementation Checklist
 
-- [ ] Design a minimal recurrence data model and create explicit migrations.
-- [ ] Add recurrence creation and editing inside This Week.
-- [ ] Generate recurring Anytime instances idempotently per week.
-- [ ] Preserve instance state and recurrence state across reloads.
-- [ ] Handle past incomplete occurrences without endless rollover.
-- [ ] Test week-boundary generation and duplicate prevention thoroughly.
-- [ ] Run migrations, typecheck, lint, build, and manual persistence checks.
+- [ ] Define the Dashboard Today data contract using persisted task history.
+- [ ] Build the active, overdue, completed-today, and count sections.
+- [ ] Reuse the existing task completion and undo behavior.
+- [ ] Add daily streak calculation and visual state.
+- [ ] Add Quick Thought creation, listing, editing, and deletion.
+- [ ] Preserve the approved visual system and responsive layout.
+- [ ] Test timezone boundaries, completion persistence, undo, and thought CRUD.
+- [ ] Run migrations if needed, typecheck, lint, build, and manual checks.
 
 ## Explicitly Out of Scope
 
-- Do not assign recurring tasks to forced weekdays.
-- Do not build dashboard streaks, Quick Thoughts, Career, Content, or Progress
-  analytics.
+- Do not implement Career or Content management systems.
+- Do not build Progress analytics or heatmaps.
 - Do not redesign the approved visual system.
+- Do not add filler dashboard widgets unrelated to Plan → Do → Complete → See Progress.
 
 ## Completion Criteria
 
-Phase 3B is complete only when weekly recurrence generates exactly the desired
-number of Anytime instances, does not duplicate after reload or week changes,
-does not let old incomplete instances accumulate, and all relevant validation
-checks pass.
+Phase 4 is complete only when the Dashboard accurately shows active, overdue,
+completed-today, and remaining work; completion and undo persist reliably;
+streak state respects the configured local timezone; Quick Thoughts support the
+required CRUD flow; and all relevant validation checks pass.
 
 ## Dependencies from Previous Phases
 
-- Phase 3 — This Week + Complete Task Workflow: completed; use its persisted
-  task workflow and Anytime This Week section.
+- Phase 3 — This Week + Complete Task Workflow: completed; reuse persisted task
+  statuses, completion timestamps, and the completion undo behavior.
+- Phase 3B — Weekly Recurrence: completed; recurring task instances and skipped
+  missed occurrences must remain compatible with Dashboard active/overdue views.

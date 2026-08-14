@@ -22,6 +22,13 @@
       "when": 1786652396960,
       "tag": "0002_common_steve_rogers",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1786704079838,
+      "tag": "0003_curious_apocalypse",
+      "breakpoints": true
     }
   ]
 }

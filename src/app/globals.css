@@ -45,58 +45,680 @@
   --color-accent-foreground: var(--accent-foreground);
 }
 
-* { box-sizing: border-box; }
-html { min-width: 320px; }
-body { margin: 0; min-height: 100vh; background: var(--background); color: var(--foreground); font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; }
-button, a { -webkit-tap-highlight-color: transparent; }
-button, a, input, textarea, select { transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, opacity 180ms ease, transform 180ms ease; }
-button:not(:disabled), [role="button"], a[href], input[type="checkbox"], input[type="radio"], select { cursor: pointer !important; }
-input, textarea, select { font: inherit; }
-.glass-panel { background: color-mix(in srgb, var(--card) 82%, transparent); border: 1px solid color-mix(in srgb, var(--border) 88%, transparent); box-shadow: 0 16px 42px rgba(73, 58, 38, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.42); backdrop-filter: blur(24px) saturate(1.06); }
-.dark .glass-panel { box-shadow: 0 16px 42px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.045); }
-.week-day-card { min-height: 250px; padding: 1rem; border: 1px solid var(--border); border-radius: 26px; background: var(--card); box-shadow: 0 8px 24px color-mix(in srgb, var(--foreground) 5%, transparent); }
-.week-sunday-card { border-color: color-mix(in srgb, var(--orange) 30%, var(--border)); background: radial-gradient(circle at 85% 15%, var(--orange-soft), transparent 44%), var(--card); }
-.week-glow-card, .week-anytime-card { border-color: color-mix(in srgb, var(--orange) 30%, var(--border)); background: radial-gradient(circle at 85% 15%, var(--orange-soft), transparent 44%), var(--card); }
-.week-anytime-card { padding: 1rem; border: 1px solid color-mix(in srgb, var(--orange) 30%, var(--border)); border-radius: 22px; box-shadow: 0 10px 28px color-mix(in srgb, var(--orange) 10%, transparent); }
-.week-sunday-card { grid-column: 1 / -1; min-height: 190px; }
-.week-task-card { padding: .75rem; border: 1px solid var(--border); border-radius: 16px; background: color-mix(in srgb, var(--background) 45%, transparent); transition: border-color .22s ease, box-shadow .22s ease, background-color .22s ease, opacity .22s ease; }
-.week-task-card:hover { border-color: color-mix(in srgb, var(--orange) 36%, var(--border)); box-shadow: 0 4px 14px color-mix(in srgb, var(--foreground) 7%, transparent); }
-.task-check { display: grid; place-items: center; width: 20px; height: 20px; flex: 0 0 auto; margin-top: 2px; border: 1px solid color-mix(in srgb, var(--muted-foreground) 60%, transparent); border-radius: 999px; transition: border-color .16s ease, background .16s ease; }
-.task-check:hover { border-color: var(--orange); background: var(--orange-soft); }
-.task-check span { width: 7px; height: 7px; border-radius: 999px; background: var(--orange); }
-.task-check-completed { border-color: var(--orange); background: var(--orange); color: white; }
-.task-check-animate-complete { animation: task-check-complete 360ms cubic-bezier(.16,1,.3,1); }
-.task-check-animate-reopen { animation: task-check-reopen 280ms cubic-bezier(.16,1,.3,1); }
-.week-task-completed { opacity: .72; background: color-mix(in srgb, var(--muted) 58%, transparent); }
-.week-task-completed p:first-child { text-decoration: line-through; text-decoration-color: var(--orange); text-decoration-thickness: 1.5px; }
-.week-task-checking-complete { animation: task-card-complete 360ms ease-out; }
-.week-task-checking-reopen { animation: task-card-reopen 280ms ease-out; }
-.progress-ring { --ring-progress: 0; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 999px; background: conic-gradient(var(--orange) calc(var(--ring-progress) * 1turn), var(--muted) 0); transition: --ring-progress 760ms cubic-bezier(.22,1,.36,1); }
-.progress-ring > div { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 999px; background: var(--card); color: var(--muted-foreground); font-size: 10px; font-weight: 600; }
-.kanban-column { min-height: 14rem; padding: .75rem; border: 1px solid var(--border); border-radius: 22px; background: color-mix(in srgb, var(--card) 70%, transparent); }
-.kanban-card { cursor: grab; padding: .75rem; border: 1px solid var(--border); border-radius: 16px; background: color-mix(in srgb, var(--background) 65%, transparent); box-shadow: 0 4px 14px color-mix(in srgb, var(--foreground) 5%, transparent); transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
-.kanban-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--orange) 45%, var(--border)); }
-.kanban-card:active { cursor: grabbing; }
-.modal-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 1rem; background: rgba(20, 18, 15, .28); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: backdrop-in 220ms ease-out both; }
-.task-composer { width: min(100%, 800px); margin-top: -7vh; padding: 1.55rem; border: 1px solid color-mix(in srgb, var(--orange) 38%, var(--border)); border-radius: 26px; background: radial-gradient(circle at 90% 5%, var(--orange-soft), transparent 38%), var(--card); box-shadow: 0 24px 65px rgba(0,0,0,.20), 0 18px 42px color-mix(in srgb, var(--orange) 14%, transparent); animation: composer-in 300ms cubic-bezier(.22,1,.36,1) both; }
-.modal-closing { animation: backdrop-out 220ms ease-in both; }
-.modal-closing .task-composer { animation: composer-out 220ms cubic-bezier(.4,0,1,1) both; }
-.choice-grid { display: flex; flex-wrap: wrap; gap: .45rem; }
-.choice-chip { min-height: 34px; padding: .45rem .7rem; border: 1px solid var(--border); border-radius: 999px; background: color-mix(in srgb, var(--background) 45%, transparent); color: var(--muted-foreground); font-size: .78rem; font-weight: 600; transition: transform .16s ease, background .16s ease, border-color .16s ease, color .16s ease; }
-.choice-chip:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--orange) 46%, var(--border)); }
-.choice-chip-active { border-color: color-mix(in srgb, var(--orange) 74%, var(--border)); background: color-mix(in srgb, var(--orange) 16%, var(--card)); color: var(--accent-foreground); box-shadow: 0 5px 14px color-mix(in srgb, var(--orange) 13%, transparent); }
-.week-view-switch { animation: week-view-in 260ms cubic-bezier(.16,1,.3,1) both; }
-@keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes backdrop-out { from { opacity: 1; } to { opacity: 0; } }
-@keyframes composer-in { from { opacity: 0; transform: translateY(14px) scale(.975); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@keyframes composer-out { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(8px) scale(.985); } }
-@keyframes week-view-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-@keyframes task-check-complete { 0% { transform: scale(.82); } 58% { transform: scale(1.1); } 100% { transform: scale(1); } }
-@keyframes task-check-reopen { 0% { transform: scale(1.08); } 100% { transform: scale(1); } }
-@keyframes task-card-complete { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--orange) 0%, transparent); } 45% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--orange) 14%, transparent); } 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--orange) 0%, transparent); } }
-@keyframes task-card-reopen { 0% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--orange) 10%, transparent); } 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--orange) 0%, transparent); } }
-@property --ring-progress { syntax: "<number>"; inherits: false; initial-value: 0; }
-
+* {
+  box-sizing: border-box;
+}
+html {
+  min-width: 320px;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+}
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+a,
+input,
+textarea,
+select {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+button:not(:disabled),
+[role="button"],
+a[href],
+input[type="checkbox"],
+input[type="radio"],
+select {
+  cursor: pointer !important;
+}
+input,
+textarea,
+select {
+  font: inherit;
+}
+.glass-panel {
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  box-shadow:
+    0 16px 42px rgba(73, 58, 38, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(24px) saturate(1.06);
+}
+.dark .glass-panel {
+  box-shadow:
+    0 16px 42px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+.week-day-card {
+  min-height: 250px;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  background: var(--card);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+.week-sunday-card {
+  border-color: color-mix(in srgb, var(--orange) 30%, var(--border));
+  background:
+    radial-gradient(circle at 85% 15%, var(--orange-soft), transparent 44%),
+    var(--card);
+}
+.week-glow-card,
+.week-anytime-card {
+  border-color: color-mix(in srgb, var(--orange) 30%, var(--border));
+  background:
+    radial-gradient(circle at 85% 15%, var(--orange-soft), transparent 44%),
+    var(--card);
+}
+.week-anytime-card {
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--orange) 30%, var(--border));
+  border-radius: 22px;
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--orange) 10%, transparent);
+}
+.week-sunday-card {
+  grid-column: 1 / -1;
+  min-height: 190px;
+}
+.week-task-card {
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--background) 45%, transparent);
+  transition:
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    background-color 0.22s ease,
+    opacity 0.22s ease;
+}
+.week-task-card:hover {
+  border-color: color-mix(in srgb, var(--orange) 36%, var(--border));
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+.recurrence-task-card {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--orange-soft) 58%, transparent),
+    color-mix(in srgb, var(--background) 45%, transparent)
+  );
+}
+.anytime-kanban-task-card {
+  background: color-mix(in srgb, var(--card) 82%, var(--background));
+}
+.anytime-kanban-task-card:hover {
+  border-color: color-mix(in srgb, var(--orange) 36%, var(--border));
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+.recurrence-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+.recurrence-check {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid color-mix(in srgb, var(--muted-foreground) 55%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--background) 58%, transparent);
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+  font-weight: 700;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
+}
+.recurrence-check:hover {
+  transform: translateY(-1px);
+  border-color: var(--orange);
+  background: var(--orange-soft);
+}
+.recurrence-check-completed {
+  border-color: var(--orange);
+  background: var(--orange);
+  color: white;
+}
+.task-check {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  border: 1px solid color-mix(in srgb, var(--muted-foreground) 60%, transparent);
+  border-radius: 999px;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease;
+}
+.task-check:hover {
+  border-color: var(--orange);
+  background: var(--orange-soft);
+}
+.task-check span {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--orange);
+}
+.task-check-completed {
+  border-color: var(--orange);
+  background: var(--orange);
+  color: white;
+}
+.task-check-animate-complete {
+  animation: task-check-complete 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.task-check-animate-reopen {
+  animation: task-check-reopen 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.week-task-completed {
+  opacity: 0.72;
+  background: color-mix(in srgb, var(--muted) 58%, transparent);
+}
+.week-task-completed p:first-child {
+  text-decoration: line-through;
+  text-decoration-color: var(--orange);
+  text-decoration-thickness: 1.5px;
+}
+.week-task-checking-complete {
+  animation: task-card-complete 360ms ease-out;
+}
+.week-task-checking-reopen {
+  animation: task-card-reopen 280ms ease-out;
+}
+.progress-ring {
+  position: relative;
+  display: grid;
+  width: 60px;
+  height: 60px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 86%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--orange) 20%, transparent);
+}
+.progress-ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.progress-ring-track,
+.progress-ring-value {
+  fill: none;
+  stroke-width: 3.5;
+}
+.progress-ring-track {
+  stroke: color-mix(in srgb, var(--muted-foreground) 24%, transparent);
+}
+.progress-ring-value {
+  stroke: var(--orange);
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  filter: drop-shadow(
+    0 0 4px color-mix(in srgb, var(--orange) 55%, transparent)
+  );
+  transition: stroke-dashoffset 620ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.progress-ring-label {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 92%, var(--background));
+  color: var(--foreground);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.kanban-board {
+  display: grid;
+  gap: 1rem;
+}
+.kanban-anytime-column {
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--orange) 30%, var(--border));
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 88% 12%, var(--orange-soft), transparent 44%),
+    var(--card);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--orange) 9%, transparent);
+}
+.kanban-anytime-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.kanban-status-columns {
+  min-width: 0;
+}
+.kanban-column {
+  min-height: 14rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--card) 70%, transparent);
+}
+.kanban-card {
+  position: relative;
+  z-index: 0;
+  cursor: grab;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--background) 65%, transparent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--foreground) 5%, transparent);
+  transition:
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    background-color 0.22s ease,
+    opacity 0.22s ease;
+}
+.kanban-card:focus-within {
+  z-index: 20;
+}
+.kanban-card:has(.kanban-status-menu),
+.kanban-card-menu-open {
+  z-index: 40;
+}
+.kanban-card:hover {
+  border-color: color-mix(in srgb, var(--orange) 36%, var(--border));
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+.kanban-card-overdue {
+  border-color: color-mix(in srgb, #d5a334 44%, var(--border));
+  background: color-mix(in srgb, #d5a334 7%, var(--card));
+}
+.kanban-card-overdue p:nth-child(2) {
+  color: color-mix(in srgb, #d5a334 76%, var(--muted-foreground));
+}
+.kanban-card:active {
+  cursor: grabbing;
+}
+.kanban-card-moving {
+  animation: kanban-card-move 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  border-color: color-mix(in srgb, var(--orange) 62%, var(--border));
+}
+.kanban-delete-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 7px;
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+  font-weight: 600;
+  opacity: 0.72;
+}
+.kanban-delete-button:hover {
+  color: #b94c20;
+  background: color-mix(in srgb, var(--orange-soft) 44%, transparent);
+  opacity: 1;
+}
+.kanban-status-select {
+  position: relative;
+  margin-top: 0.75rem;
+}
+.kanban-status-trigger {
+  --status-color: var(--muted-foreground);
+  display: flex;
+  width: 100%;
+  min-height: 34px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--status-color) 42%, var(--border));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--status-color) 9%, var(--card));
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: left;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 6%, transparent);
+}
+.kanban-status-trigger:hover,
+.kanban-status-trigger[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--orange) 52%, var(--border));
+  background: color-mix(in srgb, var(--orange-soft) 26%, var(--card));
+  color: var(--foreground);
+}
+.kanban-status-trigger:disabled {
+  cursor: wait !important;
+  opacity: 0.6;
+}
+.kanban-status-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--status-color, var(--muted-foreground));
+  box-shadow: 0 0 0 3px
+    color-mix(
+      in srgb,
+      var(--status-color, var(--muted-foreground)) 12%,
+      transparent
+    );
+}
+.kanban-status-trigger > svg {
+  margin-left: auto;
+}
+.kanban-status-not_started,
+.kanban-status-option-not_started {
+  --status-color: #8d929a;
+}
+.kanban-status-in_progress,
+.kanban-status-option-in_progress {
+  --status-color: #4ca36a;
+}
+.kanban-status-on_hold,
+.kanban-status-option-on_hold {
+  --status-color: #d5a334;
+}
+.kanban-status-done,
+.kanban-status-option-done {
+  --status-color: var(--orange);
+}
+.kanban-status-option .kanban-status-dot {
+  background: var(--status-color);
+}
+.kanban-status-chevron-open {
+  transform: rotate(180deg);
+}
+.kanban-status-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  left: 0;
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.3rem;
+  border: 1px solid color-mix(in srgb, var(--orange) 32%, var(--border));
+  border-radius: 13px;
+  background: var(--background);
+  box-shadow:
+    0 14px 30px color-mix(in srgb, var(--foreground) 16%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 7%, transparent);
+  animation: kanban-menu-in 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.kanban-status-option {
+  display: flex;
+  min-height: 31px;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.42rem 0.5rem;
+  border-radius: 9px;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: left;
+}
+.kanban-status-option:hover,
+.kanban-status-option-active {
+  background: color-mix(in srgb, var(--status-color) 15%, var(--background));
+  color: var(--foreground);
+}
+.kanban-status-option svg {
+  margin-left: auto;
+  color: var(--status-color);
+}
+.modal-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(20, 18, 15, 0.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: backdrop-in 220ms ease-out both;
+}
+.task-composer {
+  width: min(100%, 800px);
+  margin-top: -7vh;
+  padding: 1.55rem;
+  border: 1px solid color-mix(in srgb, var(--orange) 38%, var(--border));
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 90% 5%, var(--orange-soft), transparent 38%),
+    var(--card);
+  box-shadow:
+    0 24px 65px rgba(0, 0, 0, 0.2),
+    0 18px 42px color-mix(in srgb, var(--orange) 14%, transparent);
+  animation: composer-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.confirm-dialog {
+  width: min(100%, 430px);
+  margin-top: -7vh;
+  padding: 1.45rem;
+  border: 1px solid color-mix(in srgb, var(--orange) 34%, var(--border));
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 92% 4%, var(--orange-soft), transparent 42%),
+    var(--card);
+  box-shadow:
+    0 24px 65px rgba(0, 0, 0, 0.2),
+    0 18px 42px color-mix(in srgb, var(--orange) 14%, transparent);
+  animation: composer-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.confirm-dialog-kicker {
+  color: var(--orange);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.modal-closing {
+  animation: backdrop-out 220ms ease-in both;
+}
+.modal-closing .task-composer,
+.modal-closing .confirm-dialog {
+  animation: composer-out 220ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+.choice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+.choice-chip {
+  min-height: 34px;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--background) 45%, transparent);
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition:
+    transform 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+}
+.choice-chip:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--orange) 46%, var(--border));
+}
+.choice-chip-active {
+  border-color: color-mix(in srgb, var(--orange) 74%, var(--border));
+  background: color-mix(in srgb, var(--orange) 16%, var(--card));
+  color: var(--accent-foreground);
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--orange) 13%, transparent);
+}
+.task-edit-shell {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin-top: 0;
+  opacity: 0;
+  transform: translateY(-5px);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    grid-template-rows 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    margin-top 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 160ms ease,
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 260ms;
+}
+.task-edit-shell-open {
+  grid-template-rows: 1fr;
+  margin-top: 0.75rem;
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+.task-edit-panel {
+  min-height: 0;
+  overflow: hidden;
+  padding: 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--orange) 24%, var(--border));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--card) 72%, var(--background));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 7%, transparent),
+    0 8px 20px color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+.week-view-switch {
+  animation: week-view-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes backdrop-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes composer-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes composer-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+}
+@keyframes week-view-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kanban-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kanban-card-move {
+  0% {
+    opacity: 0.48;
+    transform: translateY(7px) scale(0.97);
+  }
+  62% {
+    opacity: 1;
+    transform: translateY(-1px) scale(1.012);
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--orange) 16%, transparent);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--foreground) 5%, transparent);
+  }
+}
+@keyframes task-check-complete {
+  0% {
+    transform: scale(0.82);
+  }
+  58% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes task-check-reopen {
+  0% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes task-card-complete {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--orange) 0%, transparent);
+  }
+  45% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--orange) 14%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--orange) 0%, transparent);
+  }
+}
+@keyframes task-card-reopen {
+  0% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--orange) 10%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--orange) 0%, transparent);
+  }
+}
 @media (min-width: 1024px) {
   .workspace-frame {
     position: relative;
@@ -107,7 +729,10 @@ input, textarea, select { font: inherit; }
     transition: grid-template-columns 300ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .workspace-frame[data-sidebar-collapsed="true"] { grid-template-columns: 88px minmax(0, 1fr); column-gap: 16px; }
+  .workspace-frame[data-sidebar-collapsed="true"] {
+    grid-template-columns: 88px minmax(0, 1fr);
+    column-gap: 16px;
+  }
 
   .sidebar-panel {
     grid-column: 1;
@@ -121,37 +746,210 @@ input, textarea, select { font: inherit; }
     background: transparent;
     box-shadow: none;
     font-family: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
-    transition: padding 300ms cubic-bezier(0.22, 1, 0.36, 1), transform 200ms ease;
+    transition:
+      padding 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 200ms ease;
   }
 
-  .brand-mark { position: relative; color: var(--foreground); border: 1px solid color-mix(in srgb, var(--border) 90%, transparent); background: color-mix(in srgb, var(--card) 72%, transparent); box-shadow: 0 10px 26px color-mix(in srgb, var(--foreground) 10%, transparent), inset 0 1px 0 rgba(255,255,255,0.46); backdrop-filter: blur(18px); transition: width 260ms ease, height 260ms ease, border-radius 260ms ease, transform 260ms ease, box-shadow 260ms ease; }
-  .brand-mark::before { content: ""; position: absolute; z-index: -1; inset: -10px; border-radius: 22px; background: radial-gradient(circle, color-mix(in srgb, var(--foreground) 12%, transparent), transparent 68%); filter: blur(9px); opacity: 0.62; }
-  .dark .brand-mark { box-shadow: 0 12px 30px rgba(0,0,0,0.3), 0 0 24px rgba(255,255,255,0.035), inset 0 1px 0 rgba(255,255,255,0.08); }
-  .sidebar-top-brand { cursor: default; transition: gap 280ms cubic-bezier(0.22, 1, 0.36, 1), padding 280ms cubic-bezier(0.22, 1, 0.36, 1); }
-  .sidebar-plane { position: relative; color: var(--foreground); filter: drop-shadow(0 2px 5px color-mix(in srgb, var(--foreground) 18%, transparent)) drop-shadow(0 0 10px color-mix(in srgb, var(--orange) 20%, transparent)); }
-  .sidebar-plane::before { content: ""; position: absolute; z-index: -1; inset: 4px; border-radius: 999px; background: color-mix(in srgb, var(--foreground) 16%, transparent); filter: blur(10px); opacity: 0.72; }
-  .sidebar-brand-copy { max-width: 150px; opacity: 1; overflow: hidden; transform: translateX(0); transition: max-width 300ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease 125ms, transform 240ms cubic-bezier(0.22, 1, 0.36, 1) 75ms; }
-  .sidebar-toggle { border: 1px solid color-mix(in srgb, var(--border) 72%, transparent); background: color-mix(in srgb, var(--card) 58%, transparent); backdrop-filter: blur(14px); transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1); }
-  .sidebar-toggle:hover { box-shadow: 0 7px 18px color-mix(in srgb, var(--foreground) 8%, transparent); }
-  .nav-label { max-width: 150px; opacity: 1; overflow: hidden; transform: translateX(0); transition: max-width 300ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease 125ms, transform 240ms cubic-bezier(0.22, 1, 0.36, 1) 75ms; }
-  .nav-group-label { max-height: 24px; overflow: hidden; opacity: 1; transition: max-height 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 150ms ease 115ms, padding 240ms cubic-bezier(0.22, 1, 0.36, 1); }
-  .nav-item { position: relative; font-family: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif; font-weight: 520; letter-spacing: -0.012em; transition: gap 260ms ease, padding 260ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 160ms ease; }
-  .nav-item:hover { transform: translateX(1px); }
-  .nav-item-active { color: #b94c20; border: 1px solid color-mix(in srgb, var(--orange) 24%, transparent); background: color-mix(in srgb, var(--orange) 14%, var(--card)); box-shadow: 0 9px 22px color-mix(in srgb, var(--orange) 12%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.38); }
-  .dark .nav-item-active { color: #fff8f3; border-color: color-mix(in srgb, var(--orange) 76%, transparent); background: color-mix(in srgb, var(--orange) 62%, var(--card)); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18), 0 0 20px color-mix(in srgb, var(--orange) 18%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.14); }
-  .sidebar-footer-controls { border-color: color-mix(in srgb, var(--border) 62%, transparent); }
-  .sidebar-utilities { transition: gap 280ms cubic-bezier(0.22, 1, 0.36, 1), padding 280ms cubic-bezier(0.22, 1, 0.36, 1); }
-  .theme-slot { overflow: hidden; transition: padding 260ms ease; }
+  .brand-mark {
+    position: relative;
+    color: var(--foreground);
+    border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+    background: color-mix(in srgb, var(--card) 72%, transparent);
+    box-shadow:
+      0 10px 26px color-mix(in srgb, var(--foreground) 10%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.46);
+    backdrop-filter: blur(18px);
+    transition:
+      width 260ms ease,
+      height 260ms ease,
+      border-radius 260ms ease,
+      transform 260ms ease,
+      box-shadow 260ms ease;
+  }
+  .brand-mark::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: -10px;
+    border-radius: 22px;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--foreground) 12%, transparent),
+      transparent 68%
+    );
+    filter: blur(9px);
+    opacity: 0.62;
+  }
+  .dark .brand-mark {
+    box-shadow:
+      0 12px 30px rgba(0, 0, 0, 0.3),
+      0 0 24px rgba(255, 255, 255, 0.035),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .sidebar-top-brand {
+    cursor: default;
+    transition:
+      gap 280ms cubic-bezier(0.22, 1, 0.36, 1),
+      padding 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sidebar-plane {
+    position: relative;
+    color: var(--foreground);
+    filter: drop-shadow(
+        0 2px 5px color-mix(in srgb, var(--foreground) 18%, transparent)
+      )
+      drop-shadow(0 0 10px color-mix(in srgb, var(--orange) 20%, transparent));
+  }
+  .sidebar-plane::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 4px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--foreground) 16%, transparent);
+    filter: blur(10px);
+    opacity: 0.72;
+  }
+  .sidebar-brand-copy {
+    max-width: 150px;
+    opacity: 1;
+    overflow: hidden;
+    transform: translateX(0);
+    transition:
+      max-width 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 160ms ease 125ms,
+      transform 240ms cubic-bezier(0.22, 1, 0.36, 1) 75ms;
+  }
+  .sidebar-toggle {
+    border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+    background: color-mix(in srgb, var(--card) 58%, transparent);
+    backdrop-filter: blur(14px);
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease,
+      box-shadow 160ms ease,
+      transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sidebar-toggle:hover {
+    box-shadow: 0 7px 18px color-mix(in srgb, var(--foreground) 8%, transparent);
+  }
+  .nav-label {
+    max-width: 150px;
+    opacity: 1;
+    overflow: hidden;
+    transform: translateX(0);
+    transition:
+      max-width 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 160ms ease 125ms,
+      transform 240ms cubic-bezier(0.22, 1, 0.36, 1) 75ms;
+  }
+  .nav-group-label {
+    max-height: 24px;
+    overflow: hidden;
+    opacity: 1;
+    transition:
+      max-height 240ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 150ms ease 115ms,
+      padding 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .nav-item {
+    position: relative;
+    font-family: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
+    font-weight: 520;
+    letter-spacing: -0.012em;
+    transition:
+      gap 260ms ease,
+      padding 260ms ease,
+      background-color 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      color 160ms ease,
+      transform 160ms ease;
+  }
+  .nav-item:hover {
+    transform: translateX(1px);
+  }
+  .nav-item-active {
+    color: #b94c20;
+    border: 1px solid color-mix(in srgb, var(--orange) 24%, transparent);
+    background: color-mix(in srgb, var(--orange) 14%, var(--card));
+    box-shadow:
+      0 9px 22px color-mix(in srgb, var(--orange) 12%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.38);
+  }
+  .dark .nav-item-active {
+    color: #fff8f3;
+    border-color: color-mix(in srgb, var(--orange) 76%, transparent);
+    background: color-mix(in srgb, var(--orange) 62%, var(--card));
+    box-shadow:
+      0 10px 24px rgba(0, 0, 0, 0.18),
+      0 0 20px color-mix(in srgb, var(--orange) 18%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+  .sidebar-footer-controls {
+    border-color: color-mix(in srgb, var(--border) 62%, transparent);
+  }
+  .sidebar-utilities {
+    transition:
+      gap 280ms cubic-bezier(0.22, 1, 0.36, 1),
+      padding 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .theme-slot {
+    overflow: hidden;
+    transition: padding 260ms ease;
+  }
 
-  .workspace-frame[data-sidebar-collapsed="true"] .sidebar-panel { padding-right: 6px; padding-left: 6px; }
-  .workspace-frame[data-sidebar-collapsed="true"] .sidebar-top-brand { justify-content: center; gap: 0; padding-right: 0; padding-left: 0; }
-  .workspace-frame[data-sidebar-collapsed="true"] .sidebar-brand-copy { max-width: 0; opacity: 0; transform: translateX(-7px); transition-delay: 0ms; }
-  .workspace-frame[data-sidebar-collapsed="true"] .nav-item { justify-content: center; gap: 0; padding-right: 0; padding-left: 0; }
-  .workspace-frame[data-sidebar-collapsed="true"] .nav-label { max-width: 0; opacity: 0; transform: translateX(-7px); transition-delay: 0ms; }
-  .workspace-frame[data-sidebar-collapsed="true"] .nav-group-label { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; transition-delay: 0ms; }
-  .workspace-frame[data-sidebar-collapsed="true"] .sidebar-utilities { justify-content: center; gap: 4px; padding-right: 0; padding-left: 0; }
-  .workspace-frame[data-sidebar-collapsed="true"] .sidebar-toggle { margin-left: 0; }
-  .workspace-frame[data-sidebar-collapsed="true"] .theme-slot { justify-content: center; padding-right: 0; padding-left: 0; }
+  .workspace-frame[data-sidebar-collapsed="true"] .sidebar-panel {
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+  .workspace-frame[data-sidebar-collapsed="true"] .sidebar-top-brand {
+    justify-content: center;
+    gap: 0;
+    padding-right: 0;
+    padding-left: 0;
+  }
+  .workspace-frame[data-sidebar-collapsed="true"] .sidebar-brand-copy {
+    max-width: 0;
+    opacity: 0;
+    transform: translateX(-7px);
+    transition-delay: 0ms;
+  }
+  .workspace-frame[data-sidebar-collapsed="true"] .nav-item {
+    justify-content: center;
+    gap: 0;
+    padding-right: 0;
+    padding-left: 0;
+  }
+  .workspace-frame[data-sidebar-collapsed="true"] .nav-label {
+    max-width: 0;
+    opacity: 0;
+    transform: translateX(-7px);
+    transition-delay: 0ms;
+  }
+  .workspace-frame[data-sidebar-collapsed="true"] .nav-group-label {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    transition-delay: 0ms;
+  }
+  .workspace-frame[data-sidebar-collapsed="true"] .sidebar-utilities {
+    justify-content: center;
+    gap: 4px;
+    padding-right: 0;
+    padding-left: 0;
+  }
+  .workspace-frame[data-sidebar-collapsed="true"] .sidebar-toggle {
+    margin-left: 0;
+  }
+  .workspace-frame[data-sidebar-collapsed="true"] .theme-slot {
+    justify-content: center;
+    padding-right: 0;
+    padding-left: 0;
+  }
 
   .content-region {
     grid-column: 2;
@@ -163,7 +961,10 @@ input, textarea, select { font: inherit; }
     background: transparent;
   }
 
-  .workspace-header { position: relative; background: transparent; }
+  .workspace-header {
+    position: relative;
+    background: transparent;
+  }
 
   .content-surface {
     position: relative;
@@ -175,7 +976,10 @@ input, textarea, select { font: inherit; }
     border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
     border-radius: 46px 30px 30px 30px;
     background: color-mix(in srgb, var(--card) 64%, transparent);
-    box-shadow: -8px 18px 54px rgba(73, 58, 38, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.52), inset 12px 0 28px color-mix(in srgb, var(--sidebar) 10%, transparent);
+    box-shadow:
+      -8px 18px 54px rgba(73, 58, 38, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.52),
+      inset 12px 0 28px color-mix(in srgb, var(--sidebar) 10%, transparent);
     backdrop-filter: blur(30px) saturate(1.05);
   }
 
@@ -188,27 +992,79 @@ input, textarea, select { font: inherit; }
     box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.34);
   }
 
-  .dark .content-surface { box-shadow: 0 24px 54px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.055), inset 12px 0 28px rgba(255, 255, 255, 0.015); }
-  .dark .content-surface::before { box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.045); }
-
+  .dark .content-surface {
+    box-shadow:
+      0 24px 54px rgba(0, 0, 0, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.055),
+      inset 12px 0 28px rgba(255, 255, 255, 0.015);
+  }
+  .dark .content-surface::before {
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.045);
+  }
 }
 
 @keyframes page-enter {
-  from { opacity: 0; transform: translateY(7px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.page-transition { animation: page-enter 240ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.page-transition {
+  animation: page-enter 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .page-transition { animation: none; }
-  .workspace-frame, .sidebar-panel, .brand-mark, .sidebar-toggle, .sidebar-top-brand, .sidebar-brand-copy, .nav-label, .nav-group-label, .nav-item, .theme-slot { transition: none !important; }
-  .task-composer, .week-view-switch, .task-check-completed, .week-task-completed, .week-task-checking-complete, .week-task-checking-reopen, .task-check-animate-complete, .task-check-animate-reopen, .modal-backdrop { animation: none !important; }
+  .page-transition {
+    animation: none;
+  }
+  .workspace-frame,
+  .sidebar-panel,
+  .brand-mark,
+  .sidebar-toggle,
+  .sidebar-top-brand,
+  .sidebar-brand-copy,
+  .nav-label,
+  .nav-group-label,
+  .nav-item,
+  .theme-slot {
+    transition: none !important;
+  }
+  .task-composer,
+  .week-view-switch,
+  .task-check-completed,
+  .week-task-completed,
+  .week-task-checking-complete,
+  .week-task-checking-reopen,
+  .task-check-animate-complete,
+  .task-check-animate-reopen,
+  .modal-backdrop,
+  .kanban-card-moving,
+  .kanban-status-menu {
+    animation: none !important;
+  }
+  .task-edit-shell,
+  .task-edit-shell-open {
+    transition: none !important;
+  }
 }
 
 @media (min-width: 1024px) and (max-height: 720px) {
-  .sidebar-panel { padding-top: 0.8rem; padding-bottom: 0.8rem; }
-  .sidebar-brand { margin-bottom: 1rem; }
-  .sidebar-navigation > :not(:last-child) { margin-bottom: 1rem; }
-  .sidebar-footer p { display: none; }
+  .sidebar-panel {
+    padding-top: 0.8rem;
+    padding-bottom: 0.8rem;
+  }
+  .sidebar-brand {
+    margin-bottom: 1rem;
+  }
+  .sidebar-navigation > :not(:last-child) {
+    margin-bottom: 1rem;
+  }
+  .sidebar-footer p {
+    display: none;
+  }
 }

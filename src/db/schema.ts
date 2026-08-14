@@ -87,6 +87,19 @@ export const dailyFocus = sqliteTable(
   }),
 );
 
+export const taskRecurrences = sqliteTable("task_recurrences", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: text("category", { enum: ["career", "content", "other"] }).notNull(),
+  priority: text("priority", { enum: ["high", "normal", "low"] }).notNull().default("normal"),
+  estimatedMinutes: integer("estimated_minutes"),
+  countPerWeek: integer("count_per_week").notNull(),
+  startWeek: text("start_week").notNull(),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  ...timestamps,
+});
+
 export const tasks = sqliteTable("tasks", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title").notNull(),
@@ -97,6 +110,9 @@ export const tasks = sqliteTable("tasks", {
   sprintWeekId: integer("sprint_week_id").references(() => sprintWeeks.id, { onDelete: "set null" }),
   date: text("date").notNull(),
   anytimeWeekStart: text("anytime_week_start"),
+  recurrenceId: integer("recurrence_id").references(() => taskRecurrences.id, { onDelete: "set null" }),
+  recurrenceWeekStart: text("recurrence_week_start"),
+  recurrenceIndex: integer("recurrence_index"),
   priority: text("priority", { enum: ["high", "normal", "low"] }).notNull().default("normal"),
   status: text("status", { enum: ["not_started", "in_progress", "on_hold", "done", "completed", "skipped"] })
     .notNull()
@@ -108,4 +124,5 @@ export const tasks = sqliteTable("tasks", {
 }, (table) => ({
   dateStatus: index("tasks_date_status_idx").on(table.date, table.status),
   anytimeWeekStatus: index("tasks_anytime_week_status_idx").on(table.anytimeWeekStart, table.status),
+  recurrenceInstance: uniqueIndex("tasks_recurrence_instance_idx").on(table.recurrenceId, table.recurrenceWeekStart, table.recurrenceIndex),
 }));
