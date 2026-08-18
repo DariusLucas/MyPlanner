@@ -1348,19 +1348,19 @@ If that becomes useful later it can be added intentionally.
 
 ---
 
-# 42. CONTENT MINI GOALS
+# 42. CAREER + CONTENT MILESTONES
 
-Content should contain one additional lightweight feature:
+Career and Content should each contain one additional lightweight feature:
 
 ```text
-Content Milestones
+Milestones
 ```
 
 These are NOT tasks.
 
 These represent achievements/outcomes I want to reach.
 
-Examples:
+Content examples:
 
 ```text
 1,000 views
@@ -1376,7 +1376,8 @@ Examples:
 2,000 followers
 ```
 
-The exact meaning is intentionally flexible.
+Career examples include applications sent, interviews reached, offers received,
+or a custom professional outcome. The exact meaning is intentionally flexible.
 
 For example:
 
@@ -1390,14 +1391,18 @@ Do not hardcode complex analytics semantics.
 
 ---
 
-# 43. CONTENT MILESTONE MODEL
+# 43. MILESTONE MODEL
 
 Use something conceptually like:
 
 ```text
-ContentMilestone
+FocusMilestone
 
 id
+
+category
+  career
+  content
 
 label
 
@@ -1425,9 +1430,10 @@ First video over 100k views
 
 ---
 
-# 44. CONTENT MILESTONE UX
+# 44. MILESTONE UX
 
-Display milestones in a compact, visually pleasing section.
+Display milestones in a compact, visually pleasing section on both Career and
+Content.
 
 Example:
 
@@ -2196,7 +2202,8 @@ Generic milestones system
 Generic habit system
 ```
 
-Content Milestones are the one intentional exception because they represent real creator outcomes.
+Career and Content milestones are the intentional exception because they
+represent real outcomes rather than actions.
 
 ---
 
@@ -2220,6 +2227,15 @@ Phase 2R — Product Simplification Refactor
 COMPLETED
 
 Phase 3 — This Week + Complete Task Workflow
+COMPLETED
+
+Phase 3B — Weekly Recurrence
+COMPLETED
+
+Phase 4 — Dashboard
+COMPLETED
+
+Phase 5 — Career + Content
 COMPLETED
 
 ---
@@ -2409,6 +2425,7 @@ Implement Career:
 ```text
 Active
 Completed
+Career Milestones
 ```
 
 Implement Content:
@@ -2419,7 +2436,7 @@ Completed
 Content Milestones
 ```
 
-Implement milestone CRUD:
+Implement milestone CRUD for Career and Content:
 
 - create
 - edit

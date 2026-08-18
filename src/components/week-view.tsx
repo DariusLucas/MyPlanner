@@ -206,7 +206,7 @@ export function WeekView({ data }: { data: WeekData }) {
             </Link>
             <Link
               href="/week"
-              className={`${quietButton} ${thisWeek ? "border-[var(--orange)] bg-[var(--orange)] text-white" : ""}`}
+              className={`${quietButton} ${thisWeek ? "week-current-button" : ""}`}
             >
               <CalendarDays size={15} /> This week
             </Link>
@@ -219,7 +219,7 @@ export function WeekView({ data }: { data: WeekData }) {
           </div>
         </header>
         {composer && (
-          <Composer
+          <TaskComposer
             weekStart={data.weekStart}
             days={data.days.map((day) => day.date)}
             pending={pending === "create"}
@@ -355,21 +355,25 @@ function ConfirmDialog({
   );
 }
 
-function Composer({
+export function TaskComposer({
   weekStart,
   days,
   pending,
   onSubmit,
   onClose,
+  defaultCategory = "career",
+  lockCategory = false,
 }: {
   weekStart: string;
   days: string[];
   pending: boolean;
   onSubmit: (form: FormData) => Promise<void>;
   onClose: () => void;
+  defaultCategory?: TaskCategory;
+  lockCategory?: boolean;
 }) {
   const [placement, setPlacement] = useState(`anytime:${weekStart}`);
-  const [category, setCategory] = useState<TaskCategory>("career");
+  const [category, setCategory] = useState<TaskCategory>(defaultCategory);
   const [recurrenceCount, setRecurrenceCount] = useState("0");
   const [closing, setClosing] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -514,7 +518,11 @@ function Composer({
             </div>
           </div>
         )}
-        <p className="mt-4 mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
+        {lockCategory ? (
+          <p className="mt-4 rounded-xl border border-border bg-muted/45 px-3 py-2.5 text-sm text-muted-foreground">
+            Adding to <span className="font-semibold text-foreground">{categoryLabels[category]}</span>
+          </p>
+        ) : <><p className="mt-4 mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
           Category
         </p>
         <div className="choice-grid choice-grid-compact">
@@ -532,7 +540,7 @@ function Composer({
               {categoryLabels[value]}
             </button>
           ))}
-        </div>
+        </div></>}
         <input
           type="hidden"
           name="date"

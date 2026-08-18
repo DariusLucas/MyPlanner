@@ -1,0 +1,57 @@
+import assert from "node:assert/strict";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { eq } from "drizzle-orm";
+import { db } from "../src/db/client";
+import { quickThoughts, tasks } from "../src/db/schema";
+import { calculateStreak, getDashboardData, localDayBounds } from "../src/lib/dashboard";
+import { toggleTaskPersistence } from "../src/lib/task-completion";
+
+async function main() {
+migrate(db, { migrationsFolder: "./src/db/migrations" });
+db.delete(quickThoughts).run();
+db.delete(tasks).run();
+
+const now = new Date(2026, 9, 25, 12, 0, 0);
+const bounds = localDayBounds("2026-10-25");
+assert.equal((new Date(bounds.end).getTime() - new Date(bounds.start).getTime()) / 3_600_000, 25, "DST fallback day must span 25 hours in Europe/Bucharest");
+
+db.insert(tasks).values([
+  { title: "Today active", category: "career", date: "2026-10-25", position: 0 },
+  { title: "Overdue active", category: "content", date: "2026-10-24", position: 0 },
+  { title: "Anytime excluded", category: "other", date: "2026-10-20", anytimeWeekStart: "2026-10-20", position: 0 },
+  { title: "Completed today", category: "career", date: "2026-10-24", status: "completed", completedAt: "2026-10-25T09:00:00.000Z", position: 1 },
+  { title: "Completed yesterday", category: "career", date: "2026-10-24", status: "completed", completedAt: "2026-10-24T09:00:00.000Z", position: 2 },
+]).run();
+
+let data = getDashboardData(now);
+assert.deepEqual(data.active.map((task) => task.title), ["Today active"]);
+assert.deepEqual(data.overdue.map((task) => task.title), ["Overdue active"]);
+assert.deepEqual(data.completedToday.map((task) => task.title), ["Completed today"]);
+assert.deepEqual(data.counts, { completed: 1, remaining: 2, planned: 3 });
+
+const activeId = data.active[0]!.id;
+assert.equal(toggleTaskPersistence(activeId), true);
+assert.equal(db.select().from(tasks).where(eq(tasks.id, activeId)).get()!.status, "completed");
+assert.equal(toggleTaskPersistence(activeId), true);
+assert.equal(db.select().from(tasks).where(eq(tasks.id, activeId)).get()!.status, "not_started");
+assert.equal(db.select().from(tasks).where(eq(tasks.id, activeId)).get()!.completedAt, null);
+
+const thought = db.insert(quickThoughts).values({ text: "First thought" }).returning().get();
+db.update(quickThoughts).set({ text: "Edited thought" }).where(eq(quickThoughts.id, thought.id)).run();
+assert.equal(db.select().from(quickThoughts).where(eq(quickThoughts.id, thought.id)).get()!.text, "Edited thought");
+db.delete(quickThoughts).where(eq(quickThoughts.id, thought.id)).run();
+assert.equal(db.select().from(quickThoughts).where(eq(quickThoughts.id, thought.id)).get(), undefined);
+
+assert.deepEqual(calculateStreak(["2026-10-20", "2026-10-23"], "2026-10-26"), { current: 2, best: 2, state: "cold", graceDaysUsed: 2 });
+assert.equal(calculateStreak(["2026-10-20", "2026-10-23"], "2026-10-27").current, 0);
+assert.deepEqual(calculateStreak(["2026-10-20", "2026-10-23", "2026-10-26"], "2026-10-26"), { current: 3, best: 3, state: "hot", graceDaysUsed: 0 });
+
+data = getDashboardData(now);
+assert.equal(data.recentThoughts.length, 0);
+console.log("Dashboard Today contract, DST bounds, completion undo, streak grace, and thought CRUD passed.");
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

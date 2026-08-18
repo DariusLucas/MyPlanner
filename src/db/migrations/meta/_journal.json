@@ -29,6 +29,27 @@
       "when": 1786704079838,
       "tag": "0003_curious_apocalypse",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1787053274270,
+      "tag": "0004_normal_zarek",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1787054991175,
+      "tag": "0005_bent_karen_page",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1787055673524,
+      "tag": "0006_fancy_gamora",
+      "breakpoints": true
     }
   ]
 }

@@ -123,6 +123,32 @@ export const tasks = sqliteTable("tasks", {
   ...timestamps,
 }, (table) => ({
   dateStatus: index("tasks_date_status_idx").on(table.date, table.status),
+  completedAt: index("tasks_completed_at_idx").on(table.completedAt),
+  categoryStatus: index("tasks_category_status_idx").on(table.category, table.status),
   anytimeWeekStatus: index("tasks_anytime_week_status_idx").on(table.anytimeWeekStart, table.status),
   recurrenceInstance: uniqueIndex("tasks_recurrence_instance_idx").on(table.recurrenceId, table.recurrenceWeekStart, table.recurrenceIndex),
+}));
+
+export const contentMilestones = sqliteTable("content_milestones", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  category: text("category", { enum: ["career", "content"] }).notNull().default("content"),
+  label: text("label").notNull(),
+  type: text("type", { enum: ["views", "likes", "followers", "applications", "interviews", "offers", "custom"] })
+    .notNull()
+    .default("custom"),
+  targetValue: integer("target_value"),
+  achievedAt: text("achieved_at"),
+  ...timestamps,
+}, (table) => ({
+  achievedAt: index("content_milestones_achieved_at_idx").on(table.achievedAt),
+  createdAt: index("content_milestones_created_at_idx").on(table.createdAt),
+  categoryAchieved: index("content_milestones_category_achieved_idx").on(table.category, table.achievedAt),
+}));
+
+export const quickThoughts = sqliteTable("quick_thoughts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  text: text("text").notNull(),
+  ...timestamps,
+}, (table) => ({
+  createdAt: index("quick_thoughts_created_at_idx").on(table.createdAt),
 }));

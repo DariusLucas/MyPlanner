@@ -1,0 +1,2 @@
+ALTER TABLE `content_milestones` ADD `category` text DEFAULT 'content' NOT NULL;--> statement-breakpoint
+CREATE INDEX `content_milestones_category_achieved_idx` ON `content_milestones` (`category`,`achieved_at`);

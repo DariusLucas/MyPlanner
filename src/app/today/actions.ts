@@ -7,6 +7,7 @@ import { db } from "@/src/db/client";
 import { dailyFocus, taskRecurrences, tasks } from "@/src/db/schema";
 import { ensureRecurringInstances } from "@/src/lib/recurrence";
 import { taskCategories, taskPriorities, taskStatuses } from "@/src/lib/today";
+import { toggleTaskPersistence } from "@/src/lib/task-completion";
 import { revalidatePath } from "next/cache";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -330,23 +331,8 @@ export async function toggleTask(formData: FormData): Promise<ActionResult> {
   if (!parsed.success) return resultFromError(parsed.error);
 
   try {
-    const existing = db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.id, parsed.data.id))
-      .limit(1)
-      .get();
-    if (!existing) return { ok: false, error: "That task no longer exists." };
-
-    const completed = existing.status !== "completed";
-    db.update(tasks)
-      .set({
-        status: completed ? "completed" : "not_started",
-        completedAt: completed ? new Date().toISOString() : null,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(tasks.id, parsed.data.id))
-      .run();
+    if (!toggleTaskPersistence(parsed.data.id))
+      return { ok: false, error: "That task no longer exists." };
 
     revalidatePath("/week");
     revalidatePath("/");

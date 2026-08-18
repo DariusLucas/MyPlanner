@@ -1,14 +1,21 @@
 import { notFound } from "next/navigation";
+import { FocusAreaView } from "@/src/components/focus-area-view";
+import { getFocusAreaData, type FocusArea } from "@/src/lib/focus-areas";
+import { WeekView } from "@/src/components/week-view";
+import { getWeekData, normalizeWeekStart } from "@/src/lib/week";
 
 const sections: Record<string, { title: string; description: string }> = {
-  career: { title: "Career", description: "Career work will appear here once it is connected to your weekly tasks." },
-  content: { title: "Content", description: "Content work will appear here once it is connected to your weekly tasks." },
   progress: { title: "Progress", description: "Progress will be based on completed work once there is enough activity to show." },
   settings: { title: "Settings", description: "Theme controls are available in the sidebar. Additional settings will be introduced only when they support an active workflow." },
 };
 
-export default async function SectionPage({ params }: { params: Promise<{ section: string }> }) {
+export default async function SectionPage({ params, searchParams }: { params: Promise<{ section: string }>; searchParams: Promise<{ week?: string | string[] }> }) {
   const { section } = await params;
+  if (section === "week") {
+    const query = await searchParams;
+    return <WeekView data={getWeekData(normalizeWeekStart(query.week))} />;
+  }
+  if (section === "career" || section === "content") return <FocusAreaView data={getFocusAreaData(section as FocusArea)} />;
   const content = sections[section];
   if (!content) notFound();
 
