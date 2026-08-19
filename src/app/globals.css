@@ -115,8 +115,10 @@ select {
   font-size: 0.875rem;
   font-weight: 650;
   box-shadow: 0 10px 24px color-mix(in srgb, var(--orange) 25%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  transition: transform 180ms cubic-bezier(.16,1,.3,1), filter 180ms ease, box-shadow 180ms ease;
 }
 .premium-primary-button:hover { transform: translateY(-1px); filter: brightness(0.98); }
+.premium-primary-button:active { transform: translateY(1px) scale(.985); box-shadow: 0 5px 14px color-mix(in srgb, var(--orange) 20%, transparent); }
 .premium-primary-button:focus-visible,
 .premium-small-button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .premium-small-button {
@@ -131,7 +133,10 @@ select {
   font-size: 0.75rem;
   font-weight: 650;
   box-shadow: 0 5px 14px color-mix(in srgb, var(--orange) 18%, transparent);
+  transition: transform 160ms cubic-bezier(.16,1,.3,1), filter 160ms ease, box-shadow 160ms ease;
 }
+.premium-small-button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(.98); }
+.premium-small-button:active:not(:disabled) { transform: translateY(1px) scale(.985); }
 .premium-small-button:disabled { cursor: not-allowed !important; opacity: 0.48; box-shadow: none; }
 .week-current-button {
   border-color: var(--orange) !important;
@@ -162,8 +167,10 @@ select {
 .dashboard-progress-dial { display: grid; width: 48px; height: 48px; flex: 0 0 auto; place-items: center; border-radius: 999px; }
 .dashboard-progress-dial::before { content: ""; grid-area: 1 / 1; width: 38px; height: 38px; border-radius: inherit; background: color-mix(in srgb, var(--card) 94%, var(--background)); }
 .dashboard-progress-dial span { z-index: 1; grid-area: 1 / 1; font-size: 0.62rem; font-weight: 750; }
-.dashboard-task-row { display: flex; min-height: 62px; align-items: center; gap: 0.8rem; border: 1px solid transparent; border-radius: 18px; padding: 0.75rem; transition: background 180ms ease, border-color 180ms ease, transform 180ms ease; }
+.dashboard-task-row { position: relative; display: flex; min-height: 62px; align-items: center; gap: 0.8rem; border: 1px solid transparent; border-radius: 18px; padding: 0.75rem; transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, opacity 180ms ease; }
 .dashboard-task-row:hover { border-color: color-mix(in srgb, var(--orange) 14%, var(--border)); background: color-mix(in srgb, var(--muted) 62%, transparent); transform: translateY(-1px); }
+.dashboard-task-finishing { pointer-events: none; border-color: color-mix(in srgb, var(--orange) 26%, var(--border)); background: linear-gradient(100deg, color-mix(in srgb, var(--orange-soft) 36%, transparent), color-mix(in srgb, var(--muted) 52%, transparent)); animation: achievement-row 620ms cubic-bezier(.16,1,.3,1) both; }
+.dashboard-task-finishing p:first-child { color: var(--muted-foreground); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--orange) 68%, transparent); text-decoration-thickness: 1.5px; }
 .overdue-pill { border-radius: 999px; padding: 0.18rem 0.42rem; background: color-mix(in srgb, var(--orange-soft) 62%, transparent); color: var(--accent-foreground); font-size: 0.6rem; font-weight: 650; }
 .thought-input,
 .thought-edit-input { width: 100%; resize: vertical; border: 1px solid var(--border); border-radius: 16px; background: color-mix(in srgb, var(--background) 56%, transparent); padding: 0.8rem 0.9rem; color: var(--foreground); font-size: 0.8rem; line-height: 1.55; outline: none; }
@@ -179,23 +186,32 @@ select {
 .thought-icon-button:hover { background: var(--muted); color: var(--foreground); }
 .thought-quiet-button { border-radius: 9px; padding: 0.42rem 0.7rem; color: var(--muted-foreground); font-size: 0.75rem; font-weight: 550; }
 .thought-quiet-button:hover { background: var(--muted); color: var(--foreground); }
-.completion-toast { position: fixed; z-index: 60; right: 1.25rem; bottom: 1.25rem; display: flex; width: min(360px, calc(100vw - 2rem)); align-items: center; gap: 0.7rem; border: 1px solid var(--border); border-radius: 18px; padding: 0.75rem; background: color-mix(in srgb, var(--card) 94%, var(--background)); box-shadow: 0 18px 54px color-mix(in srgb, var(--foreground) 18%, transparent); backdrop-filter: blur(24px); animation: dashboard-toast-in 260ms cubic-bezier(.16,1,.3,1); }
+.completion-toast-stack { position: fixed; z-index: 80; left: 50%; bottom: 1.35rem; display: flex; width: min(440px, calc(100vw - 2rem)); max-height: min(55vh, 440px); flex-direction: column-reverse; gap: 0.55rem; transform: translateX(-50%); pointer-events: none; }
+.completion-toast { position: relative; display: flex; width: 100%; min-height: 64px; align-items: center; gap: 0.7rem; overflow: hidden; border: 1px solid color-mix(in srgb, var(--orange) 18%, var(--border)); border-radius: 18px; padding: 0.7rem 0.75rem 0.8rem; background: color-mix(in srgb, var(--card) 95%, var(--background)); box-shadow: 0 18px 54px color-mix(in srgb, var(--foreground) 16%, transparent); backdrop-filter: blur(24px) saturate(1.08); animation: dashboard-toast-in 300ms cubic-bezier(.16,1,.3,1) both; pointer-events: auto; }
+.completion-toast-icon { display: grid; width: 32px; height: 32px; flex: 0 0 auto; place-items: center; border-radius: 11px; background: color-mix(in srgb, var(--orange) 14%, var(--card)); color: var(--orange); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orange) 15%, transparent); }
+.completion-undo-button { display: inline-flex; min-height: 34px; flex: 0 0 auto; align-items: center; gap: .35rem; border-radius: 10px; padding: .4rem .6rem; color: var(--accent-foreground); font-size: .72rem; font-weight: 700; transition: background 160ms ease, transform 160ms cubic-bezier(.16,1,.3,1); }
+.completion-undo-button:hover { background: var(--accent); transform: translateY(-1px); }
+.completion-undo-button:disabled { opacity: .55; cursor: wait !important; }
+.completion-toast-timer { position: absolute; right: 0; bottom: 0; left: 0; height: 2px; background: linear-gradient(90deg, var(--orange), color-mix(in srgb, var(--orange) 38%, transparent)); transform-origin: left; animation: completion-timer 6s linear both; }
 .focus-card-heading { display: flex; min-height: 76px; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; }
 .focus-count { display: grid; min-width: 30px; height: 30px; place-items: center; border-radius: 999px; background: var(--muted); padding: 0 0.55rem; color: var(--muted-foreground); font-size: 0.72rem; font-weight: 700; }
-.focus-task-row { display: flex; min-height: 64px; align-items: center; gap: 0.8rem; border: 1px solid transparent; border-radius: 18px; padding: 0.75rem; transition: background 180ms ease, border-color 180ms ease, transform 180ms ease; }
+.focus-task-row { position: relative; display: flex; min-height: 64px; align-items: center; gap: 0.8rem; border: 1px solid transparent; border-radius: 18px; padding: 0.75rem; transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, opacity 180ms ease; }
 .focus-task-row:hover { border-color: color-mix(in srgb, var(--orange) 14%, var(--border)); background: color-mix(in srgb, var(--muted) 58%, transparent); transform: translateY(-1px); }
 .focus-task-completed:hover { transform: none; }
+.focus-task-finishing { pointer-events: none; border-color: color-mix(in srgb, var(--orange) 26%, var(--border)); background: linear-gradient(100deg, color-mix(in srgb, var(--orange-soft) 38%, transparent), color-mix(in srgb, var(--muted) 48%, transparent)); animation: achievement-row 620ms cubic-bezier(.16,1,.3,1) both; }
 .focus-reopen-button { display: grid; width: 28px; height: 28px; flex: 0 0 auto; place-items: center; border-radius: 999px; background: color-mix(in srgb, var(--orange) 12%, var(--card)); color: var(--orange); }
 .focus-reopen-button:hover { background: color-mix(in srgb, var(--orange) 20%, var(--card)); }
 .focus-add-button { display: inline-flex; min-height: 36px; flex: 0 0 auto; align-items: center; gap: 0.4rem; border-radius: 11px; padding: 0.45rem 0.75rem; color: var(--accent-foreground); font-size: 0.75rem; font-weight: 650; }
 .focus-add-button:hover { background: var(--accent); }
-.milestone-row { display: flex; min-height: 72px; align-items: center; gap: 0.7rem; border: 1px solid var(--border); border-radius: 18px; padding: 0.75rem; background: color-mix(in srgb, var(--background) 42%, transparent); }
+.milestone-row { position: relative; display: flex; min-height: 72px; align-items: center; gap: 0.7rem; border: 1px solid var(--border); border-radius: 18px; padding: 0.75rem; background: color-mix(in srgb, var(--background) 42%, transparent); transition: background 200ms ease, border-color 200ms ease, transform 200ms cubic-bezier(.16,1,.3,1); }
+.milestone-row:hover { border-color: color-mix(in srgb, var(--orange) 17%, var(--border)); }
 .milestone-achieved { background: color-mix(in srgb, var(--muted) 45%, transparent); }
+.milestone-celebrating { border-color: color-mix(in srgb, var(--orange) 35%, var(--border)); background: linear-gradient(105deg, color-mix(in srgb, var(--orange-soft) 58%, var(--card)), color-mix(in srgb, var(--card) 88%, transparent)); animation: milestone-achieved 760ms cubic-bezier(.16,1,.3,1) both; }
 .milestone-check { display: grid; width: 25px; height: 25px; place-items: center; border: 1.5px solid color-mix(in srgb, var(--muted-foreground) 48%, transparent); border-radius: 999px; color: white; }
-.milestone-achieved .milestone-check { border-color: var(--orange); background: var(--orange); }
+.milestone-achieved .milestone-check, .milestone-celebrating .milestone-check { border-color: var(--orange); background: var(--orange); }
 .milestone-icon-button { border-radius: 8px; padding: 0.42rem; color: var(--muted-foreground); }
 .milestone-icon-button:hover { background: var(--muted); color: var(--foreground); }
-.milestone-form { display: grid; gap: 0.65rem; border-top: 1px solid var(--border); padding: 1rem 1.25rem; background: color-mix(in srgb, var(--muted) 36%, transparent); }
+.milestone-form { display: grid; gap: 0.65rem; border-top: 1px solid var(--border); padding: 1rem 1.25rem; background: color-mix(in srgb, var(--muted) 36%, transparent); transform-origin: top center; animation: milestone-form-in 280ms cubic-bezier(.16,1,.3,1) both; }
 .milestone-list { border-radius: 0 0 28px 28px; }
 .focus-input { width: 100%; min-height: 40px; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--background) 68%, transparent); padding: 0.55rem 0.75rem; color: var(--foreground); font-size: 0.8rem; outline: none; }
 .focus-input:focus { border-color: color-mix(in srgb, var(--orange) 60%, var(--border)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--orange) 10%, transparent); }
@@ -212,16 +228,20 @@ select {
 .themed-select-option:hover, .themed-select-option[aria-selected="true"] { background: color-mix(in srgb, var(--orange) 11%, var(--muted)); }
 .themed-select-option[aria-selected="true"] strong, .themed-select-option[aria-selected="true"] svg { color: var(--orange); }
 @keyframes themed-select-in { from { opacity: 0; transform: translateY(-5px) scale(.98); } }
+@keyframes milestone-form-in { from { opacity: 0; transform: translateY(-8px) scaleY(.96); } }
 @media (min-width: 640px) { .milestone-form { grid-template-columns: 1fr 1fr; } }
 .thought-dialog-backdrop { position: fixed; z-index: 70; inset: 0; display: grid; place-items: center; padding: 1rem; background: color-mix(in srgb, var(--foreground) 22%, transparent); backdrop-filter: blur(5px); animation: dashboard-fade-in 180ms ease-out; }
 .thought-dialog { width: min(620px, 100%); overflow: hidden; border: 1px solid var(--border); border-radius: 26px; background: color-mix(in srgb, var(--card) 98%, var(--background)); box-shadow: 0 28px 90px color-mix(in srgb, var(--foreground) 24%, transparent); backdrop-filter: blur(30px); animation: dashboard-dialog-in 240ms cubic-bezier(.16,1,.3,1); }
-@keyframes dashboard-toast-in { from { opacity: 0; transform: translateY(12px) scale(.97); } }
+@keyframes dashboard-toast-in { from { opacity: 0; transform: translateY(14px) scale(.965); } }
+@keyframes completion-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes achievement-row { 0% { transform: scale(1); } 42% { transform: translateY(-1px) scale(1.008); box-shadow: 0 9px 25px color-mix(in srgb, var(--orange) 10%, transparent); } 100% { transform: scale(.985); opacity: .7; } }
+@keyframes milestone-achieved { 0% { transform: scale(1); } 48% { transform: translateY(-2px) scale(1.012); box-shadow: 0 12px 30px color-mix(in srgb, var(--orange) 14%, transparent); } 100% { transform: none; } }
 @keyframes dashboard-fade-in { from { opacity: 0; } }
 @keyframes dashboard-dialog-in { from { opacity: 0; transform: translateY(12px) scale(.98); } }
 @media (max-width: 640px) {
   .streak-banner { border-radius: 20px; }
   .dashboard-card-heading { padding: 1rem; }
-  .completion-toast { right: 1rem; bottom: 1rem; }
+  .completion-toast-stack { bottom: .8rem; width: calc(100vw - 1.25rem); }
   .thought-icon-button { opacity: 1; }
   .focus-card-heading { align-items: flex-start; padding: 1rem; }
   .milestone-heading { flex-direction: column; align-items: stretch; }
@@ -323,6 +343,7 @@ select {
   color: white;
 }
 .task-check {
+  position: relative;
   display: grid;
   place-items: center;
   width: 20px;
@@ -335,6 +356,10 @@ select {
     border-color 0.16s ease,
     background 0.16s ease;
 }
+.completion-check-bloom { position: relative; isolation: isolate; overflow: visible; }
+.completion-check-bloom::before { content: ""; position: absolute; z-index: 0; inset: -8px; border: 1.5px solid color-mix(in srgb, var(--orange) 58%, transparent); border-radius: inherit; animation: achievement-ring 680ms cubic-bezier(.16,1,.3,1) both; pointer-events: none; }
+.completion-check-bloom::after { content: ""; position: absolute; z-index: 0; top: 50%; left: 50%; width: 3px; height: 3px; border-radius: 999px; background: var(--orange); box-shadow: 0 -15px 0 -1px color-mix(in srgb, var(--orange) 80%, white), 13px -8px 0 -1px color-mix(in srgb, var(--orange) 58%, transparent), 14px 8px 0 -1px color-mix(in srgb, var(--orange) 46%, transparent), 0 15px 0 -1px color-mix(in srgb, var(--orange) 66%, transparent), -13px 8px 0 -1px color-mix(in srgb, var(--orange) 44%, transparent), -13px -8px 0 -1px color-mix(in srgb, var(--orange) 58%, transparent); animation: achievement-sparks 660ms cubic-bezier(.16,1,.3,1) both; pointer-events: none; }
+.completion-check-bloom > svg { position: relative; z-index: 2; }
 .task-check:hover {
   border-color: var(--orange);
   background: var(--orange-soft);
@@ -819,6 +844,8 @@ select {
     transform: scale(1);
   }
 }
+@keyframes achievement-ring { 0% { opacity: 0; transform: scale(.45); } 28% { opacity: .78; } 100% { opacity: 0; transform: scale(1.55); } }
+@keyframes achievement-sparks { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.25) rotate(-12deg); } 30% { opacity: .95; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.2) rotate(9deg); } }
 @keyframes task-check-reopen {
   0% {
     transform: scale(1.08);
@@ -1145,6 +1172,22 @@ select {
   animation: page-enter 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.dashboard-shell > :not(.modal-backdrop):not(.completion-toast-stack),
+.focus-area-shell > :not(.modal-backdrop):not(.completion-toast-stack),
+.week-page-shell > :not(.modal-backdrop):not(.completion-toast-stack) {
+  animation: workspace-surface-in 420ms cubic-bezier(.16,1,.3,1) both;
+}
+.dashboard-shell > :nth-child(2),
+.focus-area-shell > :nth-child(2),
+.week-page-shell > :nth-child(2) { animation-delay: 35ms; }
+.dashboard-shell > :nth-child(3),
+.focus-area-shell > :nth-child(3),
+.week-page-shell > :nth-child(3) { animation-delay: 70ms; }
+.dashboard-shell > :nth-child(n+4),
+.focus-area-shell > :nth-child(n+4),
+.week-page-shell > :nth-child(n+4) { animation-delay: 95ms; }
+@keyframes workspace-surface-in { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+
 @media (prefers-reduced-motion: reduce) {
   .page-transition {
     animation: none;
@@ -1162,6 +1205,17 @@ select {
     transition: none !important;
   }
   .task-composer,
+  .dashboard-shell > *,
+  .focus-area-shell > *,
+  .week-page-shell > *,
+  .dashboard-task-finishing,
+  .focus-task-finishing,
+  .milestone-form,
+  .milestone-celebrating,
+  .completion-toast,
+  .completion-toast-timer,
+  .completion-check-bloom::before,
+  .completion-check-bloom::after,
   .week-view-switch,
   .task-check-completed,
   .week-task-completed,

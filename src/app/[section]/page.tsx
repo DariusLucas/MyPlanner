@@ -19,5 +19,5 @@ export default async function SectionPage({ params, searchParams }: { params: Pr
   const content = sections[section];
   if (!content) notFound();
 
-  return <section className="mx-auto flex min-h-[360px] max-w-xl flex-col justify-center"><p className="text-xs font-semibold uppercase tracking-[0.13em] text-muted-foreground">Workspace</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.055em]">{content.title}</h1><p className="mt-3 text-sm leading-6 text-muted-foreground">{content.description}</p></section>;
+  return <section className="mx-auto flex min-h-[360px] w-full max-w-[1500px] flex-col justify-center"><div className="max-w-xl"><p className="text-xs font-semibold uppercase tracking-[0.13em] text-muted-foreground">Workspace</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.055em]">{content.title}</h1><p className="mt-3 text-sm leading-6 text-muted-foreground">{content.description}</p></div></section>;
 }

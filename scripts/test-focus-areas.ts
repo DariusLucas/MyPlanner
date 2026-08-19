@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { db } from "../src/db/client";
-import { contentMilestones, tasks } from "../src/db/schema";
-import { createFocusMilestone, deleteFocusMilestone, getFocusAreaData, setFocusMilestoneAchieved, updateFocusMilestone } from "../src/lib/focus-areas";
+import os from "node:os";
+import path from "node:path";
 
-function main() {
+process.env.DATABASE_URL = path.join(os.tmpdir(), `my-planner-focus-areas-${process.pid}.db`);
+
+async function main() {
+  const { migrate } = await import("drizzle-orm/better-sqlite3/migrator");
+  const { db } = await import("../src/db/client");
+  const { contentMilestones, tasks } = await import("../src/db/schema");
+  const { createFocusMilestone, deleteFocusMilestone, getFocusAreaData, setFocusMilestoneAchieved, updateFocusMilestone } = await import("../src/lib/focus-areas");
   migrate(db, { migrationsFolder: "./src/db/migrations" });
   db.delete(contentMilestones).run(); db.delete(tasks).run();
   db.insert(tasks).values([
@@ -36,4 +40,7 @@ function main() {
   assert.equal(db.select().from(contentMilestones).all().length, 0);
   console.log("Career/Content filtering and shared milestone CRUD persistence passed.");
 }
-main();
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

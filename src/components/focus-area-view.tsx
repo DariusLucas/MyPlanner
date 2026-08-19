@@ -31,6 +31,8 @@ type Runner = (key: string, action: (form: FormData) => Promise<ActionResult>, f
 export function FocusAreaView({ data }: { data: FocusAreaData }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
+  const [pendingTaskIds, setPendingTaskIds] = useState<Set<number>>(new Set());
+  const [finishingIds, setFinishingIds] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [composer, setComposer] = useState(false);
   const weekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
@@ -44,32 +46,46 @@ export function FocusAreaView({ data }: { data: FocusAreaData }) {
   }
   async function toggle(task: TodayTask) {
     const form = new FormData(); form.set("id", String(task.id));
-    await run(`task-${task.id}`, toggleTask, form);
+    const completing = task.status !== "completed";
+    setError(null);
+    setPendingTaskIds((current) => new Set(current).add(task.id));
+    if (completing) setFinishingIds((current) => new Set(current).add(task.id));
+    const result = await toggleTask(form);
+    if (!result.ok) {
+      setError(result.error);
+      setPendingTaskIds((current) => { const next = new Set(current); next.delete(task.id); return next; });
+      setFinishingIds((current) => { const next = new Set(current); next.delete(task.id); return next; });
+      return;
+    }
+    if (completing) await new Promise((resolve) => window.setTimeout(resolve, 620));
+    setPendingTaskIds((current) => { const next = new Set(current); next.delete(task.id); return next; });
+    setFinishingIds((current) => { const next = new Set(current); next.delete(task.id); return next; });
+    router.refresh();
   }
   const title = data.category === "career" ? "Career" : "Content";
-  return <div className="focus-area-shell mx-auto max-w-[1120px] space-y-6 sm:space-y-7">
+  return <div className="focus-area-shell mx-auto w-full max-w-[1500px] space-y-6 sm:space-y-7">
     <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-medium text-muted-foreground">Focused workspace</p><h1 className="mt-1.5 text-3xl font-semibold tracking-[-0.055em] sm:text-[2.6rem]">{title}</h1><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Actions planned in This Week, with finished work kept close for perspective.</p></div><button onClick={() => setComposer(true)} className="premium-primary-button"><Plus size={16} /> Add task</button></header>
     {error && <div role="alert" className="flex items-center justify-between rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm">{error}<button onClick={() => setError(null)} aria-label="Dismiss"><X size={16} /></button></div>}
     {composer && <TaskComposer weekStart={weekStart} days={weekDays} defaultCategory={data.category} lockCategory pending={pending === "create-task"} onSubmit={(form) => run("create-task", createTask, form, () => setComposer(false))} onClose={() => setComposer(false)} />}
     <MilestonesPanel category={data.category} milestones={data.milestones} pending={pending} run={run} />
     <div className="grid items-start gap-6 lg:grid-cols-2">
-      <TaskSection title="Active" subtitle="Work still in motion" tasks={data.active} pending={pending} onToggle={toggle} />
-      <TaskSection title="Completed" subtitle="Your finished work stays visible" tasks={data.completed} completed pending={pending} onToggle={toggle} />
+      <TaskSection title="Active" subtitle="Work still in motion" tasks={data.active} pendingIds={pendingTaskIds} finishingIds={finishingIds} onToggle={toggle} />
+      <TaskSection title="Completed" subtitle="Your finished work stays visible" tasks={data.completed} completed pendingIds={pendingTaskIds} finishingIds={finishingIds} onToggle={toggle} />
     </div>
   </div>;
 }
 
-function TaskSection({ title, subtitle, tasks, completed = false, pending, onToggle }: { title: string; subtitle: string; tasks: TodayTask[]; completed?: boolean; pending: string | null; onToggle: (task: TodayTask) => Promise<void> }) {
-  return <section className="glass-panel overflow-hidden rounded-[28px]"><div className="focus-card-heading"><div><p className="dashboard-eyebrow">{title}</p><p className="mt-1.5 text-sm text-muted-foreground">{subtitle}</p></div><span className="focus-count">{tasks.length}</span></div><div className="border-t border-border p-3 sm:p-4">{tasks.length ? <div className="space-y-1">{tasks.map((task) => <TaskRow key={task.id} task={task} completed={completed} pending={pending === `task-${task.id}`} onToggle={() => onToggle(task)} />)}</div> : <EmptyTasks completed={completed} />}</div></section>;
+function TaskSection({ title, subtitle, tasks, completed = false, pendingIds, finishingIds, onToggle }: { title: string; subtitle: string; tasks: TodayTask[]; completed?: boolean; pendingIds: Set<number>; finishingIds: Set<number>; onToggle: (task: TodayTask) => Promise<void> }) {
+  return <section className="glass-panel overflow-hidden rounded-[28px]"><div className="focus-card-heading"><div><p className="dashboard-eyebrow">{title}</p><p className="mt-1.5 text-sm text-muted-foreground">{subtitle}</p></div><span className="focus-count">{tasks.length}</span></div><div className="border-t border-border p-3 sm:p-4">{tasks.length ? <div className="space-y-1">{tasks.map((task) => <TaskRow key={task.id} task={task} completed={completed} pending={pendingIds.has(task.id)} finishing={finishingIds.has(task.id)} onToggle={() => onToggle(task)} />)}</div> : <EmptyTasks completed={completed} />}</div></section>;
 }
 
-function TaskRow({ task, completed, pending, onToggle }: { task: TodayTask; completed: boolean; pending: boolean; onToggle: () => void }) {
+function TaskRow({ task, completed, pending, finishing, onToggle }: { task: TodayTask; completed: boolean; pending: boolean; finishing: boolean; onToggle: () => void }) {
   const date = completed && task.completedAt ? format(new Date(task.completedAt), "MMM d, yyyy") : task.anytimeWeekStart ? `Week of ${format(parseISO(task.anytimeWeekStart), "MMM d")}` : format(parseISO(task.date), "MMM d, yyyy");
-  return <article className={`focus-task-row group ${completed ? "focus-task-completed" : ""}`}><button type="button" onClick={onToggle} disabled={pending} className={completed ? "focus-reopen-button" : "task-check"} aria-label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}>{completed ? <RotateCcw size={13} /> : pending ? <span /> : null}</button><div className="min-w-0 flex-1"><p className={`text-sm font-medium leading-5 ${completed ? "text-muted-foreground line-through decoration-[var(--orange)]/45" : ""}`}>{task.title}</p><p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground"><span>{date}</span>{task.estimatedMinutes ? <><span>·</span><Clock3 size={11} /> {task.estimatedMinutes} min</> : null}<span>·</span><span>{statusLabels[task.status]}</span></p></div></article>;
+  return <article className={`focus-task-row group ${completed ? "focus-task-completed" : ""} ${finishing ? "focus-task-finishing" : ""}`}><button type="button" onClick={onToggle} disabled={pending} className={completed ? "focus-reopen-button" : `task-check ${finishing ? "completion-check-bloom" : ""}`} aria-label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}>{completed ? <RotateCcw size={13} /> : finishing ? <Check size={13} strokeWidth={3} /> : null}</button><div className="min-w-0 flex-1"><p className={`text-sm font-medium leading-5 ${completed || finishing ? "text-muted-foreground line-through decoration-[var(--orange)]/45" : ""}`}>{task.title}</p><p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground"><span>{date}</span>{task.estimatedMinutes ? <><span>·</span><Clock3 size={11} /> {task.estimatedMinutes} min</> : null}<span>·</span><span>{finishing ? "Completed" : statusLabels[task.status]}</span></p></div></article>;
 }
 
 function EmptyTasks({ completed }: { completed: boolean }) {
-  return <div className="flex min-h-40 flex-col items-center justify-center px-5 text-center"><span className="grid size-11 place-items-center rounded-2xl bg-accent text-accent-foreground">{completed ? <Check size={18} /> : <Clock3 size={18} />}</span><p className="mt-3 font-semibold">{completed ? "No completed work yet." : "Nothing active here."}</p><p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">{completed ? "Completed tasks will stay available here." : "Plan a task in This Week when there is a clear next action."}</p></div>;
+  return <div className="flex min-h-40 flex-col items-center justify-center px-5 text-center"><span className="grid size-11 place-items-center rounded-2xl bg-accent text-accent-foreground">{completed ? <Check size={18} /> : <Clock3 size={18} />}</span><p className="mt-3 font-semibold">{completed ? "No completed work yet." : "Nothing active here."}</p><p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">{completed ? "Completed tasks will stay available here." : "Use Add task above when there is a clear next action."}</p></div>;
 }
 
 function MilestonesPanel({ category, milestones, pending, run }: { category: FocusArea; milestones: FocusAreaData["milestones"]; pending: string | null; run: Runner }) {
@@ -88,7 +104,16 @@ function MilestoneForm({ category, milestone, submitLabel, pending, onCancel, ac
 
 function MilestoneRow({ category, milestone, pending, confirming, onToggle, onEdit, onConfirmDelete, onCancelDelete, onDelete }: { category: FocusArea; milestone: FocusMilestone; pending: boolean; confirming: boolean; onToggle: (form: FormData) => Promise<void>; onEdit: () => void; onConfirmDelete: () => void; onCancelDelete: () => void; onDelete: (form: FormData) => Promise<void> }) {
   const achieved = Boolean(milestone.achievedAt);
-  return <article className={`milestone-row ${achieved ? "milestone-achieved" : ""}`}><form action={onToggle}><input type="hidden" name="id" value={milestone.id} /><input type="hidden" name="category" value={category} /><input type="hidden" name="achieved" value={String(!achieved)} /><button disabled={pending} className="milestone-check" aria-label={achieved ? `Reopen ${milestone.label}` : `Mark ${milestone.label} achieved`}>{achieved && <Check size={13} strokeWidth={3} />}</button></form><div className="min-w-0 flex-1"><p className={`text-sm font-semibold ${achieved ? "text-muted-foreground line-through" : ""}`}>{milestone.label}</p><p className="mt-1 text-[10px] text-muted-foreground">{milestone.targetValue ? `${milestone.targetValue.toLocaleString()} ${milestoneTypeLabels[milestone.type].toLowerCase()}` : milestoneTypeLabels[milestone.type]}{milestone.achievedAt ? ` · Achieved ${format(new Date(milestone.achievedAt), "MMM d, yyyy")}` : ""}</p></div><div className="flex items-center">{confirming ? <><span className="mr-1 text-[10px] text-muted-foreground">Delete?</span><form action={onDelete}><input type="hidden" name="id" value={milestone.id} /><input type="hidden" name="category" value={category} /><button disabled={pending} className="milestone-icon-button text-rose-700" aria-label="Confirm delete"><Check size={14} /></button></form><button onClick={onCancelDelete} className="milestone-icon-button" aria-label="Cancel delete"><X size={14} /></button></> : <><button onClick={onEdit} className="milestone-icon-button" aria-label={`Edit ${milestone.label}`}><Pencil size={13} /></button><button onClick={onConfirmDelete} className="milestone-icon-button hover:text-rose-700" aria-label={`Delete ${milestone.label}`}><Trash2 size={13} /></button></>}</div></article>;
+  const [celebrating, setCelebrating] = useState(false);
+  async function handleToggle(form: FormData) {
+    if (!achieved) {
+      setCelebrating(true);
+      await new Promise((resolve) => window.setTimeout(resolve, 180));
+    }
+    await onToggle(form);
+    if (!achieved) window.setTimeout(() => setCelebrating(false), 700);
+  }
+  return <article className={`milestone-row ${achieved ? "milestone-achieved" : ""} ${celebrating ? "milestone-celebrating" : ""}`}><form action={handleToggle}><input type="hidden" name="id" value={milestone.id} /><input type="hidden" name="category" value={category} /><input type="hidden" name="achieved" value={String(!achieved)} /><button disabled={pending || celebrating} className={`milestone-check ${celebrating ? "completion-check-bloom" : ""}`} aria-label={achieved ? `Reopen ${milestone.label}` : `Mark ${milestone.label} achieved`}>{(achieved || celebrating) && <Check size={13} strokeWidth={3} />}</button></form><div className="min-w-0 flex-1"><p className={`text-sm font-semibold ${achieved || celebrating ? "text-muted-foreground line-through" : ""}`}>{milestone.label}</p><p className="mt-1 text-[10px] text-muted-foreground">{milestone.targetValue ? `${milestone.targetValue.toLocaleString()} ${milestoneTypeLabels[milestone.type].toLowerCase()}` : milestoneTypeLabels[milestone.type]}{milestone.achievedAt ? ` · Achieved ${format(new Date(milestone.achievedAt), "MMM d, yyyy")}` : celebrating ? " · Milestone achieved" : ""}</p></div><div className="flex items-center">{confirming ? <><span className="mr-1 text-[10px] text-muted-foreground">Delete?</span><form action={onDelete}><input type="hidden" name="id" value={milestone.id} /><input type="hidden" name="category" value={category} /><button disabled={pending} className="milestone-icon-button text-rose-700" aria-label="Confirm delete"><Check size={14} /></button></form><button type="button" onClick={onCancelDelete} className="milestone-icon-button" aria-label="Cancel delete"><X size={14} /></button></> : <><button type="button" onClick={onEdit} className="milestone-icon-button" aria-label={`Edit ${milestone.label}`}><Pencil size={13} /></button><button type="button" onClick={onConfirmDelete} className="milestone-icon-button hover:text-rose-700" aria-label={`Delete ${milestone.label}`}><Trash2 size={13} /></button></>}</div></article>;
 }
 
 function ThemedSelect({ name, initialValue, options }: { name: string; initialValue: FocusMilestone["type"]; options: Array<{ value: FocusMilestone["type"]; label: string; hint: string }> }) {

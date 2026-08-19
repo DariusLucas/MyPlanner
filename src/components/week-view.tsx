@@ -180,7 +180,7 @@ export function WeekView({ data }: { data: WeekData }) {
 
   return (
     <ConfirmDialogContext.Provider value={requestConfirmation}>
-      <div className="space-y-6">
+      <div className="week-page-shell space-y-6">
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-muted-foreground">
@@ -716,8 +716,10 @@ function RecurringTaskCard({
 }) {
   const checkIns = recurrence.tasks.slice(0, recurrence.countPerWeek);
   const task = checkIns[0]!;
+  const [visualStates, setVisualStates] = useState<Record<number, boolean>>({});
+  const [celebratingId, setCelebratingId] = useState<number | null>(null);
   const completed = checkIns.filter(
-    (instance) => instance.status === "completed",
+    (instance) => visualStates[instance.id] ?? instance.status === "completed",
   ).length;
   const total = recurrence.countPerWeek;
   return (
@@ -738,11 +740,17 @@ function RecurringTaskCard({
             aria-label={`${task.title}: ${completed} of ${total} complete`}
           >
             {checkIns.map((instance, index) => {
-              const instanceCompleted = instance.status === "completed";
+              const instanceCompleted = visualStates[instance.id] ?? instance.status === "completed";
               return (
                 <form
                   key={instance.id}
                   action={(form) => {
+                    const nextCompleted = !instanceCompleted;
+                    setVisualStates((current) => ({ ...current, [instance.id]: nextCompleted }));
+                    if (nextCompleted) {
+                      setCelebratingId(instance.id);
+                      window.setTimeout(() => setCelebratingId((current) => current === instance.id ? null : current), 720);
+                    }
                     onCompletionChange?.(instance.id, !instanceCompleted);
                     return run(`toggle-${instance.id}`, toggleTask, form);
                   }}
@@ -755,7 +763,7 @@ function RecurringTaskCard({
                         ? `Undo check-in ${index + 1} for ${task.title}`
                         : `Complete check-in ${index + 1} for ${task.title}`
                     }
-                    className={`recurrence-check ${instanceCompleted ? "recurrence-check-completed" : ""}`}
+                    className={`recurrence-check ${instanceCompleted ? "recurrence-check-completed" : ""} ${celebratingId === instance.id ? "completion-check-bloom task-check-animate-complete" : ""}`}
                   >
                     {instanceCompleted ? (
                       <Check size={11} strokeWidth={3} />
@@ -958,7 +966,7 @@ function TaskCard({
                 ? `Reopen ${task.title}`
                 : `Mark ${task.title} complete`
             }
-            className={`task-check ${visualCompleted ? "task-check-completed" : ""} ${checkAnimationClass}`}
+            className={`task-check ${visualCompleted ? "task-check-completed" : ""} ${checkAnimationClass} ${checkAnimation === "complete" ? "completion-check-bloom" : ""}`}
           >
             {visualCompleted ? <Check size={12} strokeWidth={3} /> : null}
           </button>
@@ -1158,15 +1166,20 @@ function AnytimeKanbanTaskCard({
   const [visualCompleted, setVisualCompleted] = useState(
     task.status === "completed",
   );
+  const [celebrating, setCelebrating] = useState(false);
   function toggle(form: FormData) {
     const nextCompleted = !visualCompleted;
     setVisualCompleted(nextCompleted);
+    if (nextCompleted) {
+      setCelebrating(true);
+      window.setTimeout(() => setCelebrating(false), 720);
+    }
     onCompletionChange(task.id, nextCompleted);
     return run(`toggle-${task.id}`, toggleTask, form);
   }
   return (
     <article
-      className={`week-task-card anytime-kanban-task-card ${visualCompleted ? "week-task-completed" : ""}`}
+      className={`week-task-card anytime-kanban-task-card ${visualCompleted ? "week-task-completed" : ""} ${celebrating ? "week-task-checking-complete" : ""}`}
     >
       <div className="flex items-start gap-3">
         <form action={toggle}>
@@ -1178,7 +1191,7 @@ function AnytimeKanbanTaskCard({
                 ? `Reopen ${task.title}`
                 : `Complete ${task.title}`
             }
-            className={`recurrence-check ${visualCompleted ? "recurrence-check-completed" : ""}`}
+            className={`recurrence-check ${visualCompleted ? "recurrence-check-completed" : ""} ${celebrating ? "completion-check-bloom task-check-animate-complete" : ""}`}
           >
             {visualCompleted ? <Check size={11} strokeWidth={3} /> : null}
           </button>

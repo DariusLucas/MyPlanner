@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { eq } from "drizzle-orm";
-import { db } from "../src/db/client";
-import { quickThoughts, tasks } from "../src/db/schema";
-import { calculateStreak, getDashboardData, localDayBounds } from "../src/lib/dashboard";
-import { toggleTaskPersistence } from "../src/lib/task-completion";
+import os from "node:os";
+import path from "node:path";
+
+process.env.DATABASE_URL = path.join(os.tmpdir(), `my-planner-dashboard-${process.pid}.db`);
 
 async function main() {
+const { migrate } = await import("drizzle-orm/better-sqlite3/migrator");
+const { eq } = await import("drizzle-orm");
+const { db } = await import("../src/db/client");
+const { quickThoughts, tasks } = await import("../src/db/schema");
+const { calculateStreak, getDashboardData, localDayBounds } = await import("../src/lib/dashboard");
+const { toggleTaskPersistence } = await import("../src/lib/task-completion");
 migrate(db, { migrationsFolder: "./src/db/migrations" });
 db.delete(quickThoughts).run();
 db.delete(tasks).run();
