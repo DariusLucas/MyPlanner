@@ -180,14 +180,14 @@ export function WeekView({ data }: { data: WeekData }) {
 
   return (
     <ConfirmDialogContext.Provider value={requestConfirmation}>
-      <div className="week-page-shell space-y-6">
+      <div className="week-page-shell mx-auto w-full max-w-[1500px] space-y-6 sm:space-y-7">
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-muted-foreground">
               {format(parseISO(data.weekStart), "MMMM d")} –{" "}
               {format(parseISO(data.weekEnd), "MMMM d, yyyy")}
             </p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-[-.055em] sm:text-4xl">
+            <h1 className="mt-1.5 text-3xl font-semibold tracking-[-.055em] sm:text-[2.6rem]">
               {thisWeek ? "This Week" : "Week plan"}
             </h1>
           </div>
@@ -223,9 +223,11 @@ export function WeekView({ data }: { data: WeekData }) {
             weekStart={data.weekStart}
             days={data.days.map((day) => day.date)}
             pending={pending === "create"}
-            onSubmit={(form) =>
-              run("create", createTask, form, () => setComposer(false))
-            }
+            onSubmit={async (form) => {
+              let created = false;
+              await run("create", createTask, form, () => { created = true; });
+              return created;
+            }}
             onClose={() => setComposer(false)}
           />
         )}
@@ -367,7 +369,7 @@ export function TaskComposer({
   weekStart: string;
   days: string[];
   pending: boolean;
-  onSubmit: (form: FormData) => Promise<void>;
+  onSubmit: (form: FormData) => Promise<boolean>;
   onClose: () => void;
   defaultCategory?: TaskCategory;
   lockCategory?: boolean;
@@ -408,8 +410,13 @@ export function TaskComposer({
   }, []);
 
   function close() {
+    if (closing) return;
     setClosing(true);
     setTimeout(onClose, 220);
+  }
+  async function submit(form: FormData) {
+    const created = await onSubmit(form);
+    if (created) close();
   }
   if (!mounted) return null;
 
@@ -422,7 +429,7 @@ export function TaskComposer({
       }}
     >
       <form
-        action={onSubmit}
+        action={submit}
         className="task-composer"
         role="dialog"
         aria-modal="true"

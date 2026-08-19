@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { addDays, format, parseISO, startOfWeek } from "date-fns";
 import { Check, ChevronDown, Clock3, Flag, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { createMilestone, deleteMilestone, toggleMilestone, updateMilestone } from "@/src/app/content-actions";
@@ -62,11 +63,19 @@ export function FocusAreaView({ data }: { data: FocusAreaData }) {
     setFinishingIds((current) => { const next = new Set(current); next.delete(task.id); return next; });
     router.refresh();
   }
+  async function addFocusTask(form: FormData) {
+    setPending("create-task"); setError(null);
+    const result = await createTask(form);
+    setPending(null);
+    if (!result.ok) { setError(result.error); return false; }
+    router.refresh();
+    return true;
+  }
   const title = data.category === "career" ? "Career" : "Content";
   return <div className="focus-area-shell mx-auto w-full max-w-[1500px] space-y-6 sm:space-y-7">
     <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-medium text-muted-foreground">Focused workspace</p><h1 className="mt-1.5 text-3xl font-semibold tracking-[-0.055em] sm:text-[2.6rem]">{title}</h1><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Actions planned in This Week, with finished work kept close for perspective.</p></div><button onClick={() => setComposer(true)} className="premium-primary-button"><Plus size={16} /> Add task</button></header>
     {error && <div role="alert" className="flex items-center justify-between rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm">{error}<button onClick={() => setError(null)} aria-label="Dismiss"><X size={16} /></button></div>}
-    {composer && <TaskComposer weekStart={weekStart} days={weekDays} defaultCategory={data.category} lockCategory pending={pending === "create-task"} onSubmit={(form) => run("create-task", createTask, form, () => setComposer(false))} onClose={() => setComposer(false)} />}
+    {composer && <TaskComposer weekStart={weekStart} days={weekDays} defaultCategory={data.category} lockCategory pending={pending === "create-task"} onSubmit={addFocusTask} onClose={() => setComposer(false)} />}
     <MilestonesPanel category={data.category} milestones={data.milestones} pending={pending} run={run} />
     <div className="grid items-start gap-6 lg:grid-cols-2">
       <TaskSection title="Active" subtitle="Work still in motion" tasks={data.active} pendingIds={pendingTaskIds} finishingIds={finishingIds} onToggle={toggle} />
@@ -94,7 +103,19 @@ function MilestonesPanel({ category, milestones, pending, run }: { category: Foc
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const all = [...milestones.active, ...milestones.achieved];
   const areaLabel = category === "career" ? "Career" : "Content";
-  return <section className="glass-panel overflow-visible rounded-[28px]"><div className="focus-card-heading milestone-heading"><div className="flex items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-accent text-accent-foreground"><Flag size={18} /></span><div><p className="dashboard-eyebrow">{areaLabel} milestones</p><p className="mt-1 text-sm text-muted-foreground">Outcomes worth remembering, separate from task progress.</p></div></div><button onClick={() => setAdding(true)} className="focus-add-button"><Plus size={14} /> Add milestone</button></div>{adding && <MilestoneForm category={category} submitLabel="Add milestone" pending={pending === "milestone-new"} onCancel={() => setAdding(false)} action={(form) => run("milestone-new", createMilestone, form, () => setAdding(false))} />}<div className="milestone-list border-t border-border p-3 sm:p-4">{all.length ? <div className="grid gap-2 sm:grid-cols-2">{all.map((milestone) => editing === milestone.id ? <MilestoneForm key={milestone.id} category={category} milestone={milestone} submitLabel="Save" pending={pending === `milestone-${milestone.id}`} onCancel={() => setEditing(null)} action={(form) => run(`milestone-${milestone.id}`, updateMilestone, form, () => setEditing(null))} /> : <MilestoneRow key={milestone.id} category={category} milestone={milestone} pending={pending === `milestone-${milestone.id}`} confirming={confirmDelete === milestone.id} onToggle={(form) => run(`milestone-${milestone.id}`, toggleMilestone, form)} onEdit={() => setEditing(milestone.id)} onConfirmDelete={() => setConfirmDelete(milestone.id)} onCancelDelete={() => setConfirmDelete(null)} onDelete={(form) => run(`milestone-${milestone.id}`, deleteMilestone, form, () => setConfirmDelete(null))} />)}</div> : <div className="py-8 text-center"><p className="text-sm font-semibold">No milestones yet.</p><p className="mt-1 text-xs text-muted-foreground">Add a meaningful {category === "career" ? "career" : "creator"} outcome when you have one.</p></div>}</div></section>;
+  return <section className="glass-panel overflow-visible rounded-[28px]"><div className="focus-card-heading milestone-heading"><div className="flex items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-accent text-accent-foreground"><Flag size={18} /></span><div><p className="dashboard-eyebrow">{areaLabel} milestones</p><p className="mt-1 text-sm text-muted-foreground">Outcomes worth remembering, separate from task progress.</p></div></div><button onClick={() => setAdding(true)} className="focus-add-button"><Plus size={14} /> Add milestone</button></div><AnimatedPresence show={adding} className="milestone-form-presence"><MilestoneForm category={category} submitLabel="Add milestone" pending={pending === "milestone-new"} onCancel={() => setAdding(false)} action={(form) => run("milestone-new", createMilestone, form, () => setAdding(false))} /></AnimatedPresence><div className="milestone-list border-t border-border p-3 sm:p-4">{all.length ? <div className="grid gap-2 sm:grid-cols-2">{all.map((milestone) => editing === milestone.id ? <div key={milestone.id} className="entity-editor-enter"><MilestoneForm category={category} milestone={milestone} submitLabel="Save" pending={pending === `milestone-${milestone.id}`} onCancel={() => setEditing(null)} action={(form) => run(`milestone-${milestone.id}`, updateMilestone, form, () => setEditing(null))} /></div> : <MilestoneRow key={milestone.id} category={category} milestone={milestone} pending={pending === `milestone-${milestone.id}`} confirming={confirmDelete === milestone.id} onToggle={(form) => run(`milestone-${milestone.id}`, toggleMilestone, form)} onEdit={() => setEditing(milestone.id)} onConfirmDelete={() => setConfirmDelete(milestone.id)} onCancelDelete={() => setConfirmDelete(null)} onDelete={(form) => run(`milestone-${milestone.id}`, deleteMilestone, form, () => setConfirmDelete(null))} />)}</div> : <div className="entity-empty-state py-8 text-center"><p className="text-sm font-semibold">No milestones yet.</p><p className="mt-1 text-xs text-muted-foreground">Add a meaningful {category === "career" ? "career" : "creator"} outcome when you have one.</p></div>}</div></section>;
+}
+
+function AnimatedPresence({ show, className, children }: { show: boolean; className?: string; children: ReactNode }) {
+  const [render, setRender] = useState(show);
+  useEffect(() => {
+    if (show) { setRender(true); return; }
+    if (!render) return;
+    const timer = window.setTimeout(() => setRender(false), 240);
+    return () => window.clearTimeout(timer);
+  }, [show, render]);
+  if (!render) return null;
+  return <div className={`${className ?? ""} ${show ? "entity-presence-enter" : "entity-presence-exit"}`}>{children}</div>;
 }
 
 function MilestoneForm({ category, milestone, submitLabel, pending, onCancel, action }: { category: FocusArea; milestone?: FocusMilestone; submitLabel: string; pending: boolean; onCancel: () => void; action: (form: FormData) => Promise<void> }) {
@@ -105,6 +126,7 @@ function MilestoneForm({ category, milestone, submitLabel, pending, onCancel, ac
 function MilestoneRow({ category, milestone, pending, confirming, onToggle, onEdit, onConfirmDelete, onCancelDelete, onDelete }: { category: FocusArea; milestone: FocusMilestone; pending: boolean; confirming: boolean; onToggle: (form: FormData) => Promise<void>; onEdit: () => void; onConfirmDelete: () => void; onCancelDelete: () => void; onDelete: (form: FormData) => Promise<void> }) {
   const achieved = Boolean(milestone.achievedAt);
   const [celebrating, setCelebrating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   async function handleToggle(form: FormData) {
     if (!achieved) {
       setCelebrating(true);
@@ -113,7 +135,12 @@ function MilestoneRow({ category, milestone, pending, confirming, onToggle, onEd
     await onToggle(form);
     if (!achieved) window.setTimeout(() => setCelebrating(false), 700);
   }
-  return <article className={`milestone-row ${achieved ? "milestone-achieved" : ""} ${celebrating ? "milestone-celebrating" : ""}`}><form action={handleToggle}><input type="hidden" name="id" value={milestone.id} /><input type="hidden" name="category" value={category} /><input type="hidden" name="achieved" value={String(!achieved)} /><button disabled={pending || celebrating} className={`milestone-check ${celebrating ? "completion-check-bloom" : ""}`} aria-label={achieved ? `Reopen ${milestone.label}` : `Mark ${milestone.label} achieved`}>{(achieved || celebrating) && <Check size={13} strokeWidth={3} />}</button></form><div className="min-w-0 flex-1"><p className={`text-sm font-semibold ${achieved || celebrating ? "text-muted-foreground line-through" : ""}`}>{milestone.label}</p><p className="mt-1 text-[10px] text-muted-foreground">{milestone.targetValue ? `${milestone.targetValue.toLocaleString()} ${milestoneTypeLabels[milestone.type].toLowerCase()}` : milestoneTypeLabels[milestone.type]}{milestone.achievedAt ? ` · Achieved ${format(new Date(milestone.achievedAt), "MMM d, yyyy")}` : celebrating ? " · Milestone achieved" : ""}</p></div><div className="flex items-center">{confirming ? <><span className="mr-1 text-[10px] text-muted-foreground">Delete?</span><form action={onDelete}><input type="hidden" name="id" value={milestone.id} /><input type="hidden" name="category" value={category} /><button disabled={pending} className="milestone-icon-button text-rose-700" aria-label="Confirm delete"><Check size={14} /></button></form><button type="button" onClick={onCancelDelete} className="milestone-icon-button" aria-label="Cancel delete"><X size={14} /></button></> : <><button type="button" onClick={onEdit} className="milestone-icon-button" aria-label={`Edit ${milestone.label}`}><Pencil size={13} /></button><button type="button" onClick={onConfirmDelete} className="milestone-icon-button hover:text-rose-700" aria-label={`Delete ${milestone.label}`}><Trash2 size={13} /></button></>}</div></article>;
+  async function handleDelete(form: FormData) {
+    setDeleting(true);
+    await onDelete(form);
+    setDeleting(false);
+  }
+  return <article className={`milestone-row ${achieved ? "milestone-achieved" : ""} ${celebrating ? "milestone-celebrating" : ""} ${deleting ? "entity-deleting" : ""}`}><form action={handleToggle}><input type="hidden" name="id" value={milestone.id} /><input type="hidden" name="category" value={category} /><input type="hidden" name="achieved" value={String(!achieved)} /><button disabled={pending || celebrating || deleting} className={`milestone-check ${celebrating ? "completion-check-bloom" : ""}`} aria-label={achieved ? `Reopen ${milestone.label}` : `Mark ${milestone.label} achieved`}>{(achieved || celebrating) && <Check size={13} strokeWidth={3} />}</button></form><div className="min-w-0 flex-1"><p className={`text-sm font-semibold ${achieved || celebrating ? "text-muted-foreground line-through" : ""}`}>{milestone.label}</p><p className="mt-1 text-[10px] text-muted-foreground">{milestone.targetValue ? `${milestone.targetValue.toLocaleString()} ${milestoneTypeLabels[milestone.type].toLowerCase()}` : milestoneTypeLabels[milestone.type]}{milestone.achievedAt ? ` · Achieved ${format(new Date(milestone.achievedAt), "MMM d, yyyy")}` : celebrating ? " · Milestone achieved" : ""}</p></div>{!confirming && <div className="entity-actions-enter flex items-center"><button type="button" onClick={onEdit} className="milestone-icon-button" aria-label={`Edit ${milestone.label}`}><Pencil size={13} /></button><button type="button" onClick={onConfirmDelete} className="milestone-icon-button hover:text-rose-700" aria-label={`Delete ${milestone.label}`}><Trash2 size={13} /></button></div>}<AnimatedPresence show={confirming} className="entity-delete-presence"><div className="entity-delete-confirm"><span className="entity-delete-icon"><Trash2 size={15} /></span><div className="min-w-0 flex-1"><p>Remove milestone?</p><small>This can’t be undone.</small></div><button type="button" onClick={onCancelDelete} className="entity-delete-cancel">Keep</button><form action={handleDelete}><input type="hidden" name="id" value={milestone.id} /><input type="hidden" name="category" value={category} /><button disabled={pending || deleting} className="entity-delete-button">{deleting ? "Removing…" : "Remove"}</button></form></div></AnimatedPresence></article>;
 }
 
 function ThemedSelect({ name, initialValue, options }: { name: string; initialValue: FocusMilestone["type"]; options: Array<{ value: FocusMilestone["type"]; label: string; hint: string }> }) {
