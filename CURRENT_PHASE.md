@@ -1,62 +1,61 @@
-# Phase 6 — Progress Foundation
+# Phase 7 — Next-Week Planning UX
 
 ## Objective
 
-Establish trustworthy historical progress calculations from real persisted task
-data before adding visualizations, so later analytics accurately reflect the
-Plan → Do → Complete → See Progress loop.
+Make planning the next week fast and natural inside This Week, preserving the
+existing Plan → Do → Complete → See Progress loop without introducing a
+separate planning system.
 
 ## Required Behavior
 
-- Calculate completed task counts from persisted completion history.
-- Calculate productive days.
-- Calculate current and best streaks.
-- Calculate completion rate from planned and completed work.
-- Calculate Career, Content, and Personal category counts.
-- Calculate tasks planned.
-- Calculate overdue completion.
-- Calculate weekday completion distribution.
-- Respect the configured local timezone and preserve historical timestamps.
-- Return deterministic results for empty, partial, and long-running histories.
+- Provide an obvious Plan next week flow inside This Week.
+- Support fast inline task creation.
+- Support day-by-day planning for the selected week.
+- Support Anytime this week planning.
+- Support quick category selection during planning.
+- Preserve week navigation and past-week viewing.
+- Keep normal task, recurrence, status, and completion behavior intact.
+- Respect the configured local timezone and existing week-start semantics.
 
 ## Implementation Checklist
 
-- [ ] Define a focused Progress calculation contract from persisted tasks.
-- [ ] Implement timezone-safe historical date normalization.
-- [ ] Implement completed tasks and productive-day calculations.
-- [ ] Implement current streak and best streak calculations.
-- [ ] Implement planned-task and completion-rate calculations.
-- [ ] Implement category-count calculations.
-- [ ] Implement overdue-completion calculations.
-- [ ] Implement weekday-distribution calculations.
-- [ ] Add tests for empty data, boundary dates, reopened tasks, skipped tasks,
-      recurring instances, and multi-month history.
-- [ ] Run migrations if needed, typecheck, lint, build, and all relevant tests.
+- [ ] Audit the existing This Week creation and navigation flows for reusable
+      behavior.
+- [ ] Add the Plan next week entry point within This Week.
+- [ ] Implement fast inline creation for individual days.
+- [ ] Implement fast inline creation for Anytime this week.
+- [ ] Add quick category selection without expanding the form unnecessarily.
+- [ ] Preserve editing, recurrence, completion, and historical week behavior.
+- [ ] Add tests for week boundaries, next-week creation, Anytime tasks, category
+      selection, and past-week viewing.
+- [ ] Verify responsive behavior and both themes without redesigning This Week.
+- [ ] Run migrations if needed, all tests, typecheck, lint, build, and rendering
+      checks.
 
 ## Explicitly Out of Scope
 
-- Do not build charts, graphs, heatmaps, summary cards, or the Progress page UI.
-- Do not implement Phase 6B visualizations early.
-- Do not generate fake metrics or seed fabricated history.
-- Do not change task completion semantics or delete historical task data.
-- Do not add XP, levels, generic achievements, or unrelated analytics.
+- Do not create a separate Plan route.
+- Do not implement a general calendar or scheduling system.
+- Do not change task completion or recurrence semantics without a correctness
+  bug.
+- Do not implement Phase 8 responsive-polish work outside the planning flow.
+- Do not add unrelated task fields, scoring, XP, or achievements.
 - Do not redesign the approved visual system.
 
 ## Completion Criteria
 
-Phase 6 is complete only when every required progress metric is calculated from
-real persisted history; timezone, status, recurrence, and empty-data edge cases
-are covered by passing tests; historical task data remains intact; and all
-relevant validation checks pass.
+Phase 7 is complete only when next-week, day-by-day, and Anytime planning are
+fast and reliable inside This Week; week navigation and historical behavior are
+preserved; boundary and creation tests pass; and all relevant migrations,
+tests, type checking, linting, build, and rendering checks pass.
 
 ## Relevant Dependencies from Previous Phases
 
-- Phase 3 — This Week + Complete Task Workflow: use persisted task workflow
-  statuses, planned dates, categories, and completion timestamps.
-- Phase 3B — Weekly Recurrence: count persisted recurring instances without
-  duplicating recurrence definitions or treating skipped instances as complete.
-- Phase 4 — Dashboard Today System: reuse the proven local-date and streak
-  semantics where they match the broader historical contract.
-- Phase 5 — Career + Content: category history is now exposed consistently;
-  Career and Content milestones remain outcomes and must not count as task
-  completions.
+- Phase 3 — This Week + Complete Task Workflow: reuse the existing weekly task
+  groups, creation, editing, status, completion, and navigation behavior.
+- Phase 3B — Weekly Recurrence: preserve persisted weekly instances and avoid
+  duplicate or prematurely generated recurrence work.
+- Phase 4 — Dashboard Today System: newly planned tasks must continue to appear
+  correctly in Today and overdue views.
+- Phase 6/6B — Progress: planned tasks must flow into the existing historical
+  cohort and visualization contract without duplicated counters.

@@ -3,19 +3,49 @@ import { FocusAreaView } from "@/src/components/focus-area-view";
 import { getFocusAreaData, type FocusArea } from "@/src/lib/focus-areas";
 import { WeekView } from "@/src/components/week-view";
 import { getWeekData, normalizeWeekStart } from "@/src/lib/week";
+import { ProgressView } from "@/src/components/progress-view";
+import { getProgressData, localDateInTimeZone, systemTimeZone } from "@/src/lib/progress";
+import {
+  normalizeProgressCategory,
+  normalizeProgressRange,
+  progressRangeStart,
+} from "@/src/lib/progress-visuals";
+
+export const dynamic = "force-dynamic";
 
 const sections: Record<string, { title: string; description: string }> = {
-  progress: { title: "Progress", description: "Progress will be based on completed work once there is enough activity to show." },
   settings: { title: "Settings", description: "Theme controls are available in the sidebar. Additional settings will be introduced only when they support an active workflow." },
 };
 
-export default async function SectionPage({ params, searchParams }: { params: Promise<{ section: string }>; searchParams: Promise<{ week?: string | string[] }> }) {
+type SectionSearchParams = {
+  week?: string | string[];
+  range?: string | string[];
+  category?: string | string[];
+};
+
+export default async function SectionPage({ params, searchParams }: { params: Promise<{ section: string }>; searchParams: Promise<SectionSearchParams> }) {
   const { section } = await params;
+  const query = await searchParams;
   if (section === "week") {
-    const query = await searchParams;
     return <WeekView data={getWeekData(normalizeWeekStart(query.week))} />;
   }
   if (section === "career" || section === "content") return <FocusAreaView data={getFocusAreaData(section as FocusArea)} />;
+  if (section === "progress") {
+    const range = normalizeProgressRange(query.range);
+    const category = normalizeProgressCategory(query.category);
+    const timeZone = systemTimeZone();
+    const today = localDateInTimeZone(new Date(), timeZone)!;
+    return <ProgressView
+      range={range}
+      category={category}
+      data={getProgressData({
+        startDate: progressRangeStart(range, today),
+        today,
+        timeZone,
+        category: category === "all" ? undefined : category,
+      })}
+    />;
+  }
   const content = sections[section];
   if (!content) notFound();
 

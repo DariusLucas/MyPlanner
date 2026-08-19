@@ -1,8 +1,9 @@
 import { and, asc, desc, eq, gt, gte, isNull, lt, notInArray } from "drizzle-orm";
-import { differenceInCalendarDays, format, parseISO, startOfWeek } from "date-fns";
+import { format, parseISO, startOfWeek } from "date-fns";
 import { db } from "@/src/db/client";
 import { quickThoughts, tasks } from "@/src/db/schema";
 import { ensureRecurringInstances } from "@/src/lib/recurrence";
+import { calculateProductiveStreak } from "@/src/lib/progress";
 import type { TodayTask } from "@/src/lib/today";
 
 export type QuickThought = typeof quickThoughts.$inferSelect;
@@ -36,32 +37,9 @@ export function localDayBounds(date: string) {
 }
 
 export function calculateStreak(completionDates: string[], today: string) {
-  const dates = [...new Set(completionDates)].sort();
-  let best = 0;
-  let run = 0;
-  let previous: string | undefined;
-
-  for (const date of dates) {
-    const gap = previous
-      ? differenceInCalendarDays(parseISO(date), parseISO(previous))
-      : Number.POSITIVE_INFINITY;
-    run = !previous || gap > 3 ? 1 : run + 1;
-    best = Math.max(best, run);
-    previous = date;
-  }
-
-  if (!previous) {
-    return { current: 0, best: 0, state: "hot" as const, graceDaysUsed: 0 };
-  }
-
-  const gapToToday = differenceInCalendarDays(parseISO(today), parseISO(previous));
-  if (gapToToday > 3) {
-    return { current: 0, best, state: "hot" as const, graceDaysUsed: 0 };
-  }
-
-  const graceDaysUsed = Math.max(0, gapToToday - 1);
+  const { current, best, graceDaysUsed } = calculateProductiveStreak(completionDates, today);
   return {
-    current: run,
+    current,
     best,
     state: graceDaysUsed === 0 ? "hot" as const : graceDaysUsed === 1 ? "cooling" as const : "cold" as const,
     graceDaysUsed,

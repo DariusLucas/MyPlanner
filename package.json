@@ -14,7 +14,8 @@
     "db:setup": "tsx scripts/setup-db.ts",
     "test:recurrence": "tsx scripts/test-recurrence.ts",
     "test:dashboard": "tsx scripts/test-dashboard.ts",
-    "test:focus-areas": "tsx scripts/test-focus-areas.ts"
+    "test:focus-areas": "tsx scripts/test-focus-areas.ts",
+    "test:progress": "tsx scripts/test-progress.ts"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.6",
