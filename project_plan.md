@@ -2244,6 +2244,12 @@ COMPLETED
 Phase 6B — Progress Visualizations
 COMPLETED
 
+Phase 7 — Next-Week Planning UX
+COMPLETED
+
+Phase 8 — Mobile / Responsive Polish
+COMPLETED
+
 ---
 
 # 74. NEW PHASE 2R — PRODUCT SIMPLIFICATION REFACTOR

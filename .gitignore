@@ -2,6 +2,9 @@ node_modules/
 .next/
 .next-dev/
 out/
+dist-mobile/
+
+artifacts/*.apk
 
 data/*.db
 data/*.db-shm

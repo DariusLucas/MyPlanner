@@ -15,9 +15,20 @@
     "test:recurrence": "tsx scripts/test-recurrence.ts",
     "test:dashboard": "tsx scripts/test-dashboard.ts",
     "test:focus-areas": "tsx scripts/test-focus-areas.ts",
-    "test:progress": "tsx scripts/test-progress.ts"
+    "test:progress": "tsx scripts/test-progress.ts",
+    "test:week-planning": "tsx scripts/test-week-planning.ts",
+    "test:responsive": "tsx scripts/test-responsive.ts",
+    "test:mobile": "tsx scripts/test-mobile.ts",
+    "mobile:dev": "vite --config mobile/vite.config.ts",
+    "mobile:build": "vite build --config mobile/vite.config.ts",
+    "android:sync": "npm run mobile:build && cap sync android",
+    "android:build": "node scripts/build-android.mjs",
+    "android:open": "cap open android"
   },
   "dependencies": {
+    "@capacitor-community/sqlite": "^8.1.1",
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
     "@fontsource-variable/inter": "^5.2.6",
     "better-sqlite3": "^12.4.1",
     "date-fns": "^4.1.0",
@@ -30,17 +41,20 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
     "@tailwindcss/postcss": "^4.1.14",
     "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.15.33",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^6.0.5",
     "drizzle-kit": "^0.31.4",
     "eslint": "^9.24.0",
     "eslint-config-next": "^15.5.6",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.19.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vite": "^8.2.1"
   }
 }

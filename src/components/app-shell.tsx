@@ -49,7 +49,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="sidebar-top-brand mb-7 flex h-11 items-center gap-3 px-2" aria-label="Planner">
           <span className="sidebar-plane grid size-9 shrink-0 place-items-center" aria-hidden="true"><Plane size={27} strokeWidth={1.5} /></span>
           <span className="sidebar-brand-copy whitespace-nowrap text-[16px] font-semibold tracking-[-0.04em]">Planner</span>
-          <button type="button" aria-label="Close navigation" className="ml-auto rounded-md p-1.5 text-muted-foreground hover:bg-muted lg:hidden" onClick={closeMobile}><X size={17} /></button>
+          <button type="button" aria-label="Close navigation" className="mobile-nav-button ml-auto rounded-xl text-muted-foreground hover:bg-muted lg:hidden" onClick={closeMobile}><X size={18} /></button>
         </div>
 
         <div className="sidebar-navigation">
@@ -69,7 +69,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="content-region min-w-0">
         <header className="workspace-header sticky top-0 z-20 flex h-14 items-center justify-between bg-card/60 px-4 backdrop-blur-2xl lg:hidden">
-          <button type="button" aria-label="Open navigation" className="rounded-md p-2 text-muted-foreground hover:bg-muted lg:hidden" onClick={() => { setSidebarCollapsed(false); setMobileOpen(true); }}><Menu size={18} /></button>
+          <button type="button" aria-label="Open navigation" className="mobile-nav-button rounded-xl text-muted-foreground hover:bg-muted lg:hidden" onClick={() => { setSidebarCollapsed(false); setMobileOpen(true); }}><Menu size={19} /></button>
         </header>
         <main className="content-surface w-full px-4 py-7 sm:px-6 lg:px-8 lg:py-9 xl:px-10 xl:py-10"><div key={pathname} className="page-transition">{children}</div></main>
       </div>

@@ -4,12 +4,9 @@ import { getFocusAreaData, type FocusArea } from "@/src/lib/focus-areas";
 import { WeekView } from "@/src/components/week-view";
 import { getWeekData, normalizeWeekStart } from "@/src/lib/week";
 import { ProgressView } from "@/src/components/progress-view";
-import { getProgressData, localDateInTimeZone, systemTimeZone } from "@/src/lib/progress";
-import {
-  normalizeProgressCategory,
-  normalizeProgressRange,
-  progressRangeStart,
-} from "@/src/lib/progress-visuals";
+import { localDateInTimeZone, systemTimeZone } from "@/src/lib/progress";
+import { getProgressTaskHistory } from "@/src/lib/progress-query";
+import { normalizeProgressCategory, normalizeProgressRange } from "@/src/lib/progress-visuals";
 
 export const dynamic = "force-dynamic";
 
@@ -38,12 +35,9 @@ export default async function SectionPage({ params, searchParams }: { params: Pr
     return <ProgressView
       range={range}
       category={category}
-      data={getProgressData({
-        startDate: progressRangeStart(range, today),
-        today,
-        timeZone,
-        category: category === "all" ? undefined : category,
-      })}
+      taskHistory={getProgressTaskHistory()}
+      today={today}
+      timeZone={timeZone}
     />;
   }
   const content = sections[section];

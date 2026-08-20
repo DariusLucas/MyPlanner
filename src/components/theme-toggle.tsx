@@ -26,7 +26,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
     const next = themes[(currentIndex >= 0 ? currentIndex + 1 : 0) % themes.length];
     const Icon = current.icon;
 
-    return <button type="button" title={`${current.label} theme · switch to ${next.label}`} aria-label={`${current.label} theme. Switch to ${next.label}`} onClick={() => setTheme(next.value)} className="grid size-9 place-items-center rounded-xl border border-border bg-card/70 text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Icon size={15} strokeWidth={1.75} /></button>;
+    return <button type="button" title={`${current.label} theme · switch to ${next.label}`} aria-label={`${current.label} theme. Switch to ${next.label}`} onClick={() => setTheme(next.value)} className="theme-compact-button grid size-9 place-items-center rounded-xl border border-border bg-card/70 text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Icon size={15} strokeWidth={1.75} /></button>;
   }
 
   return (
@@ -39,7 +39,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
           aria-label={`${label} theme`}
           aria-pressed={theme === value}
           onClick={() => setTheme(value)}
-          className={`rounded-full p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          className={`theme-option-button rounded-full p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
             theme === value ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"
           }`}
         >

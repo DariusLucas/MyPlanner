@@ -18,7 +18,7 @@ import type {
 export const progressRangeKeys = ["3m", "6m", "1y", "all"] as const;
 export type ProgressRangeKey = (typeof progressRangeKeys)[number];
 export type ProgressCategoryFilter = "all" | ProgressCategory;
-export type ProgressGrouping = "week" | "month";
+export type ProgressGrouping = "day" | "week" | "month";
 
 export type ProgressPeriod = {
   key: string;
@@ -63,7 +63,11 @@ export function progressRangeStart(range: ProgressRangeKey, today: string) {
 }
 
 export function progressGrouping(range: ProgressRangeKey): ProgressGrouping {
-  return range === "3m" || range === "6m" ? "week" : "month";
+  // Keep the default short range aligned with the heatmap: completed work is
+  // shown on the local calendar day it was completed, not the week start.
+  if (range === "3m") return "day";
+  if (range === "6m") return "week";
+  return "month";
 }
 
 function emptyCategoryCounts(): Record<ProgressCategory, number> {
@@ -78,19 +82,28 @@ export function buildProgressPeriods(
 
   const firstDate = data.range.startDate ?? data.daily[0]?.date;
   if (firstDate) {
-    const first = grouping === "week"
-      ? startOfWeek(parseISO(firstDate), { weekStartsOn: 1 })
-      : startOfMonth(parseISO(firstDate));
+    const first = grouping === "day"
+      ? parseISO(firstDate)
+      : grouping === "week"
+        ? startOfWeek(parseISO(firstDate), { weekStartsOn: 1 })
+        : startOfMonth(parseISO(firstDate));
     const end = parseISO(data.range.endDate);
     for (
       let date = first;
       date <= end;
-      date = grouping === "week" ? addWeeks(date, 1) : addMonths(date, 1)
+      date = grouping === "day"
+        ? addDays(date, 1)
+        : grouping === "week"
+          ? addWeeks(date, 1)
+          : addMonths(date, 1)
     ) {
-      const key = format(date, grouping === "week" ? "yyyy-MM-dd" : "yyyy-MM");
+      const key = format(
+        date,
+        grouping === "day" ? "yyyy-MM-dd" : grouping === "week" ? "yyyy-MM-dd" : "yyyy-MM",
+      );
       periods.set(key, {
         key,
-        label: format(date, grouping === "week" ? "MMM d" : "MMM yyyy"),
+        label: format(date, grouping === "day" || grouping === "week" ? "MMM d" : "MMM yyyy"),
         completed: 0,
         planned: 0,
         plannedCompleted: 0,
@@ -103,10 +116,12 @@ export function buildProgressPeriods(
 
   for (const day of data.daily) {
     const date = parseISO(day.date);
-    const key = grouping === "week"
-      ? format(startOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd")
-      : format(date, "yyyy-MM");
-    const label = grouping === "week"
+    const key = grouping === "day"
+      ? format(date, "yyyy-MM-dd")
+      : grouping === "week"
+        ? format(startOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd")
+        : format(date, "yyyy-MM");
+    const label = grouping === "day" || grouping === "week"
       ? format(parseISO(key), "MMM d")
       : format(date, "MMM yyyy");
     const period = periods.get(key) ?? {

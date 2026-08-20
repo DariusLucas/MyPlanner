@@ -8,6 +8,7 @@ import { dailyFocus, taskRecurrences, tasks } from "@/src/db/schema";
 import { ensureRecurringInstances } from "@/src/lib/recurrence";
 import { taskCategories, taskPriorities, taskStatuses } from "@/src/lib/today";
 import { toggleTaskPersistence } from "@/src/lib/task-completion";
+import { persistPlannedTask } from "@/src/lib/week-planning";
 import { revalidatePath } from "next/cache";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -142,27 +143,7 @@ export async function createTask(formData: FormData): Promise<ActionResult> {
       };
     }
 
-    if (recurrenceCount) {
-      db.insert(taskRecurrences)
-        .values({
-          title: taskData.title,
-          description: taskData.description,
-          category: taskData.category,
-          priority: taskData.priority,
-          estimatedMinutes: taskData.estimatedMinutes,
-          countPerWeek: recurrenceCount,
-          startWeek: taskData.anytimeWeekStart!,
-        })
-        .run();
-      ensureRecurringInstances(taskData.anytimeWeekStart!);
-    } else {
-      db.insert(tasks)
-        .values({
-          ...taskData,
-          position: nextPosition(taskData.date),
-        })
-        .run();
-    }
+    persistPlannedTask(taskData, recurrenceCount);
     revalidatePath("/week");
     revalidatePath("/");
     return { ok: true };

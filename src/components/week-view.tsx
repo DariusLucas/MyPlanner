@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   createContext,
+  type DragEvent as ReactDragEvent,
   useContext,
   useEffect,
   useMemo,
@@ -20,6 +21,7 @@ import {
 } from "date-fns";
 import {
   CalendarDays,
+  CalendarPlus2,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -127,9 +129,13 @@ export function WeekView({ data }: { data: WeekData }) {
   );
   const [confirmationClosing, setConfirmationClosing] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const thisWeek =
-    data.weekStart ===
-    format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
+  const currentStart = format(
+    startOfWeek(new Date(), { weekStartsOn: 1 }),
+    "yyyy-MM-dd",
+  );
+  const nextStart = format(addWeeks(parseISO(currentStart), 1), "yyyy-MM-dd");
+  const thisWeek = data.weekStart === currentStart;
+  const nextWeek = data.weekStart === nextStart;
   const active = useMemo(
     () =>
       [...data.overdue, ...data.days.flatMap((day) => day.tasks)].filter(
@@ -174,8 +180,11 @@ export function WeekView({ data }: { data: WeekData }) {
     setMessage(null);
     const result = await action(form);
     setPending(null);
-    if (result.ok) success?.();
-    else setMessage(result.error);
+    if (result.ok) {
+      success?.();
+      return;
+    }
+    setMessage(result.error);
   }
 
   return (
@@ -188,10 +197,20 @@ export function WeekView({ data }: { data: WeekData }) {
               {format(parseISO(data.weekEnd), "MMMM d, yyyy")}
             </p>
             <h1 className="mt-1.5 text-3xl font-semibold tracking-[-.055em] sm:text-[2.6rem]">
-              {thisWeek ? "This Week" : "Week plan"}
+              {thisWeek ? "This Week" : nextWeek ? "Next Week" : "Week plan"}
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
+            {thisWeek && (
+              <Link
+                href={`/week?week=${nextStart}`}
+                className="week-plan-next-button"
+              >
+                <CalendarPlus2 size={16} />
+                Plan next week
+                <ChevronRight size={15} />
+              </Link>
+            )}
             <button
               onClick={() => setComposer(true)}
               className="inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--orange)] px-4 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(190,82,37,.22)]"
@@ -245,13 +264,13 @@ export function WeekView({ data }: { data: WeekData }) {
         <div className="flex w-fit gap-1 rounded-xl border border-border bg-card/70 p-1">
           <button
             onClick={() => setView("checklist")}
-            className={`rounded-lg px-3 py-1.5 text-sm ${view === "checklist" ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground"}`}
+            className={`week-view-toggle rounded-lg px-3 py-1.5 text-sm ${view === "checklist" ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground"}`}
           >
             Checklist
           </button>
           <button
             onClick={() => setView("board")}
-            className={`rounded-lg px-3 py-1.5 text-sm ${view === "board" ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground"}`}
+            className={`week-view-toggle rounded-lg px-3 py-1.5 text-sm ${view === "board" ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground"}`}
           >
             Kanban
           </button>
@@ -584,6 +603,112 @@ export function TaskComposer({
   );
 }
 
+function InlineTaskComposer({
+  weekStart,
+  date,
+  anytime = false,
+  pending,
+  run,
+}: {
+  weekStart: string;
+  date: string;
+  anytime?: boolean;
+  pending: string | null;
+  run: Runner;
+}) {
+  const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState<TaskCategory>("career");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const key = `quick-${anytime ? `anytime-${weekStart}` : date}`;
+  const submitting = pending === key;
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  async function submit(form: FormData) {
+    let created = false;
+    await run(key, createTask, form, () => {
+      created = true;
+    });
+    if (!created) return;
+    formRef.current?.reset();
+    inputRef.current?.focus();
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="week-inline-add-trigger"
+      >
+        <Plus size={14} /> Add task
+      </button>
+    );
+  }
+
+  return (
+    <form ref={formRef} action={submit} className="week-inline-composer">
+      <div className="week-inline-entry-row">
+        <input
+          ref={inputRef}
+          name="title"
+          className="week-inline-title"
+          placeholder={anytime ? "Add a flexible task…" : "Add a task…"}
+          aria-label={
+            anytime
+              ? "Task title for Anytime this week"
+              : `Task title for ${format(parseISO(date), "EEEE")}`
+          }
+          required
+          maxLength={200}
+        />
+        <button
+          disabled={submitting}
+          className="week-inline-submit"
+          aria-label="Add task"
+        >
+          {submitting ? "Adding…" : <><Plus size={14} /> Add</>}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="week-inline-close"
+          aria-label="Close inline task form"
+        >
+          <X size={15} />
+        </button>
+      </div>
+      <div className="week-inline-categories" aria-label="Task category">
+        {categories.map((value) => (
+          <button
+            type="button"
+            key={value}
+            onClick={() => setCategory(value)}
+            aria-pressed={category === value}
+            className={category === value ? "week-inline-category-active" : ""}
+          >
+            {categoryLabels[value]}
+          </button>
+        ))}
+      </div>
+      <input type="hidden" name="date" value={anytime ? weekStart : date} />
+      <input
+        type="hidden"
+        name="anytimeWeekStart"
+        value={anytime ? weekStart : ""}
+      />
+      <input type="hidden" name="recurrenceCount" value="0" />
+      <input type="hidden" name="category" value={category} />
+      <input type="hidden" name="priority" value="normal" />
+      <input type="hidden" name="description" value="" />
+      <input type="hidden" name="estimatedMinutes" value="" />
+    </form>
+  );
+}
+
 function Checklist({
   data,
   editing,
@@ -646,6 +771,13 @@ function Checklist({
             />
           </div>
         </div>
+        <InlineTaskComposer
+          weekStart={data.weekStart}
+          date={data.weekStart}
+          anytime
+          pending={pending}
+          run={run}
+        />
         {data.recurringAnytime.length > 0 && (
           <div className="mt-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
@@ -698,6 +830,7 @@ function Checklist({
             setEditing={setEditing}
             pending={pending}
             run={run}
+            weekStart={data.weekStart}
           />
         ))}
       </div>
@@ -785,7 +918,7 @@ function RecurringTaskCard({
         </div>
         <button
           onClick={() => setEditing(editing ? null : task.id)}
-          className="p-1 text-muted-foreground"
+          className="week-task-menu-button text-muted-foreground"
           aria-label={`Edit ${task.title}`}
           aria-expanded={editing}
         >
@@ -809,6 +942,7 @@ function RecurringTaskCard({
 }
 function DayCard({
   date,
+  weekStart,
   tasks,
   glow,
   sunday,
@@ -818,6 +952,7 @@ function DayCard({
   run,
 }: {
   date: string;
+  weekStart: string;
   tasks: WeekTask[];
   glow: boolean;
   sunday: boolean;
@@ -877,6 +1012,12 @@ function DayCard({
           </div>
         )}
       </div>
+      <InlineTaskComposer
+        weekStart={weekStart}
+        date={date}
+        pending={pending}
+        run={run}
+      />
     </section>
   );
 }
@@ -975,7 +1116,9 @@ function TaskCard({
             }
             className={`task-check ${visualCompleted ? "task-check-completed" : ""} ${checkAnimationClass} ${checkAnimation === "complete" ? "completion-check-bloom" : ""}`}
           >
-            {visualCompleted ? <Check size={12} strokeWidth={3} /> : null}
+            <span className="task-check-surface">
+              {visualCompleted ? <Check size={12} strokeWidth={3} /> : null}
+            </span>
           </button>
         </form>
         <div className="min-w-0 flex-1">
@@ -990,7 +1133,7 @@ function TaskCard({
         </div>
         <button
           onClick={() => setEditing(editing ? null : task.id)}
-          className="p-1 text-muted-foreground"
+          className="week-task-menu-button text-muted-foreground"
           aria-expanded={editing}
         >
           ...
@@ -1034,28 +1177,91 @@ function Board({
   anytimeProgress: AnytimeProgress;
   onCompletionChange: (id: number, completed: boolean) => void;
 }) {
-  const [dragId, setDragId] = useState<number | null>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const dragIdRef = useRef<number | null>(null);
   const [movingId, setMovingId] = useState<number | null>(null);
+  const [mobileStatus, setMobileStatus] = useState<TaskStatus>("not_started");
+  const [optimisticStatuses, setOptimisticStatuses] = useState<Record<number, TaskStatus>>({});
+
+  useEffect(() => {
+    setOptimisticStatuses((current) => {
+      const next = { ...current };
+      let changed = false;
+      for (const task of tasks) {
+        if (next[task.id] === task.status) {
+          delete next[task.id];
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [tasks]);
+
+  function taskStatus(task: WeekTask) {
+    return optimisticStatuses[task.id] ?? task.status;
+  }
 
   async function moveTask(id: number, status: TaskStatus) {
+    const task = tasks.find((candidate) => candidate.id === id);
+    if (!task) return false;
+    const previousStatus = taskStatus(task);
+    if (previousStatus === status) return true;
+
+    setOptimisticStatuses((current) => ({ ...current, [id]: status }));
     setMovingId(id);
     const form = new FormData();
     form.set("id", String(id));
     form.set("status", status);
-    await run(`workflow-${id}`, setTaskWorkflow, form);
+    let moved = false;
+    await run(`workflow-${id}`, setTaskWorkflow, form, () => {
+      moved = true;
+    });
+    if (!moved) {
+      setOptimisticStatuses((current) => {
+        const next = { ...current };
+        if (previousStatus === task.status) delete next[id];
+        else next[id] = previousStatus;
+        return next;
+      });
+    }
     window.setTimeout(
       () => setMovingId((current) => (current === id ? null : current)),
       360,
     );
+    return moved;
   }
 
-  function drop(status: TaskStatus) {
-    if (!dragId) return;
-    void moveTask(dragId, status);
-    setDragId(null);
+  function drop(event: ReactDragEvent<HTMLElement>, status: TaskStatus) {
+    event.preventDefault();
+    event.stopPropagation();
+    const transferredId = Number(
+      event.dataTransfer.getData("application/x-myplanner-task") ||
+      event.dataTransfer.getData("text/plain"),
+    );
+    const id = Number.isInteger(transferredId) && transferredId > 0
+      ? transferredId
+      : dragIdRef.current;
+    clearDragStyles();
+    dragIdRef.current = null;
+    // Let Chromium finish its native drop/dragend lifecycle before the
+    // optimistic update relocates (and therefore unmounts) the source card.
+    if (id) window.setTimeout(() => void moveTask(id, status), 0);
+  }
+
+  function clearDragStyles() {
+    boardRef.current
+      ?.querySelectorAll(".kanban-card-dragging, .kanban-column-drop-target")
+      .forEach((element) => {
+        element.classList.remove("kanban-card-dragging", "kanban-column-drop-target");
+      });
+  }
+
+  function finishDrag() {
+    clearDragStyles();
+    dragIdRef.current = null;
   }
   return (
-    <div className="kanban-board">
+    <div ref={boardRef} className="kanban-board" onDragEnd={finishDrag}>
       <section className="kanban-anytime-column">
         <div className="kanban-anytime-header">
           <div>
@@ -1111,27 +1317,111 @@ function Board({
           ) : null}
         </div>
       </section>
-      <div className="kanban-status-columns grid gap-4 xl:grid-cols-4">
+      <section className="kanban-mobile-board" aria-label="Task workflow">
+        <div className="kanban-mobile-heading">
+          <h2 className="text-sm font-semibold">Task workflow</h2>
+          <p className="text-xs text-muted-foreground">
+            Pick a stage, then move tasks with the control on each card.
+          </p>
+        </div>
+        <div
+          className="kanban-mobile-stages"
+          role="tablist"
+          aria-label="Workflow stage"
+        >
+          {workflow.map((column) => {
+            const count = tasks.filter((task) => taskStatus(task) === column.status).length;
+            return (
+              <button
+                key={column.status}
+                type="button"
+                role="tab"
+                aria-selected={mobileStatus === column.status}
+                onClick={() => setMobileStatus(column.status)}
+                className={`kanban-mobile-stage kanban-status-${column.status}`}
+              >
+                <span className="kanban-status-dot" />
+                <span>{column.label}</span>
+                <strong>{count}</strong>
+              </button>
+            );
+          })}
+        </div>
+        <div className="kanban-mobile-task-list" role="tabpanel">
+          {tasks.filter((task) => taskStatus(task) === mobileStatus).length ? (
+            tasks
+              .filter((task) => taskStatus(task) === mobileStatus)
+              .map((task) => (
+                <KanbanCard
+                  key={task.id}
+                  task={{ ...task, status: taskStatus(task) }}
+                  overdue={
+                    task.anytimeWeekStart
+                      ? task.anytimeWeekStart < weekStart
+                      : task.date < weekStart
+                  }
+                  column={mobileStatus}
+                  pending={pending}
+                  moving={movingId === task.id}
+                  onDragStart={() => undefined}
+                  onChange={(status) => {
+                    const previousStatus = taskStatus(task);
+                    setMobileStatus(status);
+                    void moveTask(task.id, status).then((moved) => {
+                      if (!moved) setMobileStatus(previousStatus);
+                    });
+                  }}
+                  run={run}
+                  onCompletionChange={onCompletionChange}
+                  editing={editing === task.id}
+                  setEditing={setEditing}
+                  mobile
+                />
+              ))
+          ) : (
+            <p className="kanban-mobile-empty">
+              No tasks in{" "}
+              {workflow
+                .find((column) => column.status === mobileStatus)
+                ?.label.toLowerCase()}
+              .
+            </p>
+          )}
+        </div>
+      </section>
+      <div className="kanban-status-columns kanban-status-columns-desktop grid gap-4 xl:grid-cols-4">
         {workflow.map((column) => (
           <section
             key={column.status}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={() => drop(column.status)}
+            onDragEnter={(event) => {
+              event.currentTarget.classList.add("kanban-column-drop-target");
+            }}
+            onDragLeave={(event) => {
+              const nextTarget = event.relatedTarget;
+              if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+                event.currentTarget.classList.remove("kanban-column-drop-target");
+              }
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+            }}
+            onDrop={(event) => drop(event, column.status)}
             className="kanban-column"
           >
             <h2 className="px-1 pb-3 text-sm font-semibold">
               {column.label}{" "}
               <span className="text-muted-foreground">
-                {tasks.filter((task) => task.status === column.status).length}
+                {tasks.filter((task) => taskStatus(task) === column.status).length}
               </span>
             </h2>
             <div className="space-y-2">
               {tasks
-                .filter((task) => task.status === column.status)
+                .filter((task) => taskStatus(task) === column.status)
                 .map((task) => (
                   <KanbanCard
                     key={task.id}
-                    task={task}
+                    task={{ ...task, status: taskStatus(task) }}
                     overdue={
                       task.anytimeWeekStart
                         ? task.anytimeWeekStart < weekStart
@@ -1140,7 +1430,13 @@ function Board({
                     column={column.status}
                     pending={pending}
                     moving={movingId === task.id}
-                    onDragStart={() => setDragId(task.id)}
+                    onDragStart={(event) => {
+                      dragIdRef.current = task.id;
+                      event.currentTarget.classList.add("kanban-card-dragging");
+                      event.dataTransfer.effectAllowed = "move";
+                      event.dataTransfer.setData("application/x-myplanner-task", String(task.id));
+                      event.dataTransfer.setData("text/plain", String(task.id));
+                    }}
                     onChange={(status) => void moveTask(task.id, status)}
                     run={run}
                     onCompletionChange={onCompletionChange}
@@ -1211,7 +1507,7 @@ function AnytimeKanbanTaskCard({
         </div>
         <button
           onClick={() => setEditing(editing ? null : task.id)}
-          className="p-1 text-muted-foreground"
+          className="week-task-menu-button text-muted-foreground"
           aria-label={`Edit ${task.title}`}
           aria-expanded={editing}
         >
@@ -1245,31 +1541,35 @@ function KanbanCard({
   onCompletionChange,
   editing,
   setEditing,
+  mobile = false,
 }: {
   task: WeekTask;
   overdue: boolean;
   column: TaskStatus;
   pending: string | null;
   moving: boolean;
-  onDragStart: () => void;
+  onDragStart: (event: ReactDragEvent<HTMLElement>) => void;
   onChange: (status: TaskStatus) => void;
   run: Runner;
   onCompletionChange?: (id: number, completed: boolean) => void;
   editing: boolean;
   setEditing: (value: number | null) => void;
+  mobile?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
     <article
-      draggable
+      draggable={!mobile}
       onDragStart={onDragStart}
-      className={`kanban-card ${overdue ? "kanban-card-overdue" : ""} ${moving ? "kanban-card-moving" : ""} ${menuOpen ? "kanban-card-menu-open" : ""}`}
+      className={`kanban-card ${mobile ? "kanban-card-mobile" : ""} ${overdue ? "kanban-card-overdue" : ""} ${moving ? "kanban-card-moving" : ""} ${menuOpen ? "kanban-card-menu-open" : ""}`}
     >
       <div className="flex items-start gap-2">
-        <GripVertical
-          size={16}
-          className="mt-0.5 shrink-0 text-muted-foreground"
-        />
+        {!mobile && (
+          <GripVertical
+            size={16}
+            className="mt-0.5 shrink-0 text-muted-foreground"
+          />
+        )}
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">{task.title}</p>
           <p className="mt-1 text-[11px] text-muted-foreground">
@@ -1280,16 +1580,26 @@ function KanbanCard({
         <button
           type="button"
           onClick={() => setEditing(editing ? null : task.id)}
-          className="p-1 text-muted-foreground"
+          className="week-task-menu-button text-muted-foreground"
           aria-label={`Edit ${task.title}`}
           aria-expanded={editing}
         >
           ...
         </button>
       </div>
-      {column === "done" ? (
+      {mobile && <p className="kanban-mobile-move-label">Move task to</p>}
+      {(column !== "done" || mobile) && (
+        <StatusSelect
+          task={task}
+          pending={pending}
+          moving={moving}
+          onChange={onChange}
+          onOpenChange={setMenuOpen}
+        />
+      )}
+      {column === "done" && (
         <form
-          className="mt-3"
+          className={mobile ? "mt-2" : "mt-3"}
           action={(form) => {
             onCompletionChange?.(task.id, true);
             return run(`confirm-${task.id}`, confirmTaskCompletion, form);
@@ -1303,14 +1613,6 @@ function KanbanCard({
             Confirm complete
           </button>
         </form>
-      ) : (
-        <StatusSelect
-          task={task}
-          pending={pending}
-          moving={moving}
-          onChange={onChange}
-          onOpenChange={setMenuOpen}
-        />
       )}
       <EditForm
         task={task}

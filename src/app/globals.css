@@ -145,6 +145,27 @@ select {
   box-shadow: 0 7px 16px color-mix(in srgb, var(--orange) 26%, transparent);
 }
 .week-current-button:hover { background: color-mix(in srgb, var(--orange) 88%, #000) !important; color: #fff !important; }
+.week-plan-next-button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--orange) 54%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--orange) 11%, var(--card));
+  color: var(--accent-foreground);
+  font-size: 0.8rem;
+  font-weight: 700;
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--orange) 12%, transparent);
+  transition: transform 160ms cubic-bezier(.16,1,.3,1), border-color 160ms ease, background 160ms ease;
+}
+.week-plan-next-button:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--orange) 78%, var(--border));
+  background: color-mix(in srgb, var(--orange) 17%, var(--card));
+}
 .dashboard-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.25rem; }
 .dashboard-eyebrow { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted-foreground); }
 .streak-banner {
@@ -177,7 +198,8 @@ select {
 .dashboard-task-awaiting { border-color: color-mix(in srgb, var(--orange) 18%, var(--border)); background: color-mix(in srgb, var(--orange-soft) 25%, transparent); }
 .dashboard-task-awaiting p:first-child { color: var(--muted-foreground); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--orange) 58%, transparent); text-decoration-thickness: 1.5px; }
 .task-check-undoable { cursor: pointer !important; transition: transform 160ms cubic-bezier(.16,1,.3,1), background 160ms ease, box-shadow 160ms ease; }
-.task-check-undoable:hover { transform: scale(1.08); background: color-mix(in srgb, var(--orange) 84%, var(--foreground)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--orange) 12%, transparent); }
+.task-check-undoable:hover { transform: scale(1.08); box-shadow: 0 0 0 4px color-mix(in srgb, var(--orange) 12%, transparent); }
+.task-check-undoable:hover .task-check-surface { background: color-mix(in srgb, var(--orange) 84%, var(--foreground)); }
 @keyframes progress-number-in { from { opacity: .45; transform: translateY(2px) scale(.92); } to { opacity: 1; transform: none; } }
 .dashboard-task-edit-button { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border-radius: 9px; color: var(--muted-foreground); opacity: .3; transition: opacity 160ms ease, color 160ms ease, background 160ms ease, transform 160ms cubic-bezier(.16,1,.3,1); }
 .dashboard-task-row:hover .dashboard-task-edit-button, .dashboard-completed-task:hover .dashboard-task-edit-button, .dashboard-task-edit-button:focus-visible { opacity: 1; }
@@ -312,6 +334,27 @@ select {
   .entity-delete-icon { width: 27px; height: 27px; }
   .entity-delete-cancel, .entity-delete-button { padding-inline: .42rem; }
 }
+.mobile-nav-button {
+  display: none;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  place-items: center;
+}
+@media (max-width: 1023px) {
+  .mobile-nav-button { display: grid; }
+}
+.week-task-menu-button {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+}
+.week-task-menu-button:hover { background: var(--muted); color: var(--foreground); }
+.week-view-toggle { min-height: 34px; }
+
 .week-day-card {
   min-height: 250px;
   padding: 1rem;
@@ -332,6 +375,101 @@ select {
   background:
     radial-gradient(circle at 85% 15%, var(--orange-soft), transparent 44%),
     var(--card);
+}
+.week-inline-add-trigger {
+  display: flex;
+  width: 100%;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  border: 1px dashed color-mix(in srgb, var(--muted-foreground) 34%, var(--border));
+  border-radius: 12px;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 650;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+.week-inline-add-trigger:hover {
+  border-color: color-mix(in srgb, var(--orange) 62%, var(--border));
+  background: color-mix(in srgb, var(--orange-soft) 45%, transparent);
+  color: var(--accent-foreground);
+}
+.week-inline-composer {
+  margin-top: 0.75rem;
+  padding: 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--orange) 36%, var(--border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--background) 68%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 8%, transparent);
+  animation: week-inline-composer-in 180ms cubic-bezier(.16,1,.3,1) both;
+}
+.week-inline-entry-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.week-inline-title {
+  min-width: 0;
+  min-height: 34px;
+  flex: 1 1 auto;
+  padding: 0.4rem 0.55rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 0.78rem;
+  outline: none;
+}
+.week-inline-title::placeholder { color: var(--muted-foreground); }
+.week-inline-title:focus { background: color-mix(in srgb, var(--card) 76%, transparent); }
+.week-inline-submit {
+  display: inline-flex;
+  min-height: 32px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 9px;
+  background: var(--orange);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.week-inline-submit:disabled { cursor: wait !important; opacity: 0.6; }
+.week-inline-close {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--muted-foreground);
+}
+.week-inline-close:hover { background: var(--muted); color: var(--foreground); }
+.week-inline-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.45rem;
+  padding-left: 0.2rem;
+}
+.week-inline-categories button {
+  min-height: 25px;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  font-size: 0.64rem;
+  font-weight: 650;
+}
+.week-inline-categories button:hover { color: var(--foreground); }
+.week-inline-categories .week-inline-category-active {
+  border-color: color-mix(in srgb, var(--orange) 46%, var(--border));
+  background: color-mix(in srgb, var(--orange) 13%, var(--card));
+  color: var(--accent-foreground);
 }
 .week-anytime-card {
   padding: 1rem;
@@ -408,32 +546,37 @@ select {
 .task-check {
   position: relative;
   display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  margin: -6px;
   place-items: center;
+  border-radius: 999px;
+}
+.task-check-surface {
+  display: grid;
   width: 20px;
   height: 20px;
-  flex: 0 0 auto;
-  margin-top: 2px;
+  place-items: center;
   border: 1px solid color-mix(in srgb, var(--muted-foreground) 60%, transparent);
   border-radius: 999px;
-  transition:
-    border-color 0.16s ease,
-    background 0.16s ease;
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
 }
 .completion-check-bloom { position: relative; isolation: isolate; overflow: visible; }
 .completion-check-bloom::before { content: ""; position: absolute; z-index: 0; inset: -8px; border: 1.5px solid color-mix(in srgb, var(--orange) 58%, transparent); border-radius: inherit; animation: achievement-ring 680ms cubic-bezier(.16,1,.3,1) both; pointer-events: none; }
 .completion-check-bloom::after { content: ""; position: absolute; z-index: 0; top: 50%; left: 50%; width: 3px; height: 3px; border-radius: 999px; background: var(--orange); box-shadow: 0 -15px 0 -1px color-mix(in srgb, var(--orange) 80%, white), 13px -8px 0 -1px color-mix(in srgb, var(--orange) 58%, transparent), 14px 8px 0 -1px color-mix(in srgb, var(--orange) 46%, transparent), 0 15px 0 -1px color-mix(in srgb, var(--orange) 66%, transparent), -13px 8px 0 -1px color-mix(in srgb, var(--orange) 44%, transparent), -13px -8px 0 -1px color-mix(in srgb, var(--orange) 58%, transparent); animation: achievement-sparks 660ms cubic-bezier(.16,1,.3,1) both; pointer-events: none; }
-.completion-check-bloom > svg { position: relative; z-index: 2; }
-.task-check:hover {
+.completion-check-bloom .task-check-surface { position: relative; z-index: 2; }
+.task-check:hover .task-check-surface {
   border-color: var(--orange);
   background: var(--orange-soft);
 }
-.task-check span {
+.task-check-pending {
   width: 7px;
   height: 7px;
   border-radius: 999px;
   background: var(--orange);
 }
-.task-check-completed {
+.task-check-completed .task-check-surface {
   border-color: var(--orange);
   background: var(--orange);
   color: white;
@@ -531,6 +674,9 @@ select {
 .kanban-status-columns {
   min-width: 0;
 }
+.kanban-mobile-board {
+  display: none;
+}
 .kanban-column {
   min-height: 14rem;
   padding: 0.75rem;
@@ -577,6 +723,14 @@ select {
 .kanban-card-moving {
   animation: kanban-card-move 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
   border-color: color-mix(in srgb, var(--orange) 62%, var(--border));
+}
+.kanban-card-dragging {
+  opacity: 0.42;
+}
+.kanban-column-drop-target {
+  border-color: color-mix(in srgb, var(--orange) 58%, var(--border));
+  background: color-mix(in srgb, var(--orange) 8%, var(--card));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orange) 14%, transparent);
 }
 .kanban-delete-button {
   display: inline-flex;
@@ -716,7 +870,10 @@ select {
 }
 .task-composer {
   width: min(100%, 800px);
+  max-height: calc(100dvh - 2rem);
   margin-top: -7vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 1.55rem;
   border: 1px solid color-mix(in srgb, var(--orange) 38%, var(--border));
   border-radius: 26px;
@@ -869,6 +1026,10 @@ select {
     opacity: 1;
     transform: none;
   }
+}
+@keyframes week-inline-composer-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes kanban-menu-in {
   from {
@@ -1228,8 +1389,8 @@ select {
 }
 .progress-filter-stack { display: flex; flex-direction: column; align-items: flex-start; gap: .55rem; }
 .progress-filter-group { display: flex; flex-wrap: wrap; gap: .2rem; border: 1px solid var(--border); border-radius: 14px; padding: .22rem; background: color-mix(in srgb, var(--card) 72%, transparent); }
-.progress-filter-group a { display: inline-flex; min-height: 32px; align-items: center; border-radius: 10px; padding: .35rem .65rem; color: var(--muted-foreground); font-size: .7rem; font-weight: 650; }
-.progress-filter-group a:hover { background: var(--muted); color: var(--foreground); }
+.progress-filter-group button { display: inline-flex; min-height: 32px; align-items: center; border-radius: 10px; padding: .35rem .65rem; color: var(--muted-foreground); font-size: .7rem; font-weight: 650; }
+.progress-filter-group button:hover { background: var(--muted); color: var(--foreground); }
 .progress-filter-group .progress-filter-active { background: color-mix(in srgb, var(--orange) 15%, var(--card)); color: var(--accent-foreground); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orange) 18%, transparent); }
 .progress-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; }
 .progress-stat { display: flex; min-height: 104px; align-items: center; gap: .8rem; border-radius: 22px; padding: .9rem 1rem; }
@@ -1328,13 +1489,32 @@ select {
   .progress-wide-grid, .progress-wide-grid-even { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
+  .kanban-status-columns-desktop { display: none; }
+  .kanban-mobile-board { display: block; min-width: 0; order: -1; padding: .85rem; border: 1px solid var(--border); border-radius: 22px; background: color-mix(in srgb, var(--card) 70%, transparent); }
+  .kanban-mobile-heading { padding: .1rem .1rem .8rem; }
+  .kanban-mobile-heading p { margin-top: .25rem; line-height: 1.45; }
+  .kanban-mobile-stages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+  .kanban-mobile-stage { --status-color: var(--muted-foreground); display: grid; min-width: 0; min-height: 46px; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .5rem; padding: .55rem .65rem; border: 1px solid color-mix(in srgb, var(--status-color) 28%, var(--border)); border-radius: 12px; background: color-mix(in srgb, var(--status-color) 5%, var(--background)); color: var(--muted-foreground); font-size: .72rem; font-weight: 650; text-align: left; }
+  .kanban-mobile-stage[aria-selected="true"] { border-color: color-mix(in srgb, var(--status-color) 65%, var(--border)); background: color-mix(in srgb, var(--status-color) 13%, var(--card)); color: var(--foreground); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--status-color) 18%, transparent); }
+  .kanban-mobile-stage strong { display: grid; min-width: 22px; height: 22px; place-items: center; border-radius: 999px; background: color-mix(in srgb, var(--status-color) 14%, var(--muted)); color: var(--foreground); font-size: .65rem; }
+  .kanban-mobile-task-list { display: grid; gap: .65rem; padding-top: .8rem; }
+  .kanban-card-mobile { cursor: default; padding: .85rem; }
+  .kanban-card-mobile:active { cursor: default; }
+  .kanban-mobile-move-label { margin-top: .8rem; color: var(--muted-foreground); font-size: .65rem; font-weight: 650; text-transform: uppercase; letter-spacing: .07em; }
+  .kanban-card-mobile .kanban-status-select { margin-top: .35rem; }
+  .kanban-card-mobile .kanban-status-trigger { min-height: 44px; }
+  .kanban-mobile-empty { padding: 1.35rem .75rem; border: 1px dashed var(--border); border-radius: 14px; color: var(--muted-foreground); font-size: .75rem; text-align: center; }
+  .week-plan-next-button { flex: 1 1 100%; }
+  .week-inline-entry-row { flex-wrap: wrap; }
+  .week-inline-title { flex-basis: calc(100% - 2.9rem); }
+  .week-inline-submit { order: 3; flex: 1 1 auto; }
   .progress-summary-grid { grid-template-columns: 1fr 1fr; gap: .55rem; }
   .progress-stat { min-height: 96px; align-items: flex-start; flex-direction: column; gap: .45rem; padding: .8rem; }
   .progress-stat-icon { width: 30px; height: 30px; border-radius: 11px; }
   .progress-stat strong { font-size: 1.25rem; }
   .progress-filter-stack { width: 100%; }
   .progress-filter-group { width: 100%; }
-  .progress-filter-group a { flex: 1 1 auto; justify-content: center; padding-inline: .4rem; }
+  .progress-filter-group button { flex: 1 1 auto; justify-content: center; padding-inline: .4rem; }
   .progress-panel-heading { min-height: 80px; padding: 1rem 1rem .75rem; }
   .progress-calendar-months { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; padding-inline: 1rem; }
   .progress-calendar-month { padding: .6rem; }
@@ -1345,12 +1525,47 @@ select {
   .progress-donut-layout { grid-template-columns: 1fr; padding-inline: 1rem; }
   .progress-donut { width: 138px; }
   .progress-plan-header, .progress-plan-row { grid-template-columns: 64px minmax(0, 1fr) 48px; gap: .5rem; }
+  .progress-month-table-wrap { overflow: visible; }
+  .progress-month-table { display: block; min-width: 0; }
+  .progress-month-table thead { display: none; }
+  .progress-month-table tbody { display: grid; gap: .65rem; }
+  .progress-month-table tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem .8rem; border: 1px solid color-mix(in srgb, var(--border) 72%, transparent); border-radius: 15px; padding: .75rem; background: color-mix(in srgb, var(--background) 38%, transparent); }
+  .progress-month-table tbody th, .progress-month-table tbody td { display: flex; align-items: center; justify-content: space-between; gap: .55rem; border: 0; padding: .12rem 0; text-align: right; }
+  .progress-month-table tbody th { grid-column: 1 / -1; border-bottom: 1px solid color-mix(in srgb, var(--border) 62%, transparent); padding-bottom: .5rem; }
+  .progress-month-table tbody th::before, .progress-month-table tbody td::before { content: attr(data-label); color: var(--muted-foreground); font-size: .58rem; font-weight: 650; text-transform: uppercase; letter-spacing: .06em; }
   .progress-empty { flex-direction: column; text-align: center; }
   .progress-empty > svg { display: none; }
 }
 @media (max-width: 420px) {
   .progress-calendar-months { grid-template-columns: 1fr; }
   .progress-calendar-day { font-size: .58rem; }
+  .progress-month-table tr { grid-template-columns: 1fr; }
+  .progress-month-table tbody th { grid-column: auto; }
+}
+
+@media (max-height: 700px) {
+  .task-composer,
+  .confirm-dialog { margin-top: 0; }
+}
+
+@media (max-width: 1023px) {
+  .theme-option-button { display: grid; width: 38px; height: 38px; place-items: center; padding: 0; }
+  .theme-compact-button { width: 40px; height: 40px; }
+  .premium-small-button { min-height: 40px; }
+  .dashboard-task-edit-button { width: 38px; height: 38px; opacity: 1; }
+  .thought-icon-button, .milestone-icon-button { display: grid; min-width: 38px; min-height: 38px; place-items: center; padding: 0; opacity: 1; }
+  .focus-reopen-button, .milestone-check { width: 36px; height: 36px; }
+  .focus-add-button, .thought-quiet-button, .view-all-button { min-height: 40px; }
+  .recurrence-check { width: 36px; height: 36px; }
+  .week-task-menu-button { width: 40px; height: 40px; }
+  .week-view-toggle { min-height: 40px; }
+  .week-inline-add-trigger { min-height: 40px; }
+  .week-inline-categories button { min-height: 36px; padding-inline: 0.65rem; }
+  .choice-chip { min-height: 40px; }
+  .kanban-delete-button { min-height: 38px; padding-inline: 0.6rem; }
+  .kanban-status-trigger, .kanban-status-option { min-height: 40px; }
+  .entity-delete-cancel, .entity-delete-button { min-height: 36px; }
+  .progress-filter-group button { min-height: 40px; }
 }
 
 @keyframes page-enter {
@@ -1435,6 +1650,7 @@ select {
   .completion-check-bloom::before,
   .completion-check-bloom::after,
   .week-view-switch,
+  .week-inline-composer,
   .task-check-completed,
   .week-task-completed,
   .week-task-checking-complete,

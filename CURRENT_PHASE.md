@@ -1,61 +1,73 @@
-# Phase 7 — Next-Week Planning UX
+# Phase 9 — Backup + Stability
 
 ## Objective
 
-Make planning the next week fast and natural inside This Week, preserving the
-existing Plan → Do → Complete → See Progress loop without introducing a
-separate planning system.
+Protect the planner’s growing local history with reliable manual JSON export
+and import, validating every backup before any persisted data is changed.
 
 ## Required Behavior
 
-- Provide an obvious Plan next week flow inside This Week.
-- Support fast inline task creation.
-- Support day-by-day planning for the selected week.
-- Support Anytime this week planning.
-- Support quick category selection during planning.
-- Preserve week navigation and past-week viewing.
-- Keep normal task, recurrence, status, and completion behavior intact.
-- Respect the configured local timezone and existing week-start semantics.
+- Export the complete restorable planner dataset to a local JSON file.
+- Include an explicit backup format version and enough metadata to validate and
+  restore the data safely.
+- Import a selected JSON backup only after validating its structure, values,
+  relationships, and supported version.
+- Reject malformed, incomplete, incompatible, or internally inconsistent
+  backups without modifying the current database.
+- Make any accepted restore atomic so a failure cannot leave partially imported
+  data behind.
+- Clearly tell the user when an import will replace existing local data and
+  require confirmation before doing so.
+- Preserve tasks, recurrence, completion history, progress history, milestones,
+  Quick Thoughts, settings, and all relational links through a round trip.
 
 ## Implementation Checklist
 
-- [ ] Audit the existing This Week creation and navigation flows for reusable
-      behavior.
-- [ ] Add the Plan next week entry point within This Week.
-- [ ] Implement fast inline creation for individual days.
-- [ ] Implement fast inline creation for Anytime this week.
-- [ ] Add quick category selection without expanding the form unnecessarily.
-- [ ] Preserve editing, recurrence, completion, and historical week behavior.
-- [ ] Add tests for week boundaries, next-week creation, Anytime tasks, category
-      selection, and past-week viewing.
-- [ ] Verify responsive behavior and both themes without redesigning This Week.
-- [ ] Run migrations if needed, all tests, typecheck, lint, build, and rendering
-      checks.
+- [ ] Audit every persisted table and relationship required for a complete
+      restore.
+- [ ] Define a versioned JSON backup contract and strict validation schema.
+- [ ] Implement local JSON export from the existing Settings surface.
+- [ ] Implement local JSON file selection and validation for import.
+- [ ] Present import validation errors without changing existing data.
+- [ ] Add an explicit confirmation step before replacing local planner data.
+- [ ] Restore validated data in a single transaction with foreign-key-safe
+      ordering and rollback on failure.
+- [ ] Revalidate all affected routes after a successful restore.
+- [ ] Add tests for round trips, malformed input, unsupported versions, missing
+      relationships, rollback, and preservation of historical data.
+- [ ] Verify the backup controls at responsive sizes and in both themes without
+      redesigning Settings.
+- [ ] Run migrations if needed, all tests, typecheck, lint, build, and manual
+      export/import verification.
 
 ## Explicitly Out of Scope
 
-- Do not create a separate Plan route.
-- Do not implement a general calendar or scheduling system.
-- Do not change task completion or recurrence semantics without a correctness
-  bug.
-- Do not implement Phase 8 responsive-polish work outside the planning flow.
-- Do not add unrelated task fields, scoring, XP, or achievements.
+- Do not add cloud sync or third-party storage integrations.
+- Do not add scheduled or automatic backups.
+- Do not implement partial-table imports or merge conflict resolution.
+- Do not silently overwrite the current database.
+- Do not accept malformed or unsupported backup formats on a best-effort basis.
+- Do not implement Phase 10’s full application stabilization audit early.
 - Do not redesign the approved visual system.
 
 ## Completion Criteria
 
-Phase 7 is complete only when next-week, day-by-day, and Anytime planning are
-fast and reliable inside This Week; week navigation and historical behavior are
-preserved; boundary and creation tests pass; and all relevant migrations,
-tests, type checking, linting, build, and rendering checks pass.
+Phase 9 is complete only when a versioned JSON export contains all restorable
+planner data; a valid backup can be restored atomically with relationships and
+history intact; malformed, incompatible, or inconsistent imports leave the
+existing database untouched; replacement requires explicit confirmation; the
+Settings controls work responsively in both themes; and all migrations, tests,
+type checking, linting, build, and manual round-trip checks pass.
 
 ## Relevant Dependencies from Previous Phases
 
-- Phase 3 — This Week + Complete Task Workflow: reuse the existing weekly task
-  groups, creation, editing, status, completion, and navigation behavior.
-- Phase 3B — Weekly Recurrence: preserve persisted weekly instances and avoid
-  duplicate or prematurely generated recurrence work.
-- Phase 4 — Dashboard Today System: newly planned tasks must continue to appear
-  correctly in Today and overdue views.
-- Phase 6/6B — Progress: planned tasks must flow into the existing historical
-  cohort and visualization contract without duplicated counters.
+- Existing SQLite migrations and schema are the source of truth for every table
+  and relationship included in a backup.
+- Phase 3/3B — Tasks, completion history, and recurrence instances must retain
+  their identifiers and relationships.
+- Phase 4/5 — Daily focus, Quick Thoughts, focus-area tasks, and milestones must
+  survive round trips.
+- Phase 6/6B — Historical completion timestamps and progress inputs must remain
+  unchanged so analytics reproduce the same results.
+- Phase 8 — Backup controls and confirmation states must preserve the responsive
+  shell, touch targets, themes, and approved visual language.

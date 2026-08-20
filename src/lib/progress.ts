@@ -1,6 +1,3 @@
-import { asc } from "drizzle-orm";
-import { db } from "@/src/db/client";
-import { tasks } from "@/src/db/schema";
 import type { TaskCategory, TaskStatus } from "@/src/lib/today";
 
 export const progressCategoryKeys = ["career", "content", "personal"] as const;
@@ -289,18 +286,4 @@ export function calculateProgress(
     ),
     daily: [...daily.values()].sort((left, right) => left.date.localeCompare(right.date)),
   };
-}
-
-export function getProgressData(options: ProgressOptions = {}) {
-  const taskHistory = db.select({
-    id: tasks.id,
-    category: tasks.category,
-    date: tasks.date,
-    anytimeWeekStart: tasks.anytimeWeekStart,
-    recurrenceId: tasks.recurrenceId,
-    status: tasks.status,
-    completedAt: tasks.completedAt,
-  }).from(tasks).orderBy(asc(tasks.id)).all();
-
-  return calculateProgress(taskHistory, options);
 }

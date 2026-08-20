@@ -1,0 +1,57 @@
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@supports (padding: env(safe-area-inset-top)) {
+  .workspace-header {
+    height: calc(3.5rem + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .sidebar-panel {
+    padding-top: calc(1rem + env(safe-area-inset-top));
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  .content-surface {
+    padding-bottom: calc(1.75rem + env(safe-area-inset-bottom));
+  }
+}
+
+.mobile-runtime-state {
+  display: grid;
+  min-height: 55vh;
+  place-items: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.mobile-runtime-card {
+  width: min(100%, 420px);
+  padding: 1.35rem;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--card);
+  box-shadow: 0 14px 32px color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+
+.mobile-runtime-spinner {
+  width: 32px;
+  height: 32px;
+  margin: 0 auto 1rem;
+  border: 3px solid var(--muted);
+  border-top-color: var(--orange);
+  border-radius: 999px;
+  animation: mobile-spin 700ms linear infinite;
+}
+
+@keyframes mobile-spin {
+  to { transform: rotate(360deg); }
+}

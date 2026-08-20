@@ -26,14 +26,15 @@ const { tasks } = await import("../src/db/schema");
 const {
   calculateProgress,
   calculateProductiveStreak,
-  getProgressData,
   localDateInTimeZone,
 } = await import("../src/lib/progress");
+const { getProgressData } = await import("../src/lib/progress-query");
 const {
   buildHeatmap,
   buildProgressPeriods,
   normalizeProgressCategory,
   normalizeProgressRange,
+  progressGrouping,
   progressRangeStart,
 } = await import("../src/lib/progress-visuals");
 migrate(db, { migrationsFolder: "./src/db/migrations" });
@@ -237,8 +238,30 @@ assert.equal(heatmap.find((day) => day.date === "2026-06-10")?.completed, 1);
 
 assert.equal(normalizeProgressRange("unexpected"), "3m");
 assert.equal(normalizeProgressCategory("unexpected"), "all");
+assert.equal(progressGrouping("3m"), "day", "short progress ranges use completion-day buckets");
+assert.equal(progressGrouping("6m"), "week");
+assert.equal(progressGrouping("1y"), "month");
 assert.equal(progressRangeStart("3m", "2026-08-19"), "2026-05-20");
 assert.equal(progressRangeStart("all", "2026-08-19"), undefined);
+
+const overdueCompletion = calculateProgress([
+  task({
+    date: "2026-08-17",
+    status: "completed",
+    completedAt: "2026-08-20T09:00:00.000Z",
+  }),
+], {
+  today: "2026-08-20",
+  timeZone: "Europe/Bucharest",
+});
+assert.deepEqual(overdueCompletion.completionDates, { "2026-08-20": 1 });
+assert.equal(overdueCompletion.daily.find((day) => day.date === "2026-08-20")?.completed, 1);
+assert.equal(overdueCompletion.daily.find((day) => day.date === "2026-08-17")?.completed ?? 0, 0);
+assert.equal(
+  buildProgressPeriods(overdueCompletion, "day").find((period) => period.key === "2026-08-20")?.completed,
+  1,
+  "daily completion charts use completedAt rather than the planned date",
+);
 
 assert.deepEqual(
   calculateProductiveStreak(["2026-08-13", "2026-08-16", "2026-08-19"], "2026-08-21"),

@@ -1,5 +1,6 @@
-import type { CSSProperties, ReactNode } from "react";
-import Link from "next/link";
+"use client";
+
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import {
   Activity,
   CalendarCheck2,
@@ -9,12 +10,15 @@ import {
   Flame,
 } from "lucide-react";
 import { eachDayOfInterval, endOfMonth, format, parseISO, startOfMonth } from "date-fns";
-import type { ProgressCategory, ProgressData } from "@/src/lib/progress";
+import { calculateProgress, type ProgressCategory, type ProgressData, type ProgressTask } from "@/src/lib/progress";
 import {
   buildHeatmap,
   buildProgressPeriods,
+  normalizeProgressCategory,
+  normalizeProgressRange,
   progressGrouping,
   progressRangeKeys,
+  progressRangeStart,
   type ProgressCategoryFilter,
   type HeatmapDay,
   type ProgressPeriod,
@@ -35,20 +39,81 @@ const categoryLabels: Record<ProgressCategoryFilter, string> = {
 };
 const categoryKeys: ProgressCategory[] = ["career", "content", "personal"];
 
-export function ProgressView({
-  data,
-  range,
-  category,
-}: {
-  data: ProgressData;
+type ProgressViewProps = {
   range: ProgressRangeKey;
   category: ProgressCategoryFilter;
-}) {
-  const grouping = progressGrouping(range);
+} & (
+  | { taskHistory: ProgressTask[]; today: string; timeZone: string; data?: never }
+  | { data: ProgressData; taskHistory?: never; today?: never; timeZone?: never }
+);
+
+function browserFilterParams() {
+  const hash = window.location.hash;
+  if (hash.startsWith("#/")) {
+    return new URLSearchParams(hash.split("?", 2)[1] ?? "");
+  }
+  return new URLSearchParams(window.location.search);
+}
+
+export function ProgressView(props: ProgressViewProps) {
+  const { range, category } = props;
+  const taskHistory = "taskHistory" in props ? props.taskHistory : undefined;
+  const today = "today" in props ? props.today : undefined;
+  const timeZone = "timeZone" in props ? props.timeZone : undefined;
+  const suppliedData = "data" in props ? props.data : undefined;
+  const [filters, setFilters] = useState({ range, category });
+
+  useEffect(() => {
+    setFilters({ range, category });
+  }, [range, category]);
+
+  useEffect(() => {
+    function restoreFiltersFromUrl() {
+      const params = browserFilterParams();
+      setFilters({
+        range: normalizeProgressRange(params.get("range") ?? undefined),
+        category: normalizeProgressCategory(params.get("category") ?? undefined),
+      });
+    }
+    window.addEventListener("popstate", restoreFiltersFromUrl);
+    window.addEventListener("hashchange", restoreFiltersFromUrl);
+    return () => {
+      window.removeEventListener("popstate", restoreFiltersFromUrl);
+      window.removeEventListener("hashchange", restoreFiltersFromUrl);
+    };
+  }, []);
+
+  const data = useMemo(
+    () => taskHistory && today && timeZone
+      ? calculateProgress(taskHistory, {
+          startDate: progressRangeStart(filters.range, today),
+          today,
+          timeZone,
+          category: filters.category === "all" ? undefined : filters.category,
+        })
+      : suppliedData!,
+    [filters, suppliedData, taskHistory, timeZone, today],
+  );
+  const grouping = progressGrouping(filters.range);
   const periods = buildProgressPeriods(data, grouping);
   const monthly = buildProgressPeriods(data, "month");
   const hasHistory = data.tasksPlanned > 0 || data.completedTasks > 0;
-  const filterDescription = `${rangeLabels[range]} · ${categoryLabels[category]}`;
+  const filterDescription = `${rangeLabels[filters.range]} · ${categoryLabels[filters.category]}`;
+
+  function updateFilters(next: typeof filters) {
+    if (next.range === filters.range && next.category === filters.category) return;
+    setFilters(next);
+    if (window.location.hash.startsWith("#/")) {
+      const route = window.location.hash.slice(1).split("?", 1)[0] || "/progress";
+      const params = new URLSearchParams({ range: next.range, category: next.category });
+      window.location.hash = `${route}?${params}`;
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set("range", next.range);
+    url.searchParams.set("category", next.category);
+    window.history.pushState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  }
 
   return (
     <main className="progress-shell mx-auto w-full max-w-[1500px] space-y-6">
@@ -60,17 +125,17 @@ export function ProgressView({
             A history of planned work, completed tasks, and the days you kept showing up.
           </p>
         </div>
-        <ProgressFilters range={range} category={category} />
+        <ProgressFilters filters={filters} onChange={updateFilters} />
       </header>
 
       <p className="sr-only">Showing {filterDescription}</p>
       <Summary data={data} />
 
       {!hasHistory ? (
-        <EmptyProgress category={category} />
+        <EmptyProgress category={filters.category} />
       ) : (
         <>
-          <Heatmap data={data} range={range} />
+          <Heatmap data={data} range={filters.range} />
           <section className="progress-wide-grid">
             <WorkOverTime periods={periods} grouping={grouping} />
             <CategoryDistribution counts={data.categoryCounts} />
@@ -80,7 +145,7 @@ export function ProgressView({
             <WeekdayDistribution values={data.weekdayDistribution} />
           </section>
           <PlannedVsCompleted periods={periods} grouping={grouping} />
-          <MonthlySummaries periods={monthly} category={category} />
+          <MonthlySummaries periods={monthly} category={filters.category} />
         </>
       )}
     </main>
@@ -88,36 +153,38 @@ export function ProgressView({
 }
 
 function ProgressFilters({
-  range,
-  category,
+  filters,
+  onChange,
 }: {
-  range: ProgressRangeKey;
-  category: ProgressCategoryFilter;
+  filters: { range: ProgressRangeKey; category: ProgressCategoryFilter };
+  onChange: (filters: { range: ProgressRangeKey; category: ProgressCategoryFilter }) => void;
 }) {
   return (
     <div className="progress-filter-stack" aria-label="Progress filters">
       <nav className="progress-filter-group" aria-label="Time range">
         {progressRangeKeys.map((value) => (
-          <Link
+          <button
+            type="button"
             key={value}
-            href={`/progress?range=${value}&category=${category}`}
-            aria-current={range === value ? "page" : undefined}
-            className={range === value ? "progress-filter-active" : ""}
+            aria-pressed={filters.range === value}
+            className={filters.range === value ? "progress-filter-active" : ""}
+            onClick={() => onChange({ ...filters, range: value })}
           >
             {rangeLabels[value]}
-          </Link>
+          </button>
         ))}
       </nav>
       <nav className="progress-filter-group" aria-label="Category">
         {(Object.keys(categoryLabels) as ProgressCategoryFilter[]).map((value) => (
-          <Link
+          <button
+            type="button"
             key={value}
-            href={`/progress?range=${range}&category=${value}`}
-            aria-current={category === value ? "page" : undefined}
-            className={category === value ? "progress-filter-active" : ""}
+            aria-pressed={filters.category === value}
+            className={filters.category === value ? "progress-filter-active" : ""}
+            onClick={() => onChange({ ...filters, category: value })}
           >
             {categoryLabels[value]}
-          </Link>
+          </button>
         ))}
       </nav>
     </div>
@@ -264,7 +331,7 @@ function activityDetail(day: HeatmapDay) {
   return `${format(parseISO(day.date), "MMMM d, yyyy")}: ${day.completed} ${day.completed === 1 ? "task" : "tasks"} completed. Career ${day.categoryCounts.career}, Content ${day.categoryCounts.content}, Personal ${day.categoryCounts.personal}.`;
 }
 
-function WorkOverTime({ periods, grouping }: { periods: ProgressPeriod[]; grouping: "week" | "month" }) {
+function WorkOverTime({ periods, grouping }: { periods: ProgressPeriod[]; grouping: "day" | "week" | "month" }) {
   const visible = periods.slice(-24);
   const maximum = Math.max(1, ...visible.map((period) => period.completed));
   const trimmed = periods.length > visible.length;
@@ -322,7 +389,7 @@ function CategoryDistribution({ counts }: { counts: ProgressData["categoryCounts
   );
 }
 
-function ProductiveDays({ periods, grouping }: { periods: ProgressPeriod[]; grouping: "week" | "month" }) {
+function ProductiveDays({ periods, grouping }: { periods: ProgressPeriod[]; grouping: "day" | "week" | "month" }) {
   const visible = periods.slice(-12);
   const maximum = grouping === "week" ? 7 : Math.max(1, ...visible.map((period) => period.productiveDays));
   return (
@@ -358,7 +425,7 @@ function WeekdayDistribution({ values }: { values: ProgressData["weekdayDistribu
   );
 }
 
-function PlannedVsCompleted({ periods, grouping }: { periods: ProgressPeriod[]; grouping: "week" | "month" }) {
+function PlannedVsCompleted({ periods, grouping }: { periods: ProgressPeriod[]; grouping: "day" | "week" | "month" }) {
   const visible = periods.slice(-12);
   const maximum = Math.max(1, ...visible.map((period) => period.planned));
   return (
@@ -390,7 +457,7 @@ function MonthlySummaries({ periods, category }: { periods: ProgressPeriod[]; ca
         <table className="progress-month-table">
           <thead><tr><th>Month</th><th>Completed</th><th>Productive days</th><th>Planned</th><th>Completion rate</th></tr></thead>
           <tbody>
-            {visible.map((period) => <tr key={period.key}><th>{period.label}</th><td>{period.completed}</td><td>{period.productiveDays}</td><td>{period.planned}</td><td>{period.completionRate}%</td></tr>)}
+            {visible.map((period) => <tr key={period.key}><th data-label="Month">{period.label}</th><td data-label="Completed">{period.completed}</td><td data-label="Productive days">{period.productiveDays}</td><td data-label="Planned">{period.planned}</td><td data-label="Completion rate">{period.completionRate}%</td></tr>)}
           </tbody>
         </table>
       </div>
