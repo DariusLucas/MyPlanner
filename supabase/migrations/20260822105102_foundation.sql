@@ -1,0 +1,2 @@
+-- Phase S1 foundation marker.
+-- The PostgreSQL planner schema, RLS policies, and RPCs are introduced in S2.

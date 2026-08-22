@@ -4,6 +4,13 @@ node_modules/
 out/
 dist-mobile/
 
+.env
+.env.*
+!.env.example
+
+supabase/.branches/
+supabase/.temp/
+
 artifacts/*.apk
 
 data/*.db

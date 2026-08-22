@@ -2250,6 +2250,39 @@ COMPLETED
 Phase 8 — Mobile / Responsive Polish
 COMPLETED
 
+## Approved Supabase Roadmap Amendment — 2026-08-20
+
+The user-approved `SUPABASE_MIGRATION_PLAN.md` supersedes the earlier
+local-only/no-auth constraints for the migration work. The existing SQLite
+database remains protected and operational until cloud import and both client
+cutovers have been verified.
+
+The ordered work before the deferred backup phase is:
+
+```text
+Phase S1 — Roadmap Amendment and Supabase Foundation
+COMPLETED
+
+Phase S2 — Schema, Auth, RLS, and Database Functions
+COMPLETED
+
+Phase S3 — Web Migration
+PENDING
+
+Phase S4 — Android Migration
+PENDING
+
+Phase S5 — Import, Verification, and Production Cutover
+PENDING
+
+Phase S6 — Supabase Backup and Stabilization
+PENDING
+```
+
+Phase 9's backup behavior is deferred and becomes a per-user, ownership-safe
+Supabase JSON export/import after the cutover. The broader stabilization work
+follows that cloud-aware backup implementation.
+
 ---
 
 # 74. NEW PHASE 2R — PRODUCT SIMPLIFICATION REFACTOR

@@ -1,73 +1,67 @@
-# Phase 9 — Backup + Stability
+# Phase S3 — Web Migration
 
 ## Objective
 
-Protect the planner’s growing local history with reliable manual JSON export
-and import, validating every backup before any persisted data is changed.
+Move the web planner from its SQLite runtime to the authenticated Supabase
+development project while preserving the approved UI, existing planner data
+contracts, and task behavior.
 
 ## Required Behavior
 
-- Export the complete restorable planner dataset to a local JSON file.
-- Include an explicit backup format version and enough metadata to validate and
-  restore the data safely.
-- Import a selected JSON backup only after validating its structure, values,
-  relationships, and supported version.
-- Reject malformed, incomplete, incompatible, or internally inconsistent
-  backups without modifying the current database.
-- Make any accepted restore atomic so a failure cannot leave partially imported
-  data behind.
-- Clearly tell the user when an import will replace existing local data and
-  require confirmation before doing so.
-- Preserve tasks, recurrence, completion history, progress history, milestones,
-  Quick Thoughts, settings, and all relational links through a round trip.
+- Provide a web sign-in flow using email OTP authentication.
+- Persist and refresh the Supabase session through the Next.js server/browser
+  cookie clients.
+- Protect planner routes and server actions from unauthenticated access.
+- Replace web SQLite reads and writes with authenticated Supabase queries and
+  the ownership-safe planner RPCs.
+- Preserve current UI behavior, visual design, timezone handling, task history,
+  revisions, recurrence behavior, and conflict/error semantics.
+- Keep Android on SQLite until Phase S4.
 
 ## Implementation Checklist
 
-- [ ] Audit every persisted table and relationship required for a complete
-      restore.
-- [ ] Define a versioned JSON backup contract and strict validation schema.
-- [ ] Implement local JSON export from the existing Settings surface.
-- [ ] Implement local JSON file selection and validation for import.
-- [ ] Present import validation errors without changing existing data.
-- [ ] Add an explicit confirmation step before replacing local planner data.
-- [ ] Restore validated data in a single transaction with foreign-key-safe
-      ordering and rollback on failure.
-- [ ] Revalidate all affected routes after a successful restore.
-- [ ] Add tests for round trips, malformed input, unsupported versions, missing
-      relationships, rollback, and preservation of historical data.
-- [ ] Verify the backup controls at responsive sizes and in both themes without
-      redesigning Settings.
-- [ ] Run migrations if needed, all tests, typecheck, lint, build, and manual
-      export/import verification.
+- [ ] Add the web login route with email and one-time-code states.
+- [ ] Add session refresh/middleware behavior for browser navigation and server
+      rendering.
+- [ ] Add authenticated route and action guards with clear signed-out behavior.
+- [ ] Introduce web planner data-access modules backed by Supabase types and
+      RPCs; keep table/RPC details out of presentational components.
+- [ ] Migrate dashboard, week, task, focus, recurrence, and progress flows from
+      SQLite without changing their user-facing contracts.
+- [ ] Preserve optimistic revision handling and user-visible conflict errors.
+- [ ] Verify that no service-role credential, database password, or connection
+      string reaches browser bundles or client-visible output.
+- [ ] Run existing tests, typecheck, lint, build, and Supabase integration
+      checks, plus manual signed-out/signed-in web verification.
 
 ## Explicitly Out of Scope
 
-- Do not add cloud sync or third-party storage integrations.
-- Do not add scheduled or automatic backups.
-- Do not implement partial-table imports or merge conflict resolution.
-- Do not silently overwrite the current database.
-- Do not accept malformed or unsupported backup formats on a best-effort basis.
-- Do not implement Phase 10’s full application stabilization audit early.
+- Do not migrate Android SQLite or add Android secure session storage; that is
+  Phase S4.
+- Do not import the desktop SQLite database or create production planner rows;
+  that is Phase S5.
+- Do not create the production project or perform production cutover.
+- Do not add profiles, OAuth, passwords, passkeys, sharing, teams, offline
+  queues, conflict merging, push notifications, or backup UI.
 - Do not redesign the approved visual system.
+- Do not delete SQLite migrations or rewrite existing local data.
 
 ## Completion Criteria
 
-Phase 9 is complete only when a versioned JSON export contains all restorable
-planner data; a valid backup can be restored atomically with relationships and
-history intact; malformed, incompatible, or inconsistent imports leave the
-existing database untouched; replacement requires explicit confirmation; the
-Settings controls work responsively in both themes; and all migrations, tests,
-type checking, linting, build, and manual round-trip checks pass.
+Phase S3 is complete only when the complete web planner works against the
+development Supabase project with email OTP sign-in, cookie-backed session
+refresh, protected routes, authenticated Supabase reads/writes and RPCs, no
+SQLite runtime dependency in the web app, no privileged credentials in client
+outputs, and all relevant automated and manual checks passing.
 
 ## Relevant Dependencies from Previous Phases
 
-- Existing SQLite migrations and schema are the source of truth for every table
-  and relationship included in a backup.
-- Phase 3/3B — Tasks, completion history, and recurrence instances must retain
-  their identifiers and relationships.
-- Phase 4/5 — Daily focus, Quick Thoughts, focus-area tasks, and milestones must
-  survive round trips.
-- Phase 6/6B — Historical completion timestamps and progress inputs must remain
-  unchanged so analytics reproduce the same results.
-- Phase 8 — Backup controls and confirmation states must preserve the responsive
-  shell, touch targets, themes, and approved visual language.
+- S2 established the applied PostgreSQL schema, generated database types,
+  ownership-safe RLS, atomic planner RPCs, Supabase clients, and verified email
+  OTP behavior.
+- Existing SQLite behavior and UI contracts remain the parity source of truth
+  during the web cutover.
+- The publishable Supabase key is client-safe; service-role credentials,
+  database passwords, and connection strings remain server/import-only.
+- `SUPABASE_MIGRATION_PLAN.md` remains the detailed architecture and security
+  reference for the cutover.

@@ -1,0 +1,2 @@
+-- Intentionally empty during Phase S1.
+-- Phase S2 will add local-only auth fixtures required by integration tests.
