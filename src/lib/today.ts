@@ -10,11 +10,31 @@ export const taskStatuses = ["not_started", "in_progress", "on_hold", "done", "c
 export type TaskCategory = (typeof taskCategories)[number];
 export type TaskPriority = (typeof taskPriorities)[number];
 export type TaskStatus = (typeof taskStatuses)[number];
-export type TodayTask = typeof tasks.$inferSelect;
+export type PlannerId = string | number;
+
+type SqliteTask = typeof tasks.$inferSelect;
+type SqliteDailyFocus = typeof dailyFocus.$inferSelect;
+
+export type TodayTask = Omit<
+  SqliteTask,
+  "id" | "goalId" | "sprintId" | "sprintWeekId" | "recurrenceId"
+> & {
+  id: PlannerId;
+  goalId: PlannerId | null;
+  sprintId: PlannerId | null;
+  sprintWeekId: PlannerId | null;
+  recurrenceId: PlannerId | null;
+  revision?: number;
+};
+
+export type DailyFocus = Omit<SqliteDailyFocus, "id"> & {
+  id: PlannerId;
+  revision?: number;
+};
 
 export type TodayData = {
   date: string;
-  focus: typeof dailyFocus.$inferSelect | undefined;
+  focus: DailyFocus | undefined;
   tasks: TodayTask[];
   categories: Record<TaskCategory, { total: number; completed: number }>;
   total: number;

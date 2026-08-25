@@ -4,9 +4,12 @@ import { db } from "@/src/db/client";
 import { quickThoughts, tasks } from "@/src/db/schema";
 import { ensureRecurringInstances } from "@/src/lib/recurrence";
 import { calculateProductiveStreak } from "@/src/lib/progress";
-import type { TodayTask } from "@/src/lib/today";
+import type { PlannerId, TodayTask } from "@/src/lib/today";
 
-export type QuickThought = typeof quickThoughts.$inferSelect;
+export type QuickThought = Omit<typeof quickThoughts.$inferSelect, "id"> & {
+  id: PlannerId;
+  revision?: number;
+};
 export type StreakState = "hot" | "cooling" | "cold";
 
 export type DashboardData = {

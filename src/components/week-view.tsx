@@ -39,7 +39,7 @@ import {
   updateTask,
   type ActionResult,
 } from "@/src/app/today/actions";
-import type { TaskCategory, TaskStatus } from "@/src/lib/today";
+import type { PlannerId, TaskCategory, TaskStatus } from "@/src/lib/today";
 import type { WeekData, WeekTask, WeeklyRecurrence } from "@/src/lib/week";
 
 const categories: TaskCategory[] = ["career", "content", "other"];
@@ -64,7 +64,7 @@ type Runner = (
   form: FormData,
   success?: () => void,
 ) => Promise<void>;
-type OptimisticCompletions = Record<number, boolean>;
+type OptimisticCompletions = Record<string, boolean>;
 type AnytimeProgress = { completed: number; total: number; value: number };
 type ConfirmationRequest = {
   title: string;
@@ -81,7 +81,7 @@ function getAnytimeProgress(
   data: WeekData,
   optimisticCompletions: OptimisticCompletions,
 ): AnytimeProgress {
-  const normalTasks = new Map<number, WeekTask>();
+  const normalTasks = new Map<PlannerId, WeekTask>();
   [...data.anytime, ...data.completed]
     .filter(
       (task) => task.anytimeWeekStart === data.weekStart && !task.recurrenceId,
@@ -119,7 +119,7 @@ function getAnytimeProgress(
 export function WeekView({ data }: { data: WeekData }) {
   const [view, setView] = useState<"checklist" | "board">("checklist");
   const [composer, setComposer] = useState(false);
-  const [editing, setEditing] = useState<number | null>(null);
+  const [editing, setEditing] = useState<PlannerId | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [optimisticCompletions, setOptimisticCompletions] =
@@ -145,7 +145,7 @@ export function WeekView({ data }: { data: WeekData }) {
   );
   const anytimeProgress = getAnytimeProgress(data, optimisticCompletions);
 
-  function setOptimisticCompletion(id: number, completed: boolean) {
+  function setOptimisticCompletion(id: PlannerId, completed: boolean) {
     setOptimisticCompletions((current) => ({ ...current, [id]: completed }));
   }
 
@@ -719,12 +719,12 @@ function Checklist({
   onCompletionChange,
 }: {
   data: WeekData;
-  editing: number | null;
-  setEditing: (value: number | null) => void;
+  editing: PlannerId | null;
+  setEditing: (value: PlannerId | null) => void;
   pending: string | null;
   run: Runner;
   anytimeProgress: AnytimeProgress;
-  onCompletionChange: (id: number, completed: boolean) => void;
+  onCompletionChange: (id: PlannerId, completed: boolean) => void;
 }) {
   const itemCount = data.anytime.length + data.recurringAnytime.length;
   return (
@@ -850,14 +850,14 @@ function RecurringTaskCard({
   pending: string | null;
   run: Runner;
   editing: boolean;
-  setEditing: (value: number | null) => void;
-  onCompletionChange?: (id: number, completed: boolean) => void;
+  setEditing: (value: PlannerId | null) => void;
+  onCompletionChange?: (id: PlannerId, completed: boolean) => void;
   kanban?: boolean;
 }) {
   const checkIns = recurrence.tasks.slice(0, recurrence.countPerWeek);
   const task = checkIns[0]!;
-  const [visualStates, setVisualStates] = useState<Record<number, boolean>>({});
-  const [celebratingId, setCelebratingId] = useState<number | null>(null);
+  const [visualStates, setVisualStates] = useState<Record<string, boolean>>({});
+  const [celebratingId, setCelebratingId] = useState<PlannerId | null>(null);
   const completed = checkIns.filter(
     (instance) => visualStates[instance.id] ?? instance.status === "completed",
   ).length;
@@ -886,6 +886,8 @@ function RecurringTaskCard({
                   key={instance.id}
                   action={(form) => {
                     const nextCompleted = !instanceCompleted;
+                    form.set("revision", String(instance.revision ?? 1));
+                    form.set("completed", String(nextCompleted));
                     setVisualStates((current) => ({ ...current, [instance.id]: nextCompleted }));
                     if (nextCompleted) {
                       setCelebratingId(instance.id);
@@ -956,8 +958,8 @@ function DayCard({
   tasks: WeekTask[];
   glow: boolean;
   sunday: boolean;
-  editing: number | null;
-  setEditing: (value: number | null) => void;
+  editing: PlannerId | null;
+  setEditing: (value: PlannerId | null) => void;
   pending: string | null;
   run: Runner;
 }) {
@@ -1073,8 +1075,8 @@ function TaskCard({
   pending: string | null;
   run: Runner;
   editing: boolean;
-  setEditing: (value: number | null) => void;
-  onCompletionChange?: (id: number, completed: boolean) => void;
+  setEditing: (value: PlannerId | null) => void;
+  onCompletionChange?: (id: PlannerId, completed: boolean) => void;
 }) {
   const completed = task.status === "completed";
   const [visualCompleted, setVisualCompleted] = useState(completed);
@@ -1089,6 +1091,8 @@ function TaskCard({
   }, [checkAnimation]);
   function toggle(form: FormData) {
     const nextCompleted = !visualCompleted;
+    form.set("revision", String(task.revision ?? 1));
+    form.set("completed", String(nextCompleted));
     setVisualCompleted(nextCompleted);
     setCheckAnimation(nextCompleted ? "complete" : "reopen");
     onCompletionChange?.(task.id, nextCompleted);
@@ -1170,18 +1174,18 @@ function Board({
   weekStart: string;
   anytime: WeekTask[];
   recurringAnytime: WeeklyRecurrence[];
-  editing: number | null;
-  setEditing: (value: number | null) => void;
+  editing: PlannerId | null;
+  setEditing: (value: PlannerId | null) => void;
   pending: string | null;
   run: Runner;
   anytimeProgress: AnytimeProgress;
-  onCompletionChange: (id: number, completed: boolean) => void;
+  onCompletionChange: (id: PlannerId, completed: boolean) => void;
 }) {
   const boardRef = useRef<HTMLDivElement>(null);
-  const dragIdRef = useRef<number | null>(null);
-  const [movingId, setMovingId] = useState<number | null>(null);
+  const dragIdRef = useRef<PlannerId | null>(null);
+  const [movingId, setMovingId] = useState<PlannerId | null>(null);
   const [mobileStatus, setMobileStatus] = useState<TaskStatus>("not_started");
-  const [optimisticStatuses, setOptimisticStatuses] = useState<Record<number, TaskStatus>>({});
+  const [optimisticStatuses, setOptimisticStatuses] = useState<Record<string, TaskStatus>>({});
 
   useEffect(() => {
     setOptimisticStatuses((current) => {
@@ -1201,7 +1205,7 @@ function Board({
     return optimisticStatuses[task.id] ?? task.status;
   }
 
-  async function moveTask(id: number, status: TaskStatus) {
+  async function moveTask(id: PlannerId, status: TaskStatus) {
     const task = tasks.find((candidate) => candidate.id === id);
     if (!task) return false;
     const previousStatus = taskStatus(task);
@@ -1211,6 +1215,7 @@ function Board({
     setMovingId(id);
     const form = new FormData();
     form.set("id", String(id));
+    form.set("revision", String(task.revision ?? 1));
     form.set("status", status);
     let moved = false;
     await run(`workflow-${id}`, setTaskWorkflow, form, () => {
@@ -1463,8 +1468,8 @@ function AnytimeKanbanTaskCard({
   pending: string | null;
   run: Runner;
   editing: boolean;
-  setEditing: (value: number | null) => void;
-  onCompletionChange: (id: number, completed: boolean) => void;
+  setEditing: (value: PlannerId | null) => void;
+  onCompletionChange: (id: PlannerId, completed: boolean) => void;
 }) {
   const [visualCompleted, setVisualCompleted] = useState(
     task.status === "completed",
@@ -1472,6 +1477,8 @@ function AnytimeKanbanTaskCard({
   const [celebrating, setCelebrating] = useState(false);
   function toggle(form: FormData) {
     const nextCompleted = !visualCompleted;
+    form.set("revision", String(task.revision ?? 1));
+    form.set("completed", String(nextCompleted));
     setVisualCompleted(nextCompleted);
     if (nextCompleted) {
       setCelebrating(true);
@@ -1551,9 +1558,9 @@ function KanbanCard({
   onDragStart: (event: ReactDragEvent<HTMLElement>) => void;
   onChange: (status: TaskStatus) => void;
   run: Runner;
-  onCompletionChange?: (id: number, completed: boolean) => void;
+  onCompletionChange?: (id: PlannerId, completed: boolean) => void;
   editing: boolean;
-  setEditing: (value: number | null) => void;
+  setEditing: (value: PlannerId | null) => void;
   mobile?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1601,6 +1608,7 @@ function KanbanCard({
         <form
           className={mobile ? "mt-2" : "mt-3"}
           action={(form) => {
+            form.set("revision", String(task.revision ?? 1));
             onCompletionChange?.(task.id, true);
             return run(`confirm-${task.id}`, confirmTaskCompletion, form);
           }}
@@ -1749,6 +1757,7 @@ function EditForm({
   const anytime = placement.startsWith("anytime:");
 
   async function submit(form: FormData) {
+    form.set("revision", String(task.revision ?? 1));
     setSubmitting(true);
     await new Promise((resolve) => window.setTimeout(resolve, 180));
     await onSave(form);
@@ -1764,6 +1773,7 @@ function EditForm({
         setSubmitting(true);
         const form = new FormData();
         form.set("id", String(task.id));
+        form.set("revision", String(task.revision ?? 1));
         await onDelete(form);
         setSubmitting(false);
       },

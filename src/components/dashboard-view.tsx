@@ -8,29 +8,29 @@ import { addDays, format, parseISO, startOfWeek } from "date-fns";
 import { createThought, deleteThought, updateThought } from "@/src/app/dashboard-actions";
 import { createTask, toggleTask, updateTask, type ActionResult } from "@/src/app/today/actions";
 import type { DashboardData, QuickThought } from "@/src/lib/dashboard";
-import type { TaskCategory, TodayTask } from "@/src/lib/today";
+import type { PlannerId, TaskCategory, TodayTask } from "@/src/lib/today";
 import { TaskComposer } from "@/src/components/week-view";
 
 const categoryLabels: Record<TaskCategory, string> = { career: "Career", content: "Content", other: "Personal" };
 const taskCategories = Object.keys(categoryLabels) as TaskCategory[];
 const undoDuration = 5000;
-type UndoItem = { id: number; title: string };
+type UndoItem = { id: PlannerId; title: string; revision: number };
 type DeferredTask = { task: TodayTask; overdue: boolean; index: number };
 
 export function DashboardView({ data }: { data: DashboardData }) {
   const router = useRouter();
-  const [pendingIds, setPendingIds] = useState<Set<number>>(() => new Set());
-  const [finishingIds, setFinishingIds] = useState<Set<number>>(() => new Set());
-  const [undoingIds, setUndoingIds] = useState<Set<number>>(() => new Set());
-  const [restoringIds, setRestoringIds] = useState<Set<number>>(() => new Set());
+  const [pendingIds, setPendingIds] = useState<Set<PlannerId>>(() => new Set());
+  const [finishingIds, setFinishingIds] = useState<Set<PlannerId>>(() => new Set());
+  const [undoingIds, setUndoingIds] = useState<Set<PlannerId>>(() => new Set());
+  const [restoringIds, setRestoringIds] = useState<Set<PlannerId>>(() => new Set());
   const [error, setError] = useState<string | null>(null);
   const [undoItems, setUndoItems] = useState<UndoItem[]>([]);
-  const [deferredTasks, setDeferredTasks] = useState<Map<number, DeferredTask>>(() => new Map());
+  const [deferredTasks, setDeferredTasks] = useState<Map<PlannerId, DeferredTask>>(() => new Map());
   const [composer, setComposer] = useState(false);
   const [composerPending, setComposerPending] = useState(false);
   const [editingTask, setEditingTask] = useState<TodayTask | null>(null);
   const [editPending, setEditPending] = useState(false);
-  const undoTimers = useRef<Map<number, number>>(new Map());
+  const undoTimers = useRef<Map<PlannerId, number>>(new Map());
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const weekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
@@ -66,11 +66,11 @@ export function DashboardView({ data }: { data: DashboardData }) {
     });
   }, [data.active, data.overdue, restoringIds]);
 
-  function updateIdSet(setter: React.Dispatch<React.SetStateAction<Set<number>>>, id: number, present: boolean) {
+  function updateIdSet(setter: React.Dispatch<React.SetStateAction<Set<PlannerId>>>, id: PlannerId, present: boolean) {
     setter((current) => { const next = new Set(current); if (present) next.add(id); else next.delete(id); return next; });
   }
 
-  function removeDeferred(id: number) {
+  function removeDeferred(id: PlannerId) {
     const timer = undoTimers.current.get(id);
     if (timer) window.clearTimeout(timer);
     undoTimers.current.delete(id);
@@ -81,7 +81,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
     updateIdSet(setPendingIds, id, false);
   }
 
-  function dismissUndo(id: number) {
+  function dismissUndo(id: PlannerId) {
     const timer = undoTimers.current.get(id);
     if (timer) window.clearTimeout(timer);
     undoTimers.current.delete(id);
@@ -89,7 +89,10 @@ export function DashboardView({ data }: { data: DashboardData }) {
   }
 
   function addUndo(task: TodayTask) {
-    setUndoItems((current) => [...current, { id: task.id, title: task.title }]);
+    setUndoItems((current) => [
+      ...current,
+      { id: task.id, title: task.title, revision: (task.revision ?? 1) + 1 },
+    ]);
     const timer = window.setTimeout(() => {
       removeDeferred(task.id);
       router.refresh();
@@ -100,6 +103,8 @@ export function DashboardView({ data }: { data: DashboardData }) {
   async function complete(task: TodayTask, overdue: boolean, index: number) {
     const form = new FormData();
     form.set("id", String(task.id));
+    form.set("revision", String(task.revision ?? 1));
+    form.set("completed", "true");
     setDeferredTasks((current) => new Map(current).set(task.id, { task, overdue, index }));
     updateIdSet(setPendingIds, task.id, true);
     updateIdSet(setFinishingIds, task.id, true);
@@ -117,6 +122,8 @@ export function DashboardView({ data }: { data: DashboardData }) {
   async function undoCompletion(item: UndoItem) {
     const form = new FormData();
     form.set("id", String(item.id));
+    form.set("revision", String(item.revision));
+    form.set("completed", "false");
     const timer = undoTimers.current.get(item.id);
     if (timer) window.clearTimeout(timer);
     updateIdSet(setRestoringIds, item.id, true);
@@ -210,9 +217,9 @@ export function DashboardView({ data }: { data: DashboardData }) {
           <div className="p-3 sm:p-4">
             {visibleCounts.remaining === 0 ? <EmptyToday completed={visibleCounts.completed} onAdd={() => setComposer(true)} /> : <div className="space-y-1">
               {visibleOverdue.length > 0 && <TaskGroupLabel label="Carried forward" count={visibleOverdue.length} />}
-              {visibleOverdue.map((task, index) => <DashboardTask key={task.id} task={task} overdue pending={pendingIds.has(task.id)} finishing={finishingIds.has(task.id)} deferred={deferredTasks.has(task.id) && !restoringIds.has(task.id)} restoring={restoringIds.has(task.id)} undoing={undoingIds.has(task.id)} onComplete={() => complete(task, true, index)} onUndo={() => undoCompletion({ id: task.id, title: task.title })} onEdit={() => setEditingTask(task)} />)}
+              {visibleOverdue.map((task, index) => <DashboardTask key={task.id} task={task} overdue pending={pendingIds.has(task.id)} finishing={finishingIds.has(task.id)} deferred={deferredTasks.has(task.id) && !restoringIds.has(task.id)} restoring={restoringIds.has(task.id)} undoing={undoingIds.has(task.id)} onComplete={() => complete(task, true, index)} onUndo={() => undoCompletion({ id: task.id, title: task.title, revision: (task.revision ?? 1) + 1 })} onEdit={() => setEditingTask(task)} />)}
               {visibleOverdue.length > 0 && visibleActive.length > 0 && <TaskGroupLabel label="Planned today" count={visibleActive.length} />}
-              {visibleActive.map((task, index) => <DashboardTask key={task.id} task={task} pending={pendingIds.has(task.id)} finishing={finishingIds.has(task.id)} deferred={deferredTasks.has(task.id) && !restoringIds.has(task.id)} restoring={restoringIds.has(task.id)} undoing={undoingIds.has(task.id)} onComplete={() => complete(task, false, index)} onUndo={() => undoCompletion({ id: task.id, title: task.title })} onEdit={() => setEditingTask(task)} />)}
+              {visibleActive.map((task, index) => <DashboardTask key={task.id} task={task} pending={pendingIds.has(task.id)} finishing={finishingIds.has(task.id)} deferred={deferredTasks.has(task.id) && !restoringIds.has(task.id)} restoring={restoringIds.has(task.id)} undoing={undoingIds.has(task.id)} onComplete={() => complete(task, false, index)} onUndo={() => undoCompletion({ id: task.id, title: task.title, revision: (task.revision ?? 1) + 1 })} onEdit={() => setEditingTask(task)} />)}
             </div>}
             {visibleCompletedToday.length > 0 && <div className="mt-5 border-t border-border px-1 pt-5">
               <div className="mb-2.5 flex items-center justify-between px-2"><div><p className="dashboard-eyebrow">Completed today</p><p className="mt-1 text-xs text-muted-foreground">Quiet proof of progress.</p></div><span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">{visibleCompletedToday.length}</span></div>
@@ -276,6 +283,7 @@ function DashboardTaskEditor({ task, pending, onSave, onClose }: { task: TodayTa
     window.setTimeout(onClose, 220);
   }
   async function submit(form: FormData) {
+    form.set("revision", String(task.revision ?? 1));
     setSaving(true);
     const saved = await onSave(form);
     if (saved) close(); else setSaving(false);
@@ -297,8 +305,8 @@ function ThoughtsPanel({ recent, all, onError }: { recent: QuickThought[]; all: 
   const [backgroundRecent, setBackgroundRecent] = useState(recent);
   const [closingAll, setClosingAll] = useState(false);
   const [captureState, setCaptureState] = useState<"idle" | "saving" | "saved">("idle");
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<PlannerId | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<PlannerId | null>(null);
   useEffect(() => { if (!showAll) setBackgroundRecent(recent); }, [recent, showAll]);
   async function run(action: (form: FormData) => Promise<ActionResult>, form: FormData, onSuccess?: () => void) { setPending(true); const result = await action(form); setPending(false); if (!result.ok) { onError(result.error); return false; } onSuccess?.(); router.refresh(); return true; }
   async function capture(form: FormData) {
@@ -313,7 +321,7 @@ function ThoughtsPanel({ recent, all, onError }: { recent: QuickThought[]; all: 
     setClosingAll(true);
     window.setTimeout(() => { setShowAll(false); setClosingAll(false); setEditingId(null); setConfirmDelete(null); }, 240);
   }
-  return <section className="glass-panel overflow-hidden rounded-[28px]"><div className="dashboard-card-heading"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-2xl bg-accent text-accent-foreground"><Lightbulb size={18} /></span><div><p className="dashboard-eyebrow">Quick thought</p><h2 className="mt-1 text-base font-semibold tracking-[-0.025em]">Catch it before it goes</h2></div></div></div><form action={capture} className={`thought-capture px-4 pb-4 sm:px-5 sm:pb-5 thought-capture-${captureState}`}><textarea name="text" value={text} onChange={(event) => setText(event.target.value)} rows={3} maxLength={1200} placeholder="What’s on your mind?" className="thought-input" /><div className="mt-2.5 flex items-center justify-between gap-3"><span className="text-[10px] text-muted-foreground">Saved locally · {text.length}/1200</span><button disabled={pending || !text.trim()} className="premium-small-button">{captureState === "saving" ? "Saving…" : captureState === "saved" ? <><Check size={13} /> Saved</> : "Save thought"}</button></div></form><div className="border-t border-border px-4 py-4 sm:px-5"><div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-semibold uppercase tracking-[.14em] text-muted-foreground">Latest</p>{all.length > 0 && <button onClick={() => { setClosingAll(false); setShowAll(true); }} className="view-all-button">View all <ArrowRight size={12} /></button>}</div>{backgroundRecent.length ? <div className="space-y-1">{backgroundRecent.map((thought) => <ThoughtRow key={thought.id} thought={thought} editing={!showAll && editingId === thought.id} confirming={!showAll && confirmDelete === thought.id} pending={pending} onEdit={() => setEditingId(thought.id)} onCancel={() => { setEditingId(null); setConfirmDelete(null); }} onConfirmDelete={() => setConfirmDelete(thought.id)} onSave={(form) => run(updateThought, form, () => setEditingId(null))} onDelete={(form) => run(deleteThought, form, () => setConfirmDelete(null))} />)}</div> : <EmptyThoughts compact />}</div>{showAll && <ThoughtsDialog thoughts={all} closing={closingAll} pending={pending} editingId={editingId} confirmingId={confirmDelete} setEditingId={setEditingId} setConfirmDelete={setConfirmDelete} onClose={closeAll} onSave={(form) => run(updateThought, form, () => setEditingId(null))} onDelete={(form) => run(deleteThought, form, () => setConfirmDelete(null))} />}</section>;
+  return <section className="glass-panel overflow-hidden rounded-[28px]"><div className="dashboard-card-heading"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-2xl bg-accent text-accent-foreground"><Lightbulb size={18} /></span><div><p className="dashboard-eyebrow">Quick thought</p><h2 className="mt-1 text-base font-semibold tracking-[-0.025em]">Catch it before it goes</h2></div></div></div><form action={capture} className={`thought-capture px-4 pb-4 sm:px-5 sm:pb-5 thought-capture-${captureState}`}><textarea name="text" value={text} onChange={(event) => setText(event.target.value)} rows={3} maxLength={1200} placeholder="What’s on your mind?" className="thought-input" /><div className="mt-2.5 flex items-center justify-between gap-3"><span className="text-[10px] text-muted-foreground">Saved to your planner · {text.length}/1200</span><button disabled={pending || !text.trim()} className="premium-small-button">{captureState === "saving" ? "Saving…" : captureState === "saved" ? <><Check size={13} /> Saved</> : "Save thought"}</button></div></form><div className="border-t border-border px-4 py-4 sm:px-5"><div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-semibold uppercase tracking-[.14em] text-muted-foreground">Latest</p>{all.length > 0 && <button onClick={() => { setClosingAll(false); setShowAll(true); }} className="view-all-button">View all <ArrowRight size={12} /></button>}</div>{backgroundRecent.length ? <div className="space-y-1">{backgroundRecent.map((thought) => <ThoughtRow key={thought.id} thought={thought} editing={!showAll && editingId === thought.id} confirming={!showAll && confirmDelete === thought.id} pending={pending} onEdit={() => setEditingId(thought.id)} onCancel={() => { setEditingId(null); setConfirmDelete(null); }} onConfirmDelete={() => setConfirmDelete(thought.id)} onSave={(form) => run(updateThought, form, () => setEditingId(null))} onDelete={(form) => run(deleteThought, form, () => setConfirmDelete(null))} />)}</div> : <EmptyThoughts compact />}</div>{showAll && <ThoughtsDialog thoughts={all} closing={closingAll} pending={pending} editingId={editingId} confirmingId={confirmDelete} setEditingId={setEditingId} setConfirmDelete={setConfirmDelete} onClose={closeAll} onSave={(form) => run(updateThought, form, () => setEditingId(null))} onDelete={(form) => run(deleteThought, form, () => setConfirmDelete(null))} />}</section>;
 }
 
 function EmptyThoughts({ compact = false }: { compact?: boolean }) {
@@ -323,13 +331,13 @@ function EmptyThoughts({ compact = false }: { compact?: boolean }) {
 function ThoughtRow({ thought, editing, confirming, pending, onEdit, onCancel, onConfirmDelete, onSave, onDelete }: { thought: QuickThought; editing: boolean; confirming: boolean; pending: boolean; onEdit: () => void; onCancel: () => void; onConfirmDelete: () => void; onSave: (form: FormData) => Promise<boolean>; onDelete: (form: FormData) => Promise<boolean> }) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  async function save(form: FormData) { setSaving(true); await new Promise((resolve) => window.setTimeout(resolve, 180)); const saved = await onSave(form); if (!saved) setSaving(false); }
-  async function remove(form: FormData) { setDeleting(true); const deleted = await onDelete(form); if (!deleted) setDeleting(false); }
+  async function save(form: FormData) { form.set("revision", String(thought.revision ?? 1)); setSaving(true); await new Promise((resolve) => window.setTimeout(resolve, 180)); const saved = await onSave(form); if (!saved) setSaving(false); }
+  async function remove(form: FormData) { form.set("revision", String(thought.revision ?? 1)); setDeleting(true); const deleted = await onDelete(form); if (!deleted) setDeleting(false); }
   if (editing) return <form action={save} className={`thought-edit-form entity-editor-enter ${saving ? "entity-saving" : ""}`}><input type="hidden" name="id" value={thought.id} /><textarea autoFocus name="text" defaultValue={thought.text} rows={3} maxLength={1200} className="thought-edit-input" /><div className="mt-2 flex justify-end gap-2"><button type="button" onClick={onCancel} className="thought-quiet-button">Cancel</button><button disabled={pending || saving} className="premium-small-button">{saving ? "Saving…" : "Save"}</button></div></form>;
   return <article className={`thought-row group ${deleting ? "entity-deleting" : ""}`}><div className="min-w-0 flex-1"><p className="line-clamp-3 text-xs leading-5">{thought.text}</p><p className="mt-1.5 text-[10px] text-muted-foreground">{formatThoughtTime(thought.createdAt)}</p></div><div className="flex shrink-0 items-center">{confirming ? <div className="thought-delete-confirm"><span>Remove?</span><button type="button" onClick={onCancel} className="entity-delete-cancel">Keep</button><form action={remove}><input type="hidden" name="id" value={thought.id} /><button disabled={pending || deleting} className="entity-delete-button">{deleting ? "Removing…" : "Remove"}</button></form></div> : <><button onClick={onEdit} className="thought-icon-button" aria-label="Edit thought"><Pencil size={13} /></button><button onClick={onConfirmDelete} className="thought-icon-button hover:text-rose-700" aria-label="Delete thought"><Trash2 size={13} /></button></>}</div></article>;
 }
 
-function ThoughtsDialog({ thoughts, closing, pending, editingId, confirmingId, setEditingId, setConfirmDelete, onClose, onSave, onDelete }: { thoughts: QuickThought[]; closing: boolean; pending: boolean; editingId: number | null; confirmingId: number | null; setEditingId: (id: number | null) => void; setConfirmDelete: (id: number | null) => void; onClose: () => void; onSave: (form: FormData) => Promise<boolean>; onDelete: (form: FormData) => Promise<boolean> }) {
+function ThoughtsDialog({ thoughts, closing, pending, editingId, confirmingId, setEditingId, setConfirmDelete, onClose, onSave, onDelete }: { thoughts: QuickThought[]; closing: boolean; pending: boolean; editingId: PlannerId | null; confirmingId: PlannerId | null; setEditingId: (id: PlannerId | null) => void; setConfirmDelete: (id: PlannerId | null) => void; onClose: () => void; onSave: (form: FormData) => Promise<boolean>; onDelete: (form: FormData) => Promise<boolean> }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); const handler = (event: KeyboardEvent) => event.key === "Escape" && onClose(); document.addEventListener("keydown", handler); const previousOverflow = document.body.style.overflow; document.body.style.overflow = "hidden"; return () => { document.removeEventListener("keydown", handler); document.body.style.overflow = previousOverflow; }; }, [onClose]);
   if (!mounted) return null;

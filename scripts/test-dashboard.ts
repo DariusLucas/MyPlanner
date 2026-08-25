@@ -34,11 +34,11 @@ assert.deepEqual(data.completedToday.map((task) => task.title), ["Completed toda
 assert.deepEqual(data.counts, { completed: 1, remaining: 2, planned: 3 });
 
 const activeId = data.active[0]!.id;
-assert.equal(toggleTaskPersistence(activeId), true);
-assert.equal(db.select().from(tasks).where(eq(tasks.id, activeId)).get()!.status, "completed");
-assert.equal(toggleTaskPersistence(activeId), true);
-assert.equal(db.select().from(tasks).where(eq(tasks.id, activeId)).get()!.status, "not_started");
-assert.equal(db.select().from(tasks).where(eq(tasks.id, activeId)).get()!.completedAt, null);
+assert.equal(toggleTaskPersistence(Number(activeId)), true);
+assert.equal(db.select().from(tasks).where(eq(tasks.id, Number(activeId))).get()!.status, "completed");
+assert.equal(toggleTaskPersistence(Number(activeId)), true);
+assert.equal(db.select().from(tasks).where(eq(tasks.id, Number(activeId))).get()!.status, "not_started");
+assert.equal(db.select().from(tasks).where(eq(tasks.id, Number(activeId))).get()!.completedAt, null);
 
 const thought = db.insert(quickThoughts).values({ text: "First thought" }).returning().get();
 db.update(quickThoughts).set({ text: "Edited thought" }).where(eq(quickThoughts.id, thought.id)).run();

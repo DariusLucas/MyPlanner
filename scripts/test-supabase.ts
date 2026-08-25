@@ -22,6 +22,7 @@ const expectedMigrationVersions = [
   "20260822130100",
   "20260822130200",
   "20260822130300",
+  "20260825120000",
 ];
 
 async function setAuthenticatedUser(client: Client, userId: string) {
@@ -129,10 +130,11 @@ async function main() {
           'reorder_task', 'set_task_workflow', 'complete_task',
           'reopen_task', 'delete_task', 'save_daily_focus',
           'create_or_update_recurrence', 'ensure_recurring_instances',
-          'delete_or_deactivate_recurrence'
+          'delete_or_deactivate_recurrence', 'set_task_completed',
+          'update_planned_task'
         )
     `);
-    assert.equal(rpcSecurity.rowCount, 12, "all required planner RPCs exist");
+    assert.equal(rpcSecurity.rowCount, 14, "all required planner RPCs exist");
     for (const functionRow of rpcSecurity.rows) {
       assert.equal(functionRow.security_definer, true, "planner RPC is security definer");
       assert.equal(functionRow.authenticated_can_execute, true, "authenticated can execute planner RPC");
@@ -308,6 +310,65 @@ async function main() {
       [],
     );
     const currentWeek = currentWeekProbe.current_week_start!;
+    const quickTaskId = randomUUID();
+    await rpc(
+      client,
+      "select public.create_task($1::jsonb, $2::uuid) as result",
+      [JSON.stringify({ title: "Quick completion", category: "career", date: currentWeek }), quickTaskId],
+    );
+    const quickCompleted = await rpc(
+      client,
+      "select public.set_task_completed($1::uuid, 1, true) as result",
+      [quickTaskId],
+    );
+    assert.equal(quickCompleted.task?.status, "completed", "quick completion is atomic");
+    const quickRetry = await rpc(
+      client,
+      "select public.set_task_completed($1::uuid, 1, true) as result",
+      [quickTaskId],
+    );
+    assert.equal(quickRetry.idempotent, true, "quick completion retry is idempotent");
+    const quickReopened = await rpc(
+      client,
+      "select public.set_task_completed($1::uuid, $2::bigint, false) as result",
+      [quickTaskId, quickCompleted.task!.revision],
+    );
+    assert.equal(quickReopened.task?.status, "not_started", "quick completion can be reopened");
+
+    const convertedTaskId = randomUUID();
+    await rpc(
+      client,
+      "select public.create_task($1::jsonb, $2::uuid) as result",
+      [JSON.stringify({ title: "Convert to routine", category: "content", date: currentWeek, anytime_week_start: currentWeek }), convertedTaskId],
+    );
+    const converted = await rpc(
+      client,
+      "select public.update_planned_task($1::uuid, 1, $2::jsonb, 2) as result",
+      [convertedTaskId, JSON.stringify({ title: "Converted routine", category: "content", priority: "normal", date: currentWeek, anytime_week_start: currentWeek })],
+    );
+    assert.equal(converted.ok, true, "a planned task converts to a recurrence atomically");
+    await rpc(
+      client,
+      "select public.ensure_recurring_instances($1::date) as result",
+      [currentWeek],
+    );
+    const convertedRows = await client.query<{ count: string }>(
+      "select count(*)::text as count from public.tasks where recurrence_id = (select recurrence_id from public.tasks where id = $1)",
+      [convertedTaskId],
+    );
+    assert.equal(Number(convertedRows.rows[0]!.count), 2, "converted recurrence materializes all instances");
+    const detached = await rpc(
+      client,
+      "select public.update_planned_task($1::uuid, $2::bigint, $3::jsonb, null) as result",
+      [convertedTaskId, converted.task!.revision, JSON.stringify({ title: "Detached task", category: "content", priority: "normal", date: currentWeek, anytime_week_start: currentWeek })],
+    );
+    assert.equal(detached.ok, true, "a recurrence instance detaches atomically");
+    const detachedRow = await client.query<{ recurrence_id: string | null }>(
+      "select recurrence_id::text from public.tasks where id = $1",
+      [convertedTaskId],
+    );
+    assert.equal(detachedRow.rows[0]!.recurrence_id, null, "detached task no longer belongs to the recurrence");
+
     const recurrenceId = randomUUID();
     const recurrence = await rpc(
       client,

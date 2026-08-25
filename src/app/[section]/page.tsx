@@ -1,11 +1,15 @@
 import { notFound } from "next/navigation";
 import { FocusAreaView } from "@/src/components/focus-area-view";
-import { getFocusAreaData, type FocusArea } from "@/src/lib/focus-areas";
+import type { FocusArea } from "@/src/lib/focus-areas";
 import { WeekView } from "@/src/components/week-view";
-import { getWeekData, normalizeWeekStart } from "@/src/lib/week";
+import { normalizeWeekStart } from "@/src/lib/planner-dates";
 import { ProgressView } from "@/src/components/progress-view";
 import { localDateInTimeZone, systemTimeZone } from "@/src/lib/progress";
-import { getProgressTaskHistory } from "@/src/lib/progress-query";
+import {
+  getFocusAreaData,
+  getProgressTaskHistory,
+  getWeekData,
+} from "@/src/lib/supabase/planner";
 import { normalizeProgressCategory, normalizeProgressRange } from "@/src/lib/progress-visuals";
 
 export const dynamic = "force-dynamic";
@@ -24,9 +28,9 @@ export default async function SectionPage({ params, searchParams }: { params: Pr
   const { section } = await params;
   const query = await searchParams;
   if (section === "week") {
-    return <WeekView data={getWeekData(normalizeWeekStart(query.week))} />;
+    return <WeekView data={await getWeekData(normalizeWeekStart(query.week))} />;
   }
-  if (section === "career" || section === "content") return <FocusAreaView data={getFocusAreaData(section as FocusArea)} />;
+  if (section === "career" || section === "content") return <FocusAreaView data={await getFocusAreaData(section as FocusArea)} />;
   if (section === "progress") {
     const range = normalizeProgressRange(query.range);
     const category = normalizeProgressCategory(query.category);
@@ -35,7 +39,7 @@ export default async function SectionPage({ params, searchParams }: { params: Pr
     return <ProgressView
       range={range}
       category={category}
-      taskHistory={getProgressTaskHistory()}
+      taskHistory={await getProgressTaskHistory()}
       today={today}
       timeZone={timeZone}
     />;

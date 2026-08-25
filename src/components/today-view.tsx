@@ -27,6 +27,7 @@ import {
   type ActionResult,
 } from "@/src/app/today/actions";
 import type {
+  PlannerId,
   TodayData,
   TodayTask,
   TaskCategory,
@@ -50,7 +51,7 @@ const quietButton =
   "inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-card/70 px-3.5 text-sm text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 export function TodayView({ data }: { data: TodayData }) {
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<PlannerId | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -212,8 +213,8 @@ function CategorySection({
   tasks: TodayTask[];
   completed: number;
   total: number;
-  editingId: number | null;
-  setEditingId: (id: number | null) => void;
+  editingId: PlannerId | null;
+  setEditingId: (id: PlannerId | null) => void;
   pending: string | null;
   runAction: (
     key: string,
@@ -271,7 +272,7 @@ function TaskItem({
   index: number;
   last: number;
   editing: boolean;
-  setEditingId: (id: number | null) => void;
+  setEditingId: (id: PlannerId | null) => void;
   pending: string | null;
   runAction: (
     key: string,
@@ -288,9 +289,11 @@ function TaskItem({
     >
       <div className="flex min-w-0 items-center gap-3 px-4 py-3.5">
         <form
-          action={(formData) =>
-            runAction(`toggle-${task.id}`, toggleTask, formData)
-          }
+          action={(formData) => {
+            formData.set("revision", String(task.revision ?? 1));
+            formData.set("completed", String(task.status !== "completed"));
+            return runAction(`toggle-${task.id}`, toggleTask, formData);
+          }}
         >
           <input type="hidden" name="id" value={task.id} />
           <button
@@ -329,9 +332,10 @@ function TaskItem({
         </div>
         <div className="flex shrink-0 items-center">
           <form
-            action={(formData) =>
-              runAction(`move-${task.id}`, moveTaskToTomorrow, formData)
-            }
+            action={(formData) => {
+              formData.set("revision", String(task.revision ?? 1));
+              return runAction(`move-${task.id}`, moveTaskToTomorrow, formData);
+            }}
           >
             <input type="hidden" name="id" value={task.id} />
             <button
@@ -410,6 +414,7 @@ function TaskItem({
           onConfirm={async () => {
             const formData = new FormData();
             formData.set("id", String(task.id));
+            formData.set("revision", String(task.revision ?? 1));
             await runAction(`delete-${task.id}`, deleteTask, formData, () =>
               setEditingId(null),
             );
@@ -503,9 +508,10 @@ function ReorderButton({
 }) {
   return (
     <form
-      action={(formData) =>
-        runAction(`${direction}-${task.id}`, reorderTask, formData)
-      }
+      action={(formData) => {
+        formData.set("revision", String(task.revision ?? 1));
+        return runAction(`${direction}-${task.id}`, reorderTask, formData);
+      }}
     >
       <input type="hidden" name="id" value={task.id} />
       <input type="hidden" name="date" value={task.date} />
@@ -539,7 +545,13 @@ function TaskForm({
   submitLabel: string;
 }) {
   return (
-    <form className="mt-4 rounded-2xl bg-muted/55 p-3.5" action={onSubmit}>
+    <form
+      className="mt-4 rounded-2xl bg-muted/55 p-3.5"
+      action={(formData) => {
+        if (task) formData.set("revision", String(task.revision ?? 1));
+        return onSubmit(formData);
+      }}
+    >
       {task && <input type="hidden" name="id" value={task.id} />}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_130px_130px]">
         <label className="space-y-1.5 lg:col-span-1">

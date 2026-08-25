@@ -8,7 +8,7 @@ import { Check, ChevronDown, Clock3, Flag, Pencil, Plus, RotateCcw, Trash2, X } 
 import { createMilestone, deleteMilestone, toggleMilestone, updateMilestone } from "@/src/app/content-actions";
 import { createTask, toggleTask, type ActionResult } from "@/src/app/today/actions";
 import type { FocusArea, FocusMilestone, FocusAreaData } from "@/src/lib/focus-areas";
-import type { TodayTask } from "@/src/lib/today";
+import type { PlannerId, TodayTask } from "@/src/lib/today";
 import { TaskComposer } from "@/src/components/week-view";
 
 const statusLabels = { not_started: "Upcoming", in_progress: "Doing", on_hold: "On hold", done: "Done", completed: "Completed", skipped: "Skipped" } as const;
@@ -32,8 +32,8 @@ type Runner = (key: string, action: (form: FormData) => Promise<ActionResult>, f
 export function FocusAreaView({ data }: { data: FocusAreaData }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
-  const [pendingTaskIds, setPendingTaskIds] = useState<Set<number>>(new Set());
-  const [finishingIds, setFinishingIds] = useState<Set<number>>(new Set());
+  const [pendingTaskIds, setPendingTaskIds] = useState<Set<PlannerId>>(new Set());
+  const [finishingIds, setFinishingIds] = useState<Set<PlannerId>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [composer, setComposer] = useState(false);
   const weekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
@@ -46,7 +46,10 @@ export function FocusAreaView({ data }: { data: FocusAreaData }) {
     success?.(); router.refresh();
   }
   async function toggle(task: TodayTask) {
-    const form = new FormData(); form.set("id", String(task.id));
+    const form = new FormData();
+    form.set("id", String(task.id));
+    form.set("revision", String(task.revision ?? 1));
+    form.set("completed", String(task.status !== "completed"));
     const completing = task.status !== "completed";
     setError(null);
     setPendingTaskIds((current) => new Set(current).add(task.id));
@@ -84,7 +87,7 @@ export function FocusAreaView({ data }: { data: FocusAreaData }) {
   </div>;
 }
 
-function TaskSection({ title, subtitle, tasks, completed = false, pendingIds, finishingIds, onToggle }: { title: string; subtitle: string; tasks: TodayTask[]; completed?: boolean; pendingIds: Set<number>; finishingIds: Set<number>; onToggle: (task: TodayTask) => Promise<void> }) {
+function TaskSection({ title, subtitle, tasks, completed = false, pendingIds, finishingIds, onToggle }: { title: string; subtitle: string; tasks: TodayTask[]; completed?: boolean; pendingIds: Set<PlannerId>; finishingIds: Set<PlannerId>; onToggle: (task: TodayTask) => Promise<void> }) {
   return <section className="glass-panel overflow-hidden rounded-[28px]"><div className="focus-card-heading"><div><p className="dashboard-eyebrow">{title}</p><p className="mt-1.5 text-sm text-muted-foreground">{subtitle}</p></div><span className="focus-count">{tasks.length}</span></div><div className="border-t border-border p-3 sm:p-4">{tasks.length ? <div className="space-y-1">{tasks.map((task) => <TaskRow key={task.id} task={task} completed={completed} pending={pendingIds.has(task.id)} finishing={finishingIds.has(task.id)} onToggle={() => onToggle(task)} />)}</div> : <EmptyTasks completed={completed} />}</div></section>;
 }
 
@@ -99,8 +102,8 @@ function EmptyTasks({ completed }: { completed: boolean }) {
 
 function MilestonesPanel({ category, milestones, pending, run }: { category: FocusArea; milestones: FocusAreaData["milestones"]; pending: string | null; run: Runner }) {
   const [adding, setAdding] = useState(false);
-  const [editing, setEditing] = useState<number | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [editing, setEditing] = useState<PlannerId | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<PlannerId | null>(null);
   const all = [...milestones.active, ...milestones.achieved];
   const areaLabel = category === "career" ? "Career" : "Content";
   return <section className="glass-panel overflow-visible rounded-[28px]"><div className="focus-card-heading milestone-heading"><div className="flex items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-accent text-accent-foreground"><Flag size={18} /></span><div><p className="dashboard-eyebrow">{areaLabel} milestones</p><p className="mt-1 text-sm text-muted-foreground">Outcomes worth remembering, separate from task progress.</p></div></div><button onClick={() => setAdding(true)} className="focus-add-button"><Plus size={14} /> Add milestone</button></div><AnimatedPresence show={adding} className="milestone-form-presence"><MilestoneForm category={category} submitLabel="Add milestone" pending={pending === "milestone-new"} onCancel={() => setAdding(false)} action={(form) => run("milestone-new", createMilestone, form, () => setAdding(false))} /></AnimatedPresence><div className="milestone-list border-t border-border p-3 sm:p-4">{all.length ? <div className="grid gap-2 sm:grid-cols-2">{all.map((milestone) => editing === milestone.id ? <div key={milestone.id} className="entity-editor-enter"><MilestoneForm category={category} milestone={milestone} submitLabel="Save" pending={pending === `milestone-${milestone.id}`} onCancel={() => setEditing(null)} action={(form) => run(`milestone-${milestone.id}`, updateMilestone, form, () => setEditing(null))} /></div> : <MilestoneRow key={milestone.id} category={category} milestone={milestone} pending={pending === `milestone-${milestone.id}`} confirming={confirmDelete === milestone.id} onToggle={(form) => run(`milestone-${milestone.id}`, toggleMilestone, form)} onEdit={() => setEditing(milestone.id)} onConfirmDelete={() => setConfirmDelete(milestone.id)} onCancelDelete={() => setConfirmDelete(null)} onDelete={(form) => run(`milestone-${milestone.id}`, deleteMilestone, form, () => setConfirmDelete(null))} />)}</div> : <div className="entity-empty-state py-8 text-center"><p className="text-sm font-semibold">No milestones yet.</p><p className="mt-1 text-xs text-muted-foreground">Add a meaningful {category === "career" ? "career" : "creator"} outcome when you have one.</p></div>}</div></section>;
@@ -118,8 +121,12 @@ function AnimatedPresence({ show, className, children }: { show: boolean; classN
   return <div className={`${className ?? ""} ${show ? "entity-presence-enter" : "entity-presence-exit"}`}>{children}</div>;
 }
 
-function MilestoneForm({ category, milestone, submitLabel, pending, onCancel, action }: { category: FocusArea; milestone?: FocusMilestone; submitLabel: string; pending: boolean; onCancel: () => void; action: (form: FormData) => Promise<void> }) {
+function MilestoneForm({ category, milestone, submitLabel, pending, onCancel, action: submitAction }: { category: FocusArea; milestone?: FocusMilestone; submitLabel: string; pending: boolean; onCancel: () => void; action: (form: FormData) => Promise<void> }) {
   const fallbackType = category === "career" ? "custom" : "custom";
+  const action = (form: FormData) => {
+    if (milestone) form.set("revision", String(milestone.revision ?? 1));
+    return submitAction(form);
+  };
   return <form action={action} className="milestone-form">{milestone && <input type="hidden" name="id" value={milestone.id} />}<input type="hidden" name="category" value={category} /><input autoFocus name="label" defaultValue={milestone?.label} maxLength={160} placeholder={category === "career" ? "Land the first interview" : "First video over 100K views"} className="focus-input sm:col-span-2" /><ThemedSelect name="type" initialValue={milestone?.type ?? fallbackType} options={milestoneTypeOptions[category]} /><input name="targetValue" type="number" min="1" max="1000000000" defaultValue={milestone?.targetValue ?? ""} placeholder="Optional target" className="focus-input" /><div className="flex justify-end gap-2 sm:col-span-2"><button type="button" onClick={onCancel} className="thought-quiet-button">Cancel</button><button disabled={pending} className="premium-small-button">{pending ? "Saving…" : submitLabel}</button></div></form>;
 }
 
@@ -128,6 +135,7 @@ function MilestoneRow({ category, milestone, pending, confirming, onToggle, onEd
   const [celebrating, setCelebrating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   async function handleToggle(form: FormData) {
+    form.set("revision", String(milestone.revision ?? 1));
     if (!achieved) {
       setCelebrating(true);
       await new Promise((resolve) => window.setTimeout(resolve, 180));
@@ -136,6 +144,7 @@ function MilestoneRow({ category, milestone, pending, confirming, onToggle, onEd
     if (!achieved) window.setTimeout(() => setCelebrating(false), 700);
   }
   async function handleDelete(form: FormData) {
+    form.set("revision", String(milestone.revision ?? 1));
     setDeleting(true);
     await onDelete(form);
     setDeleting(false);

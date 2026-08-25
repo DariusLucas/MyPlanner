@@ -8,5 +8,11 @@ export default function nextConfig(phase: string): NextConfig {
     // running dev server's RSC and CSS manifests.
     distDir: phase === PHASE_DEVELOPMENT_SERVER ? ".next-dev" : ".next",
     devIndicators: false,
+    experimental: {
+      staleTimes: {
+        dynamic: 30,
+        static: 30,
+      },
+    },
   };
 }

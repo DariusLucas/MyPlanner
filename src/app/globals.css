@@ -90,12 +90,12 @@ select {
   font: inherit;
 }
 .glass-panel {
-  background: color-mix(in srgb, var(--card) 82%, transparent);
+  background: color-mix(in srgb, var(--card) 96%, transparent);
   border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   box-shadow:
     0 16px 42px rgba(73, 58, 38, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.42);
-  backdrop-filter: blur(24px) saturate(1.06);
+  backdrop-filter: none;
 }
 .dark .glass-panel {
   box-shadow:
@@ -306,8 +306,8 @@ select {
 @keyframes entity-saving { to { border-color: color-mix(in srgb, var(--orange) 58%, var(--border)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--orange) 9%, transparent); } }
 @keyframes entity-saved { 45% { background: color-mix(in srgb, var(--orange-soft) 28%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orange) 14%, transparent); } }
 @media (min-width: 640px) { .milestone-form { grid-template-columns: 1fr 1fr; } }
-.thought-dialog-backdrop { position: fixed; z-index: 70; inset: 0; display: grid; place-items: center; padding: 1rem; background: color-mix(in srgb, var(--foreground) 22%, transparent); backdrop-filter: blur(5px); animation: dashboard-fade-in 180ms ease-out; }
-.thought-dialog { width: min(620px, 100%); overflow: hidden; border: 1px solid var(--border); border-radius: 26px; background: color-mix(in srgb, var(--card) 98%, var(--background)); box-shadow: 0 28px 90px color-mix(in srgb, var(--foreground) 24%, transparent); backdrop-filter: blur(30px); animation: dashboard-dialog-in 240ms cubic-bezier(.16,1,.3,1); }
+.thought-dialog-backdrop { position: fixed; z-index: 70; inset: 0; display: grid; place-items: center; padding: 1rem; background: color-mix(in srgb, var(--foreground) 22%, transparent); transform: translateZ(0); will-change: opacity; animation: dashboard-fade-in 180ms ease-out; }
+.thought-dialog { width: min(620px, 100%); overflow: hidden; border: 1px solid var(--border); border-radius: 26px; background: color-mix(in srgb, var(--card) 98%, var(--background)); box-shadow: 0 28px 90px color-mix(in srgb, var(--foreground) 24%, transparent); backface-visibility: hidden; will-change: transform, opacity; animation: dashboard-dialog-in 240ms cubic-bezier(.16,1,.3,1); }
 .thought-dialog-backdrop-closing { animation: dashboard-fade-out 240ms ease-in both; }
 .thought-dialog-closing { animation: dashboard-dialog-out 240ms cubic-bezier(.4,0,1,1) both; }
 @keyframes dashboard-toast-in { from { opacity: 0; transform: translateY(14px) scale(.965); } }
@@ -315,9 +315,9 @@ select {
 @keyframes achievement-row { 0% { transform: none; } 38% { transform: translateY(-1px) scale(1.006); box-shadow: 0 9px 25px color-mix(in srgb, var(--orange) 10%, transparent); } 100% { transform: none; opacity: 1; box-shadow: none; } }
 @keyframes milestone-achieved { 0% { transform: scale(1); } 48% { transform: translateY(-2px) scale(1.012); box-shadow: 0 12px 30px color-mix(in srgb, var(--orange) 14%, transparent); } 100% { transform: none; } }
 @keyframes dashboard-fade-in { from { opacity: 0; } }
-@keyframes dashboard-dialog-in { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+@keyframes dashboard-dialog-in { from { opacity: 0; transform: translate3d(0, 12px, 0) scale(.98); } }
 @keyframes dashboard-fade-out { to { opacity: 0; } }
-@keyframes dashboard-dialog-out { to { opacity: 0; transform: translateY(10px) scale(.975); } }
+@keyframes dashboard-dialog-out { to { opacity: 0; transform: translate3d(0, 10px, 0) scale(.975); } }
 @media (max-width: 640px) {
   .streak-banner { border-radius: 20px; }
   .dashboard-card-heading { padding: 1rem; }
@@ -864,9 +864,16 @@ select {
   place-items: center;
   padding: 1rem;
   background: rgba(20, 18, 15, 0.28);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  transform: translateZ(0);
+  will-change: opacity;
   animation: backdrop-in 220ms ease-out both;
+}
+.workspace-frame {
+  will-change: filter;
+}
+body:has(.modal-backdrop, .thought-dialog-backdrop) .workspace-frame {
+  filter: blur(6px);
+  transform: translateZ(0);
 }
 .task-composer {
   width: min(100%, 800px);
@@ -883,6 +890,8 @@ select {
   box-shadow:
     0 24px 65px rgba(0, 0, 0, 0.2),
     0 18px 42px color-mix(in srgb, var(--orange) 14%, transparent);
+  backface-visibility: hidden;
+  will-change: transform, opacity;
   animation: composer-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .confirm-dialog {
@@ -897,6 +906,8 @@ select {
   box-shadow:
     0 24px 65px rgba(0, 0, 0, 0.2),
     0 18px 42px color-mix(in srgb, var(--orange) 14%, transparent);
+  backface-visibility: hidden;
+  will-change: transform, opacity;
   animation: composer-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .confirm-dialog-kicker {
@@ -1000,21 +1011,21 @@ select {
 @keyframes composer-in {
   from {
     opacity: 0;
-    transform: translateY(14px) scale(0.975);
+    transform: translate3d(0, 14px, 0) scale(0.975);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 @keyframes composer-out {
   from {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
   to {
     opacity: 0;
-    transform: translateY(8px) scale(0.985);
+    transform: translate3d(0, 8px, 0) scale(0.985);
   }
 }
 @keyframes week-view-in {
@@ -1104,7 +1115,8 @@ select {
     grid-template-columns: clamp(232px, 18vw, 244px) minmax(0, 1fr);
     background: transparent;
     column-gap: 12px;
-    transition: grid-template-columns 300ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition:
+      grid-template-columns 300ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .workspace-frame[data-sidebar-collapsed="true"] {
@@ -1274,6 +1286,15 @@ select {
       gap 280ms cubic-bezier(0.22, 1, 0.36, 1),
       padding 280ms cubic-bezier(0.22, 1, 0.36, 1);
   }
+  .sidebar-account {
+    max-height: 52px;
+    overflow: hidden;
+    opacity: 1;
+    transition:
+      max-height 240ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 150ms ease 100ms,
+      padding 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
   .theme-slot {
     overflow: hidden;
     transition: padding 260ms ease;
@@ -1328,6 +1349,14 @@ select {
     padding-right: 0;
     padding-left: 0;
   }
+  .workspace-frame[data-sidebar-collapsed="true"] .sidebar-account {
+    max-height: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+    opacity: 0;
+    transition-delay: 0ms;
+  }
 
   .content-region {
     grid-column: 2;
@@ -1353,12 +1382,12 @@ select {
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
     border-radius: 46px 30px 30px 30px;
-    background: color-mix(in srgb, var(--card) 64%, transparent);
+    background: color-mix(in srgb, var(--card) 94%, var(--background));
     box-shadow:
       -8px 18px 54px rgba(73, 58, 38, 0.1),
       inset 0 1px 0 rgba(255, 255, 255, 0.52),
       inset 12px 0 28px color-mix(in srgb, var(--sidebar) 10%, transparent);
-    backdrop-filter: blur(30px) saturate(1.05);
+    backdrop-filter: none;
   }
 
   .content-surface::before {
@@ -1582,6 +1611,27 @@ select {
 .page-transition {
   animation: page-enter 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+.route-progress {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  right: 1.75rem;
+  left: 1.75rem;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--orange) 12%, transparent);
+}
+.route-progress span {
+  display: block;
+  width: 42%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--orange);
+  animation: route-progress 700ms cubic-bezier(.4,0,.2,1) infinite alternate;
+}
+@keyframes route-progress { from { transform: translateX(-45%); } to { transform: translateX(185%); } }
 
 .dashboard-shell > :not(.modal-backdrop):not(.completion-toast-stack),
 .focus-area-shell > :not(.modal-backdrop):not(.completion-toast-stack),

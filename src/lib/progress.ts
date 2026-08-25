@@ -1,4 +1,4 @@
-import type { TaskCategory, TaskStatus } from "@/src/lib/today";
+import type { PlannerId, TaskCategory, TaskStatus } from "@/src/lib/today";
 
 export const progressCategoryKeys = ["career", "content", "personal"] as const;
 export type ProgressCategory = (typeof progressCategoryKeys)[number];
@@ -15,11 +15,11 @@ export const weekdayKeys = [
 export type WeekdayKey = (typeof weekdayKeys)[number];
 
 export type ProgressTask = {
-  id?: number;
+  id?: PlannerId;
   category: TaskCategory;
   date: string;
   anytimeWeekStart: string | null;
-  recurrenceId?: number | null;
+  recurrenceId?: PlannerId | null;
   status: TaskStatus;
   completedAt: string | null;
 };

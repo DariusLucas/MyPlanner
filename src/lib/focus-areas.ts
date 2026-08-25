@@ -1,10 +1,13 @@
 import { and, asc, desc, eq, notInArray } from "drizzle-orm";
 import { db } from "@/src/db/client";
 import { contentMilestones, tasks } from "@/src/db/schema";
-import type { TaskCategory, TodayTask } from "@/src/lib/today";
+import type { PlannerId, TaskCategory, TodayTask } from "@/src/lib/today";
 
 export type FocusArea = Extract<TaskCategory, "career" | "content">;
-export type FocusMilestone = typeof contentMilestones.$inferSelect;
+export type FocusMilestone = Omit<typeof contentMilestones.$inferSelect, "id"> & {
+  id: PlannerId;
+  revision?: number;
+};
 
 export type FocusAreaData = {
   category: FocusArea;

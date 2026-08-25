@@ -128,7 +128,7 @@ async function main() {
     2,
     "missed routine check-ins are summarized without carrying them forward",
   );
-  const futureWeek = getWeekData("2026-08-24");
+  const futureWeek = getWeekData("2099-01-05");
   assert.equal(
     futureWeek.recurringAnytime.length,
     0,

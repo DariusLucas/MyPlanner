@@ -595,11 +595,28 @@ export type Database = {
         }
         Returns: Json
       }
+      set_task_completed: {
+        Args: {
+          p_task_id: string
+          p_expected_revision: number
+          p_completed: boolean
+        }
+        Returns: Json
+      }
       set_task_workflow: {
         Args: {
           p_task_id: string
           p_expected_revision: number
           p_status: string
+        }
+        Returns: Json
+      }
+      update_planned_task: {
+        Args: {
+          p_task_id: string
+          p_expected_revision: number
+          p_input: Json
+          p_recurrence_count?: number
         }
         Returns: Json
       }

@@ -11,7 +11,7 @@ import {
 import { db } from "@/src/db/client";
 import { taskRecurrences, tasks } from "@/src/db/schema";
 import { ensureRecurringInstances } from "@/src/lib/recurrence";
-import type { TodayTask } from "@/src/lib/today";
+import type { PlannerId, TodayTask } from "@/src/lib/today";
 
 export type WeekData = {
   weekStart: string;
@@ -25,7 +25,7 @@ export type WeekData = {
 
 export type WeekTask = TodayTask & { recurrenceCount: number | null };
 export type WeeklyRecurrence = {
-  recurrenceId: number;
+  recurrenceId: PlannerId;
   countPerWeek: number;
   tasks: WeekTask[];
   missedLastWeek: number;
@@ -71,7 +71,7 @@ export function getWeekData(weekStart: string): WeekData {
   const addRecurrenceCount = (task: TodayTask): WeekTask => ({
     ...task,
     recurrenceCount: task.recurrenceId
-      ? (recurrenceCounts.get(task.recurrenceId) ?? null)
+      ? (recurrenceCounts.get(Number(task.recurrenceId)) ?? null)
       : null,
   });
   const active = db
@@ -116,13 +116,15 @@ export function getWeekData(weekStart: string): WeekData {
           !task.recurrenceCount ||
           (task.recurrenceIndex ?? 0) < task.recurrenceCount),
     )
-    .sort((a, b) => a.position - b.position || a.id - b.id);
-  const recurringById = new Map<number, WeeklyRecurrence>();
+    .sort((a, b) =>
+      a.position - b.position || String(a.id).localeCompare(String(b.id)),
+    );
+  const recurringById = new Map<PlannerId, WeeklyRecurrence>();
   const previousWeekStart = format(
     addWeeks(parseISO(weekStart), -1),
     "yyyy-MM-dd",
   );
-  const missedLastWeek = new Map<number, number>();
+  const missedLastWeek = new Map<PlannerId, number>();
   db.select({ recurrenceId: tasks.recurrenceId })
     .from(tasks)
     .where(
@@ -154,7 +156,7 @@ export function getWeekData(weekStart: string): WeekData {
   const recurringAnytime = [...recurringById.values()].sort(
     (a, b) =>
       a.tasks[0]!.position - b.tasks[0]!.position ||
-      a.recurrenceId - b.recurrenceId,
+      String(a.recurrenceId).localeCompare(String(b.recurrenceId)),
   );
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = format(addDays(parseISO(weekStart), index), "yyyy-MM-dd");

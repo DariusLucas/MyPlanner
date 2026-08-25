@@ -27,6 +27,7 @@
     "test:mobile": "tsx scripts/test-mobile.ts",
     "test:supabase": "tsx scripts/test-supabase.ts",
     "test:supabase-auth": "tsx scripts/test-supabase-auth.ts",
+    "test:web-supabase": "tsx scripts/test-web-supabase.ts",
     "mobile:dev": "vite --config mobile/vite.config.ts",
     "mobile:build": "vite build --config mobile/vite.config.ts",
     "android:sync": "npm run mobile:build && cap sync android",
