@@ -25,17 +25,17 @@ behavior.
 
 ## Implementation Checklist
 
-- [ ] Audit the Android SQLite data/actions and map each flow to the web
+- [x] Audit the Android SQLite data/actions and map each flow to the web
       Supabase repository and RPC contracts.
-- [ ] Add Android Supabase client configuration using only publishable values.
-- [ ] Install and exercise Keystore-backed secure session storage.
-- [ ] Implement Android email OTP sign-in, sign-out, session refresh, and
+- [x] Add Android Supabase client configuration using only publishable values.
+- [x] Install and exercise Keystore-backed secure session storage.
+- [x] Implement Android email OTP sign-in, sign-out, session refresh, and
       signed-out/session-expired routing.
-- [ ] Migrate dashboard, week, task, recurrence, focus, and progress reads and
+- [x] Migrate dashboard, week, task, recurrence, focus, and progress reads and
       writes to Supabase.
-- [ ] Add loading, network-error, retry, and optimistic-conflict states.
-- [ ] Add Realtime invalidation and refresh behavior for shared planner data.
-- [ ] Update Android documentation and Settings copy.
+- [x] Add loading, network-error, retry, and optimistic-conflict states.
+- [x] Add Realtime invalidation and refresh behavior for shared planner data.
+- [x] Update Android documentation and Settings copy.
 - [ ] Run Android and web builds, all relevant tests, migration/security checks,
       and manual cross-platform verification.
 
@@ -45,7 +45,19 @@ behavior.
   phase.
 - The development Supabase schema, RLS policies, planner RPCs, and web parity
   behavior are available for Android integration.
-- Android still uses SQLite until the S4 migration is implemented and verified.
+- Android runtime reads and writes now use authenticated Supabase access; the
+  legacy SQLite files remain retained but are no longer imported at runtime.
+- The Android debug APK builds with secure storage and app lifecycle plugins.
+- The Realtime publication migration is applied to development Supabase, and
+  remote migration/RLS/RPC verification passes.
+- Native email OTP sign-in works on a Samsung SM-S931B, and the authenticated
+  session survives app restarts and APK reinstalls through Keystore-backed
+  storage.
+- Mobile navigation, drawer interaction, account identity, loading behavior,
+  and route transitions have been exercised on the physical phone.
+- Shared planner data persistence between authenticated desktop and mobile
+  sessions has been manually verified. Two-client Realtime refresh still needs
+  manual verification before S4 can be completed.
 
 ## Explicitly Out of Scope
 

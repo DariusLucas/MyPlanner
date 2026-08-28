@@ -23,6 +23,7 @@ const expectedMigrationVersions = [
   "20260822130200",
   "20260822130300",
   "20260825120000",
+  "20260826120000",
 ];
 
 async function setAuthenticatedUser(client: Client, userId: string) {
@@ -113,6 +114,19 @@ async function main() {
         and table_row.relrowsecurity
     `);
     assert.equal(Number(schema.rows[0]!.count), 11, "all planner tables have RLS enabled");
+
+    const realtimeTables = await client.query<{ tablename: string }>(`
+      select tablename
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename in (
+          'app_settings', 'tasks', 'task_recurrences', 'daily_focus',
+          'quick_thoughts', 'content_milestones'
+        )
+      order by tablename
+    `);
+    assert.equal(realtimeTables.rowCount, 6, "mobile planner tables publish Realtime invalidations");
 
     const rpcSecurity = await client.query<{
       authenticated_can_execute: boolean;

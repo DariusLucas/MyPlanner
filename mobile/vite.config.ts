@@ -8,6 +8,8 @@ const mobile = fileURLToPath(new URL(".", import.meta.url));
 export default defineConfig({
   root: mobile,
   base: "./",
+  envDir: root,
+  envPrefix: ["VITE_", "NEXT_PUBLIC_"],
   plugins: [react()],
   resolve: {
     alias: [

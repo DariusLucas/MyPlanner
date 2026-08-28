@@ -1239,13 +1239,13 @@ function Board({
   function drop(event: ReactDragEvent<HTMLElement>, status: TaskStatus) {
     event.preventDefault();
     event.stopPropagation();
-    const transferredId = Number(
+    const transferredId =
       event.dataTransfer.getData("application/x-myplanner-task") ||
-      event.dataTransfer.getData("text/plain"),
+      event.dataTransfer.getData("text/plain");
+    const transferredTask = tasks.find(
+      (task) => String(task.id) === transferredId,
     );
-    const id = Number.isInteger(transferredId) && transferredId > 0
-      ? transferredId
-      : dragIdRef.current;
+    const id = transferredTask?.id ?? dragIdRef.current;
     clearDragStyles();
     dragIdRef.current = null;
     // Let Chromium finish its native drop/dragend lifecycle before the

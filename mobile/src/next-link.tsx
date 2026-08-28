@@ -4,6 +4,11 @@ import { useMobileRouter } from "./router";
 type MobileLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & {
   href: string | { pathname?: string; query?: Record<string, string> };
   children: ReactNode;
+  prefetch?: boolean;
+  replace?: boolean;
+  scroll?: boolean;
+  shallow?: boolean;
+  locale?: string | false;
 };
 
 function hrefValue(href: MobileLinkProps["href"]) {
@@ -13,7 +18,8 @@ function hrefValue(href: MobileLinkProps["href"]) {
   return `${href.pathname ?? "/"}${query ? `?${query}` : ""}`;
 }
 
-export default function Link({ href, onClick, children, ...props }: MobileLinkProps) {
+export default function Link({ href, onClick, children, prefetch, replace, scroll, shallow, locale, ...props }: MobileLinkProps) {
+  void [prefetch, replace, scroll, shallow, locale];
   const router = useMobileRouter();
   const value = hrefValue(href);
   function navigate(event: MouseEvent<HTMLAnchorElement>) {

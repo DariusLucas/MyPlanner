@@ -9,6 +9,54 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+@media (max-width: 1023px) {
+  body:has(button[aria-label="Close navigation"].fixed.inset-0) {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  .workspace-frame {
+    /* Desktop modal blur pre-promotes this element with will-change: filter.
+       Android then treats it as the containing block for the fixed drawer,
+       so the drawer scrolls away from its visible touch targets. */
+    will-change: auto;
+  }
+
+  .sidebar-panel {
+    z-index: 60;
+    top: 0;
+    bottom: 0;
+    height: 100dvh;
+    overflow: hidden;
+    border-right: 1px solid var(--border);
+    background: var(--background);
+    box-shadow: 16px 0 38px rgba(42, 34, 26, 0.16);
+    opacity: 1;
+    isolation: isolate;
+    pointer-events: auto;
+    touch-action: manipulation;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .dark .sidebar-panel {
+    box-shadow: 16px 0 42px rgba(0, 0, 0, 0.36);
+  }
+
+  button[aria-label="Close navigation"].fixed.inset-0 {
+    z-index: 50;
+    background: color-mix(in srgb, var(--foreground) 24%, transparent);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .sidebar-panel .nav-item,
+  .sidebar-panel button {
+    pointer-events: auto;
+    touch-action: manipulation;
+  }
+}
+
 @supports (padding: env(safe-area-inset-top)) {
   .workspace-header {
     height: calc(3.5rem + env(safe-area-inset-top));
@@ -42,16 +90,108 @@ body {
   box-shadow: 0 14px 32px color-mix(in srgb, var(--foreground) 7%, transparent);
 }
 
-.mobile-runtime-spinner {
-  width: 32px;
-  height: 32px;
-  margin: 0 auto 1rem;
-  border: 3px solid var(--muted);
-  border-top-color: var(--orange);
-  border-radius: 999px;
-  animation: mobile-spin 700ms linear infinite;
+.mobile-page-skeleton {
+  display: grid;
+  width: min(100%, 1000px);
+  margin: 0 auto;
+  gap: 1rem;
 }
 
-@keyframes mobile-spin {
-  to { transform: rotate(360deg); }
+.mobile-page-skeleton-standalone {
+  min-height: 100vh;
+  align-content: start;
+  padding: calc(4.5rem + env(safe-area-inset-top)) 1rem 2rem;
+}
+
+.mobile-skeleton-header {
+  display: grid;
+  gap: 0.65rem;
+  padding-bottom: 0.4rem;
+}
+
+.mobile-skeleton-line,
+.mobile-skeleton-tile,
+.mobile-skeleton-panel,
+.mobile-skeleton-row {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+  background: color-mix(in srgb, var(--card) 82%, var(--muted));
+}
+
+.mobile-skeleton-line::after,
+.mobile-skeleton-tile::after,
+.mobile-skeleton-panel::after,
+.mobile-skeleton-row::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, color-mix(in srgb, var(--foreground) 7%, transparent) 48%, transparent 76%);
+  transform: translateX(-110%);
+  animation: mobile-skeleton-shimmer 1.25s ease-in-out infinite;
+}
+
+.mobile-skeleton-line {
+  display: block;
+  border: 0;
+  border-radius: 999px;
+}
+
+.mobile-skeleton-kicker { width: 28%; height: 10px; }
+.mobile-skeleton-title { width: 66%; height: 30px; }
+.mobile-skeleton-copy { width: 84%; height: 12px; }
+
+.mobile-skeleton-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.mobile-skeleton-tile {
+  min-height: 92px;
+  border-radius: 20px;
+}
+
+.mobile-page-skeleton[data-variant="week"] .mobile-skeleton-tile {
+  min-height: 76px;
+}
+
+.mobile-page-skeleton[data-variant="progress"] .mobile-skeleton-tile {
+  min-height: 104px;
+}
+
+.mobile-skeleton-panel {
+  min-height: 230px;
+  border-radius: 24px;
+  padding: 1rem;
+}
+
+.mobile-skeleton-panel-title {
+  width: 42%;
+  height: 14px;
+}
+
+.mobile-skeleton-rows {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.mobile-skeleton-row {
+  display: block;
+  height: 44px;
+  border-radius: 14px;
+}
+
+@keyframes mobile-skeleton-shimmer {
+  to { transform: translateX(110%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-skeleton-line::after,
+  .mobile-skeleton-tile::after,
+  .mobile-skeleton-panel::after,
+  .mobile-skeleton-row::after {
+    animation: none;
+  }
 }

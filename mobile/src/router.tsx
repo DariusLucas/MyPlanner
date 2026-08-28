@@ -29,14 +29,20 @@ export function MobileRouterProvider({ children }: { children: ReactNode }) {
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
-    const onHashChange = () => setHref(currentHref());
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    const syncFromLocation = () => setHref(currentHref());
+    window.addEventListener("hashchange", syncFromLocation);
+    window.addEventListener("popstate", syncFromLocation);
+    return () => {
+      window.removeEventListener("hashchange", syncFromLocation);
+      window.removeEventListener("popstate", syncFromLocation);
+    };
   }, []);
 
   const navigate = useCallback((nextHref: string) => {
+    // Update React immediately. Android WebView can delay the hashchange event,
+    // which otherwise leaves mobile sidebar taps looking unresponsive.
+    setHref(nextHref);
     if (currentHref() === nextHref) {
-      setHref(nextHref);
       return;
     }
     window.location.hash = nextHref;
