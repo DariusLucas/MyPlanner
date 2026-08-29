@@ -195,12 +195,13 @@ export function DashboardView({ data }: { data: DashboardData }) {
 
   return (
     <div className="dashboard-shell mx-auto w-full max-w-[1500px] space-y-6 sm:space-y-7">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">{greeting} · {format(parseISO(data.date), "EEEE, MMMM d")}</p>
-          <h1 className="mt-1.5 text-3xl font-semibold tracking-[-0.055em] sm:text-[2.6rem]">What matters today?</h1>
+      <header className="dashboard-hero">
+        <div className="dashboard-hero-copy">
+          <div className="dashboard-hero-kicker"><span className="dashboard-hero-kicker-mark"><Sparkles size={12} /></span><span>{greeting}</span><span className="dashboard-hero-kicker-divider" aria-hidden="true" /><span>{format(parseISO(data.date), "EEEE, MMMM d")}</span></div>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.055em] sm:text-[2.6rem]">What matters today?</h1>
+          <p className="dashboard-hero-copy-text">A clear view of the next useful thing, with room for everything else.</p>
         </div>
-        <button onClick={() => setComposer(true)} className="premium-primary-button"><Plus size={16} /> Add task</button>
+        <div className="dashboard-hero-action"><span className="dashboard-hero-date">Today <span aria-hidden="true">·</span> {format(parseISO(data.date), "MMM d")}</span><button onClick={() => setComposer(true)} className="premium-primary-button"><Plus size={16} /> Add task</button></div>
       </header>
 
       {error && <div role="alert" className="flex items-center justify-between rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm">{error}<button onClick={() => setError(null)} aria-label="Dismiss"><X size={16} /></button></div>}

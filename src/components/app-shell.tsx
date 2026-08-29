@@ -108,6 +108,8 @@ export function AppShell({ children, signOutAction, userEmail }: { children: Rea
       <div className="content-region min-w-0">
         <header className="workspace-header sticky top-0 z-20 flex h-14 items-center justify-between bg-card/95 px-4 lg:hidden">
           <button type="button" aria-label="Open navigation" className="mobile-nav-button rounded-xl text-muted-foreground hover:bg-muted lg:hidden" onClick={() => { setSidebarCollapsed(false); setMobileOpen(true); }}><Menu size={19} /></button>
+          <div className="workspace-mobile-brand" aria-label="Planner"><span className="workspace-mobile-brand-mark"><Plane size={16} strokeWidth={1.7} /></span><span>Planner</span></div>
+          <span className="workspace-mobile-caption">Today</span>
         </header>
         <main className="content-surface w-full px-4 py-7 sm:px-6 lg:px-8 lg:py-9 xl:px-10 xl:py-10">
           {pendingHref && pendingHref !== pathname && <div className="route-progress" role="status" aria-label="Loading page"><span /></div>}
