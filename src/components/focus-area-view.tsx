@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { addDays, format, parseISO, startOfWeek } from "date-fns";
@@ -30,7 +29,6 @@ const milestoneTypeOptions: Record<FocusArea, Array<{ value: FocusMilestone["typ
 type Runner = (key: string, action: (form: FormData) => Promise<ActionResult>, form: FormData, success?: () => void) => Promise<void>;
 
 export function FocusAreaView({ data }: { data: FocusAreaData }) {
-  const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
   const [pendingTaskIds, setPendingTaskIds] = useState<Set<PlannerId>>(new Set());
   const [finishingIds, setFinishingIds] = useState<Set<PlannerId>>(new Set());
@@ -43,7 +41,7 @@ export function FocusAreaView({ data }: { data: FocusAreaData }) {
     const result = await action(form);
     setPending(null);
     if (!result.ok) return setError(result.error);
-    success?.(); router.refresh();
+    success?.();
   }
   async function toggle(task: TodayTask) {
     const form = new FormData();
@@ -64,14 +62,12 @@ export function FocusAreaView({ data }: { data: FocusAreaData }) {
     if (completing) await new Promise((resolve) => window.setTimeout(resolve, 620));
     setPendingTaskIds((current) => { const next = new Set(current); next.delete(task.id); return next; });
     setFinishingIds((current) => { const next = new Set(current); next.delete(task.id); return next; });
-    router.refresh();
   }
   async function addFocusTask(form: FormData) {
     setPending("create-task"); setError(null);
     const result = await createTask(form);
     setPending(null);
     if (!result.ok) { setError(result.error); return false; }
-    router.refresh();
     return true;
   }
   const title = data.category === "career" ? "Career" : "Content";

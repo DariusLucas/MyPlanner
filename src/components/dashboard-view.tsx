@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Clock3, Flame, Lightbulb, Pencil, Plus, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowRight, Check, Clock3, Flame, Lightbulb, LoaderCircle, Pencil, Plus, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
 import { addDays, format, parseISO, startOfWeek } from "date-fns";
 import { createThought, deleteThought, updateThought } from "@/src/app/dashboard-actions";
-import { createTask, toggleTask, updateTask, type ActionResult } from "@/src/app/today/actions";
+import { createTask, deleteTask, toggleTask, updateTask, type ActionResult } from "@/src/app/today/actions";
 import type { DashboardData, QuickThought } from "@/src/lib/dashboard";
 import type { PlannerId, TaskCategory, TodayTask } from "@/src/lib/today";
 import { TaskComposer } from "@/src/components/week-view";
@@ -30,6 +30,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
   const [composerPending, setComposerPending] = useState(false);
   const [editingTask, setEditingTask] = useState<TodayTask | null>(null);
   const [editPending, setEditPending] = useState(false);
+  const [deletePending, setDeletePending] = useState(false);
   const undoTimers = useRef<Map<PlannerId, number>>(new Map());
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -137,7 +138,6 @@ export function DashboardView({ data }: { data: DashboardData }) {
       return setError(result.error);
     }
     dismissUndo(item.id);
-    router.refresh();
   }
 
   async function addTask(form: FormData) {
@@ -145,7 +145,6 @@ export function DashboardView({ data }: { data: DashboardData }) {
     const result = await createTask(form);
     setComposerPending(false);
     if (!result.ok) { setError(result.error); return false; }
-    router.refresh();
     return true;
   }
 
@@ -154,7 +153,14 @@ export function DashboardView({ data }: { data: DashboardData }) {
     const result = await updateTask(form);
     setEditPending(false);
     if (!result.ok) { setError(result.error); return false; }
-    router.refresh();
+    return true;
+  }
+
+  async function removeTask(form: FormData) {
+    setDeletePending(true); setError(null);
+    const result = await deleteTask(form);
+    setDeletePending(false);
+    if (!result.ok) { setError(result.error); return false; }
     return true;
   }
 
@@ -169,6 +175,8 @@ export function DashboardView({ data }: { data: DashboardData }) {
 
   const visibleOverdue = mergeDeferred(data.overdue, true);
   const visibleActive = mergeDeferred(data.active, false);
+  const visibleScheduled = visibleActive.filter((task) => !task.anytimeWeekStart);
+  const visibleAnytime = visibleActive.filter((task) => Boolean(task.anytimeWeekStart));
   const visibleCompletedToday = data.completedToday.filter((task) => !deferredTasks.has(task.id));
   const deferredCompletedCount = data.completedToday.length - visibleCompletedToday.length;
   const visibleCounts = {
@@ -197,7 +205,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
 
       {error && <div role="alert" className="flex items-center justify-between rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm">{error}<button onClick={() => setError(null)} aria-label="Dismiss"><X size={16} /></button></div>}
       {composer && <TaskComposer weekStart={weekStart} days={weekDays} pending={composerPending} onSubmit={addTask} onClose={() => setComposer(false)} />}
-      {editingTask && <DashboardTaskEditor task={editingTask} pending={editPending} onSave={saveTask} onClose={() => setEditingTask(null)} />}
+      {editingTask && <DashboardTaskEditor task={editingTask} pending={editPending} deletePending={deletePending} onSave={saveTask} onDelete={removeTask} onClose={() => setEditingTask(null)} />}
 
       <StreakBanner streak={data.streak} />
 
@@ -207,19 +215,21 @@ export function DashboardView({ data }: { data: DashboardData }) {
             <div>
               <p className="dashboard-eyebrow">Today</p>
               <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h2 className="text-xl font-semibold tracking-[-0.035em]">{progressCounts.completed} of {progressCounts.planned} complete</h2>
-                <span className="text-xs text-muted-foreground">{progressCounts.remaining} remaining</span>
+                <h2 className="text-xl font-semibold tracking-[-0.035em]">{progressCounts.planned === 0 ? "0 tasks for today" : `${progressCounts.completed} of ${progressCounts.planned} complete`}</h2>
+                {progressCounts.planned > 0 && <span className="text-xs text-muted-foreground">{progressCounts.remaining} remaining</span>}
               </div>
             </div>
-            <ProgressDial completed={progressCounts.completed} total={progressCounts.planned} />
+            {progressCounts.planned > 0 && <ProgressDial completed={progressCounts.completed} total={progressCounts.planned} />}
           </div>
-          <div className="h-1 bg-muted/80"><div className="h-full rounded-r-full bg-[var(--orange)] transition-[width] duration-500" style={{ width: `${progressCounts.planned ? (progressCounts.completed / progressCounts.planned) * 100 : 0}%` }} /></div>
+          {progressCounts.planned > 0 && <div className="h-1 bg-muted/80"><div className="h-full rounded-r-full bg-[var(--orange)] transition-[width] duration-500" style={{ width: `${(progressCounts.completed / progressCounts.planned) * 100}%` }} /></div>}
           <div className="p-3 sm:p-4">
             {visibleCounts.remaining === 0 ? <EmptyToday completed={visibleCounts.completed} onAdd={() => setComposer(true)} /> : <div className="space-y-1">
               {visibleOverdue.length > 0 && <TaskGroupLabel label="Carried forward" count={visibleOverdue.length} />}
               {visibleOverdue.map((task, index) => <DashboardTask key={task.id} task={task} overdue pending={pendingIds.has(task.id)} finishing={finishingIds.has(task.id)} deferred={deferredTasks.has(task.id) && !restoringIds.has(task.id)} restoring={restoringIds.has(task.id)} undoing={undoingIds.has(task.id)} onComplete={() => complete(task, true, index)} onUndo={() => undoCompletion({ id: task.id, title: task.title, revision: (task.revision ?? 1) + 1 })} onEdit={() => setEditingTask(task)} />)}
-              {visibleOverdue.length > 0 && visibleActive.length > 0 && <TaskGroupLabel label="Planned today" count={visibleActive.length} />}
-              {visibleActive.map((task, index) => <DashboardTask key={task.id} task={task} pending={pendingIds.has(task.id)} finishing={finishingIds.has(task.id)} deferred={deferredTasks.has(task.id) && !restoringIds.has(task.id)} restoring={restoringIds.has(task.id)} undoing={undoingIds.has(task.id)} onComplete={() => complete(task, false, index)} onUndo={() => undoCompletion({ id: task.id, title: task.title, revision: (task.revision ?? 1) + 1 })} onEdit={() => setEditingTask(task)} />)}
+              {visibleScheduled.length > 0 && <TaskGroupLabel label="Planned today" count={visibleScheduled.length} />}
+              {visibleScheduled.map((task) => { const index = visibleActive.findIndex((item) => item.id === task.id); return <DashboardTask key={task.id} task={task} pending={pendingIds.has(task.id)} finishing={finishingIds.has(task.id)} deferred={deferredTasks.has(task.id) && !restoringIds.has(task.id)} restoring={restoringIds.has(task.id)} undoing={undoingIds.has(task.id)} onComplete={() => complete(task, false, index)} onUndo={() => undoCompletion({ id: task.id, title: task.title, revision: (task.revision ?? 1) + 1 })} onEdit={() => setEditingTask(task)} />; })}
+              {visibleAnytime.length > 0 && <TaskGroupLabel label="Anytime this week" count={visibleAnytime.length} />}
+              {visibleAnytime.map((task) => { const index = visibleActive.findIndex((item) => item.id === task.id); return <DashboardTask key={task.id} task={task} pending={pendingIds.has(task.id)} finishing={finishingIds.has(task.id)} deferred={deferredTasks.has(task.id) && !restoringIds.has(task.id)} restoring={restoringIds.has(task.id)} undoing={undoingIds.has(task.id)} onComplete={() => complete(task, false, index)} onUndo={() => undoCompletion({ id: task.id, title: task.title, revision: (task.revision ?? 1) + 1 })} onEdit={() => setEditingTask(task)} />; })}
             </div>}
             {visibleCompletedToday.length > 0 && <div className="mt-5 border-t border-border px-1 pt-5">
               <div className="mb-2.5 flex items-center justify-between px-2"><div><p className="dashboard-eyebrow">Completed today</p><p className="mt-1 text-xs text-muted-foreground">Quiet proof of progress.</p></div><span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">{visibleCompletedToday.length}</span></div>
@@ -257,28 +267,29 @@ function CompletedTask({ task, onEdit }: { task: TodayTask; onEdit: () => void }
   return <article className="dashboard-completed-task group"><span className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--orange)]/15 text-[var(--orange)]"><Check size={12} strokeWidth={3} /></span><p className="min-w-0 flex-1 truncate text-sm line-through decoration-[var(--orange)]/55">{task.title}</p><span className="shrink-0 text-[10px]">{task.completedAt ? format(new Date(task.completedAt), "HH:mm") : categoryLabels[task.category]}</span>{!task.recurrenceId && <button type="button" onClick={onEdit} className="dashboard-task-edit-button" aria-label={`Edit ${task.title}`}><Pencil size={13} /></button>}</article>;
 }
 
-function DashboardTaskEditor({ task, pending, onSave, onClose }: { task: TodayTask; pending: boolean; onSave: (form: FormData) => Promise<boolean>; onClose: () => void }) {
+function DashboardTaskEditor({ task, pending, deletePending, onSave, onDelete, onClose }: { task: TodayTask; pending: boolean; deletePending: boolean; onSave: (form: FormData) => Promise<boolean>; onDelete: (form: FormData) => Promise<boolean>; onClose: () => void }) {
   const taskWeekStart = format(startOfWeek(parseISO(task.date), { weekStartsOn: 1 }), "yyyy-MM-dd");
   const dates = Array.from({ length: 7 }, (_, index) => format(addDays(parseISO(taskWeekStart), index), "yyyy-MM-dd"));
   const [date, setDate] = useState(task.date);
   const [category, setCategory] = useState<TaskCategory>(task.category);
   const [closing, setClosing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const escape = (event: KeyboardEvent) => { if (event.key === "Escape" && !pending && !saving) close(); };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape" && !pending && !saving && !deletePending) close(); };
     document.addEventListener("keydown", escape);
     return () => { document.body.style.overflow = previousOverflow; document.removeEventListener("keydown", escape); };
   // `close` intentionally reads the current pending state for this mounted dialog.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pending, saving]);
+  }, [pending, saving, deletePending]);
 
   function close() {
-    if (closing) return;
+    if (closing || pending || saving || deletePending) return;
     setClosing(true);
     window.setTimeout(onClose, 220);
   }
@@ -288,9 +299,16 @@ function DashboardTaskEditor({ task, pending, onSave, onClose }: { task: TodayTa
     const saved = await onSave(form);
     if (saved) close(); else setSaving(false);
   }
+  async function remove() {
+    const form = new FormData();
+    form.set("id", String(task.id));
+    form.set("revision", String(task.revision ?? 1));
+    const deleted = await onDelete(form);
+    if (deleted) onClose();
+  }
   if (!mounted) return null;
 
-  return createPortal(<div className={`modal-backdrop ${closing ? "modal-closing" : ""}`} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}><form action={submit} className="task-composer dashboard-task-editor" role="dialog" aria-modal="true" aria-labelledby="dashboard-edit-title"><div className="flex items-start justify-between gap-4"><div><p className="dashboard-eyebrow">Today</p><h2 id="dashboard-edit-title" className="mt-1 text-lg font-semibold">Edit task</h2><p className="mt-1 text-xs text-muted-foreground">Adjust it here without leaving your day.</p></div><button type="button" onClick={close} className="milestone-icon-button" aria-label="Close task editor"><X size={17} /></button></div><input type="hidden" name="id" value={task.id} /><input type="hidden" name="anytimeWeekStart" value="" /><input type="hidden" name="recurrenceCount" value="0" /><input type="hidden" name="priority" value={task.priority} /><input type="hidden" name="category" value={category} /><input name="title" defaultValue={task.title} required maxLength={200} autoFocus className="focus-input mt-5" /><textarea name="description" defaultValue={task.description ?? ""} maxLength={2000} rows={3} placeholder="Optional details" className="thought-edit-input mt-3" /><div className="mt-4"><p className="mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">When</p><div className="choice-grid">{dates.map((value) => <button type="button" key={value} onClick={() => setDate(value)} className={date === value ? "choice-chip choice-chip-active" : "choice-chip"}>{format(parseISO(value), "EEE d")}</button>)}</div><input type="hidden" name="date" value={date} /></div><div className="mt-4"><p className="mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">Category</p><div className="choice-grid">{taskCategories.map((value) => <button type="button" key={value} onClick={() => setCategory(value)} className={category === value ? "choice-chip choice-chip-active" : "choice-chip"}>{categoryLabels[value]}</button>)}</div></div><label className="mt-4 block text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">Estimate<input name="estimatedMinutes" type="number" min="1" max="1440" defaultValue={task.estimatedMinutes ?? ""} placeholder="Minutes" className="focus-input mt-2 normal-case tracking-normal" /></label><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={close} className="thought-quiet-button">Cancel</button><button disabled={pending || saving} className="premium-small-button">{pending || saving ? "Saving…" : "Save changes"}</button></div></form></div>, document.body);
+  return createPortal(<div className={`modal-backdrop ${closing ? "modal-closing" : ""}`} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}><form action={submit} aria-busy={pending || saving || deletePending} className="task-composer dashboard-task-editor" role="dialog" aria-modal="true" aria-labelledby="dashboard-edit-title"><div className="flex items-start justify-between gap-4"><div><p className="dashboard-eyebrow">Today</p><h2 id="dashboard-edit-title" className="mt-1 text-lg font-semibold">Edit task</h2><p className="mt-1 text-xs text-muted-foreground">Adjust it here without leaving your day.</p></div><button type="button" onClick={close} disabled={pending || saving || deletePending} className="milestone-icon-button" aria-label="Close task editor"><X size={17} /></button></div><input type="hidden" name="id" value={task.id} /><input type="hidden" name="anytimeWeekStart" value={task.anytimeWeekStart ?? ""} /><input type="hidden" name="recurrenceCount" value="0" /><input type="hidden" name="priority" value={task.priority} /><input type="hidden" name="category" value={category} /><input name="title" defaultValue={task.title} required maxLength={200} autoFocus className="focus-input mt-5" /><textarea name="description" defaultValue={task.description ?? ""} maxLength={2000} rows={3} placeholder="Optional details" className="thought-edit-input mt-3" /><div className="mt-4"><p className="mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">When</p><div className="choice-grid">{dates.map((value) => <button type="button" key={value} onClick={() => setDate(value)} className={date === value ? "choice-chip choice-chip-active" : "choice-chip"}>{format(parseISO(value), "EEE d")}</button>)}</div><input type="hidden" name="date" value={date} /></div><div className="mt-4"><p className="mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">Category</p><div className="choice-grid">{taskCategories.map((value) => <button type="button" key={value} onClick={() => setCategory(value)} className={category === value ? "choice-chip choice-chip-active" : "choice-chip"}>{categoryLabels[value]}</button>)}</div></div><label className="mt-4 block text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">Estimate<input name="estimatedMinutes" type="number" min="1" max="1440" defaultValue={task.estimatedMinutes ?? ""} placeholder="Minutes" className="focus-input mt-2 normal-case tracking-normal" /></label>{(pending || saving || deletePending) && <div role="status" className="task-save-status"><LoaderCircle size={14} className="animate-spin" /> {deletePending ? "Deleting task…" : "Saving task…"}</div>}<div className="mt-5 flex flex-wrap items-center justify-between gap-2"><div>{confirmDelete ? <span className="inline-flex items-center gap-2"><span className="text-xs text-muted-foreground">Delete this task?</span><button type="button" onClick={() => setConfirmDelete(false)} disabled={deletePending} className="thought-quiet-button">Keep</button><button type="button" onClick={remove} disabled={deletePending} className="entity-delete-button">{deletePending ? "Deleting…" : "Delete"}</button></span> : <button type="button" onClick={() => setConfirmDelete(true)} disabled={pending || saving} className="thought-quiet-button text-red-600"><Trash2 size={14} /> Delete</button>}</div><div className="flex gap-2"><button type="button" onClick={close} disabled={pending || saving || deletePending} className="thought-quiet-button">Cancel</button><button disabled={pending || saving || deletePending} className="premium-small-button">{pending || saving ? <><LoaderCircle size={13} className="animate-spin" /> Saving…</> : "Save changes"}</button></div></div></form></div>, document.body);
 }
 
 function EmptyToday({ completed, onAdd }: { completed: number; onAdd: () => void }) {
@@ -298,7 +316,6 @@ function EmptyToday({ completed, onAdd }: { completed: number; onAdd: () => void
 }
 
 function ThoughtsPanel({ recent, all, onError }: { recent: QuickThought[]; all: QuickThought[]; onError: (message: string) => void }) {
-  const router = useRouter();
   const [text, setText] = useState("");
   const [pending, setPending] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -308,7 +325,7 @@ function ThoughtsPanel({ recent, all, onError }: { recent: QuickThought[]; all: 
   const [editingId, setEditingId] = useState<PlannerId | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<PlannerId | null>(null);
   useEffect(() => { if (!showAll) setBackgroundRecent(recent); }, [recent, showAll]);
-  async function run(action: (form: FormData) => Promise<ActionResult>, form: FormData, onSuccess?: () => void) { setPending(true); const result = await action(form); setPending(false); if (!result.ok) { onError(result.error); return false; } onSuccess?.(); router.refresh(); return true; }
+  async function run(action: (form: FormData) => Promise<ActionResult>, form: FormData, onSuccess?: () => void) { setPending(true); const result = await action(form); setPending(false); if (!result.ok) { onError(result.error); return false; } onSuccess?.(); return true; }
   async function capture(form: FormData) {
     setCaptureState("saving");
     const saved = await run(createThought, form, () => setText(""));

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, isNull, lt, notInArray } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, isNull, lt, notInArray, or } from "drizzle-orm";
 import { format, parseISO, startOfWeek } from "date-fns";
 import { db } from "@/src/db/client";
 import { quickThoughts, tasks } from "@/src/db/schema";
@@ -55,13 +55,17 @@ export function getDashboardData(now = new Date()): DashboardData {
   ensureRecurringInstances(weekStart, weekStart);
   const incomplete = notInArray(tasks.status, ["completed", "skipped"]);
   const active = db.select().from(tasks).where(and(
-    eq(tasks.date, date),
-    isNull(tasks.anytimeWeekStart),
+    or(
+      and(eq(tasks.date, date), isNull(tasks.anytimeWeekStart)),
+      eq(tasks.anytimeWeekStart, weekStart),
+    ),
     incomplete,
   )).orderBy(asc(tasks.position), asc(tasks.id)).all();
   const overdue = db.select().from(tasks).where(and(
-    lt(tasks.date, date),
-    isNull(tasks.anytimeWeekStart),
+    or(
+      and(lt(tasks.date, date), isNull(tasks.anytimeWeekStart)),
+      lt(tasks.anytimeWeekStart, weekStart),
+    ),
     incomplete,
   )).orderBy(asc(tasks.date), asc(tasks.position), asc(tasks.id)).all();
   const bounds = localDayBounds(date);

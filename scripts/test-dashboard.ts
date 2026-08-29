@@ -22,16 +22,16 @@ assert.equal((new Date(bounds.end).getTime() - new Date(bounds.start).getTime())
 db.insert(tasks).values([
   { title: "Today active", category: "career", date: "2026-10-25", position: 0 },
   { title: "Overdue active", category: "content", date: "2026-10-24", position: 0 },
-  { title: "Anytime excluded", category: "other", date: "2026-10-20", anytimeWeekStart: "2026-10-20", position: 0 },
+  { title: "Anytime visible", category: "other", date: "2026-10-19", anytimeWeekStart: "2026-10-19", position: 0 },
   { title: "Completed today", category: "career", date: "2026-10-24", status: "completed", completedAt: "2026-10-25T09:00:00.000Z", position: 1 },
   { title: "Completed yesterday", category: "career", date: "2026-10-24", status: "completed", completedAt: "2026-10-24T09:00:00.000Z", position: 2 },
 ]).run();
 
 let data = getDashboardData(now);
-assert.deepEqual(data.active.map((task) => task.title), ["Today active"]);
+assert.deepEqual(data.active.map((task) => task.title), ["Today active", "Anytime visible"]);
 assert.deepEqual(data.overdue.map((task) => task.title), ["Overdue active"]);
 assert.deepEqual(data.completedToday.map((task) => task.title), ["Completed today"]);
-assert.deepEqual(data.counts, { completed: 1, remaining: 2, planned: 3 });
+assert.deepEqual(data.counts, { completed: 1, remaining: 3, planned: 4 });
 
 const activeId = data.active[0]!.id;
 assert.equal(toggleTaskPersistence(Number(activeId)), true);

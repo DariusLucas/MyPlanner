@@ -27,6 +27,7 @@ import {
   ChevronLeft,
   ChevronRight,
   GripVertical,
+  LoaderCircle,
   Plus,
   X,
 } from "lucide-react";
@@ -429,7 +430,7 @@ export function TaskComposer({
   }, []);
 
   function close() {
-    if (closing) return;
+    if (closing || pending) return;
     setClosing(true);
     setTimeout(onClose, 220);
   }
@@ -450,6 +451,7 @@ export function TaskComposer({
       <form
         action={submit}
         className="task-composer"
+        aria-busy={pending}
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-task-title"
@@ -463,10 +465,11 @@ export function TaskComposer({
               Choose a day, or keep it flexible for this week.
             </p>
           </div>
-          <button type="button" onClick={close} aria-label="Close add task">
+          <button type="button" onClick={close} disabled={pending} aria-label="Close add task">
             <X size={16} />
           </button>
         </div>
+        {pending && <div role="status" className="task-save-status"><LoaderCircle size={14} className="animate-spin" /> Saving your task…</div>}
         <input
           name="title"
           className={`${inputClass} mt-4`}
@@ -587,14 +590,14 @@ export function TaskComposer({
         <input type="hidden" name="description" value="" />
         <input type="hidden" name="estimatedMinutes" value="" />
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className={quietButton} onClick={close}>
+          <button type="button" disabled={pending} className={quietButton} onClick={close}>
             Cancel
           </button>
           <button
             disabled={pending}
-            className="rounded-xl bg-[var(--orange)] px-4 py-2.5 text-sm font-semibold text-white"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--orange)] px-4 py-2.5 text-sm font-semibold text-white"
           >
-            {pending ? "Adding..." : "Add task"}
+            {pending ? <><LoaderCircle size={14} className="animate-spin" /> Adding…</> : "Add task"}
           </button>
         </div>
       </form>

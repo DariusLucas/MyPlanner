@@ -71,19 +71,24 @@ export async function getDashboardData(): Promise<DashboardData> {
   const date = localDateInTimeZone(now, timeZone) ?? format(now, "yyyy-MM-dd");
   const weekStart = format(startOfWeek(parseISO(date), { weekStartsOn: 1 }), "yyyy-MM-dd");
   await ensureRecurringInstances(weekStart);
-  const [taskResult, thoughtResult] = await Promise.all([
-    mobileSupabase.from("tasks").select("*").order("date").order("position").order("id"),
+  const recentCompletedStart = format(addDays(parseISO(date), -1), "yyyy-MM-dd");
+  const recentCompletedEnd = format(addDays(parseISO(date), 2), "yyyy-MM-dd");
+  const [taskResult, completedResult, completionResult, thoughtResult] = await Promise.all([
+    mobileSupabase.from("tasks").select("*").not("status", "in", "(completed,skipped)").lte("date", date).order("date").order("position").order("id"),
+    mobileSupabase.from("tasks").select("*").eq("status", "completed").gte("completed_at", `${recentCompletedStart}T00:00:00.000Z`).lt("completed_at", `${recentCompletedEnd}T00:00:00.000Z`).order("completed_at", { ascending: false }).order("id", { ascending: false }),
+    mobileSupabase.from("tasks").select("completed_at").eq("status", "completed").not("completed_at", "is", null).order("completed_at"),
     mobileSupabase.from("quick_thoughts").select("*").order("created_at", { ascending: false }).order("id", { ascending: false }),
   ]);
-  fail(taskResult.error); fail(thoughtResult.error);
+  fail(taskResult.error); fail(completedResult.error); fail(completionResult.error); fail(thoughtResult.error);
   const tasks = (taskResult.data ?? []).map(taskFromRow);
+  const completedTasks = (completedResult.data ?? []).map(taskFromRow);
   const thoughts = (thoughtResult.data ?? []).map(thoughtFromRow);
   const incomplete = (task: TodayTask) => task.status !== "completed" && task.status !== "skipped";
-  const active = tasks.filter((task) => task.date === date && !task.anytimeWeekStart && incomplete(task));
-  const overdue = tasks.filter((task) => task.date < date && !task.anytimeWeekStart && incomplete(task));
-  const completedToday = tasks.filter((task) => task.status === "completed" && task.completedAt && localDateInTimeZone(task.completedAt, timeZone) === date)
+  const active = tasks.filter((task) => incomplete(task) && ((task.date === date && !task.anytimeWeekStart) || task.anytimeWeekStart === weekStart));
+  const overdue = tasks.filter((task) => incomplete(task) && ((!task.anytimeWeekStart && task.date < date) || Boolean(task.anytimeWeekStart && task.anytimeWeekStart < weekStart)));
+  const completedToday = completedTasks.filter((task) => task.completedAt && localDateInTimeZone(task.completedAt, timeZone) === date)
     .sort((left, right) => (right.completedAt ?? "").localeCompare(left.completedAt ?? "") || String(right.id).localeCompare(String(left.id)));
-  const completionDates = tasks.flatMap((task) => task.status === "completed" && task.completedAt ? [localDateInTimeZone(task.completedAt, timeZone)!] : []);
+  const completionDates = (completionResult.data ?? []).flatMap((task) => task.completed_at ? [localDateInTimeZone(task.completed_at, timeZone)!] : []);
   const streak = calculateProductiveStreak(completionDates, date);
   const remaining = active.length + overdue.length;
   return {
