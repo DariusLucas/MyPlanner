@@ -1,91 +1,85 @@
-# Phase S4 — Android Migration
+# Phase S5 — Import, Verification, and Production Cutover
 
 ## Objective
 
-Move the Android planner from its SQLite runtime to the authenticated
-development Supabase project so Android and web use the same ownership-safe
-planner data, while preserving the approved mobile UI and existing task
-behavior.
+Safely import the existing desktop SQLite planner data into Supabase, prove
+that the imported development data matches the source, and then execute the
+documented production cutover with verified rollback artifacts.
 
 ## Required Behavior
 
-- Replace Android SQLite reads and writes with authenticated Supabase client
-  access and the existing ownership-safe RPCs.
-- Add Android email OTP sign-in and secure session storage using the selected
-  Keystore-backed `@aparajita/capacitor-secure-storage` 8.x plugin.
-- Provide clear loading, offline/network-error, signed-out, and session-expired
-  states without exposing privileged credentials.
-- Add Realtime invalidation so Android reflects planner changes initiated from
-  web and refreshes data honestly after remote changes.
-- Preserve Android task, recurrence, focus, progress, timezone, revision, and
-  conflict behavior.
-- Update Android documentation and mobile Settings copy for Supabase-backed
-  synchronization.
-- Keep the approved visual design and mobile interaction language.
+- Create a SQLite-consistent migration snapshot while preserving WAL state.
+- Validate snapshot integrity, foreign keys, row counts, relationships, and
+  the canonical `Europe/Bucharest` planner timezone before import.
+- Import the desktop data into the development Supabase project using a
+  server-only transactional importer and explicit legacy-to-new ID maps.
+- Preserve source timestamps, nullable values, statuses, task positions,
+  recurrence definitions, completion history, and relationships.
+- Reject invalid enum values, orphaned foreign keys, and unsupported records
+  before target rows are committed.
+- Produce a non-secret import report containing source/target counts, rejected
+  rows, timezone, and validation checks.
+- Verify imported data through normal authenticated RLS clients, including
+  isolation from a second test user.
+- Verify Dashboard, Today, This Week, Career, Content, and Progress outputs
+  against expected data derived from the SQLite snapshot.
+- Test web and Android against the same imported development user, including
+  Realtime refresh, session restoration, network errors, and stale writes.
+- Create or configure the distinct production Supabase project, apply reviewed
+  migrations, import the final verified snapshot exactly once, and perform
+  bidirectional web/Android spot checks before release.
+- Keep the final SQLite snapshot and import report available for rollback.
 
 ## Implementation Checklist
 
-- [x] Audit the Android SQLite data/actions and map each flow to the web
-      Supabase repository and RPC contracts.
-- [x] Add Android Supabase client configuration using only publishable values.
-- [x] Install and exercise Keystore-backed secure session storage.
-- [x] Implement Android email OTP sign-in, sign-out, session refresh, and
-      signed-out/session-expired routing.
-- [x] Migrate dashboard, week, task, recurrence, focus, and progress reads and
-      writes to Supabase.
-- [x] Add loading, network-error, retry, and optimistic-conflict states.
-- [x] Add Realtime invalidation and refresh behavior for shared planner data.
-- [x] Update Android documentation and Settings copy.
-- [ ] Run Android and web builds, all relevant tests, migration/security checks,
-      and manual cross-platform verification.
-
-## Current Verification Status
-
-- Phase S3 web migration is complete and committed as the prerequisite for this
-  phase.
-- The development Supabase schema, RLS policies, planner RPCs, and web parity
-  behavior are available for Android integration.
-- Android runtime reads and writes now use authenticated Supabase access; the
-  legacy SQLite files remain retained but are no longer imported at runtime.
-- The Android debug APK builds with secure storage and app lifecycle plugins.
-- The Realtime publication migration is applied to development Supabase, and
-  remote migration/RLS/RPC verification passes.
-- Native email OTP sign-in works on a Samsung SM-S931B, and the authenticated
-  session survives app restarts and APK reinstalls through Keystore-backed
-  storage.
-- Mobile navigation, drawer interaction, account identity, loading behavior,
-  and route transitions have been exercised on the physical phone.
-- Shared planner data persistence between authenticated desktop and mobile
-  sessions has been manually verified. Two-client Realtime refresh still needs
-  manual verification before S4 can be completed.
+- [ ] Inspect the current SQLite schema, migrations, live database, and WAL
+      handling requirements.
+- [ ] Build an immutable SQLite snapshot command with integrity and row-count
+      validation.
+- [ ] Build the server-only SQLite-to-Supabase importer with protected user
+      configuration and transactional rollback.
+- [ ] Build the independent Supabase import verifier and expected-data report.
+- [ ] Run repeated imports against development data and fix all discrepancies.
+- [ ] Verify development RLS access, second-user isolation, relationships,
+      counts, timestamps, recurrence, dashboard, and progress parity.
+- [ ] Run manual web/Android development spot checks using the imported data.
+- [ ] Prepare the documented write freeze, production project, migration,
+      import, release, and rollback steps.
+- [ ] Execute production cutover only after every development gate passes.
+- [ ] Run production verification, bidirectional cross-device testing, and
+      preserve rollback artifacts.
+- [ ] Update migration, Android, Supabase, and operational documentation.
 
 ## Explicitly Out of Scope
 
-- Do not import the desktop SQLite database; that is Phase S5.
-- Do not create or cut over to a production Supabase project; that is Phase S5.
-- Do not implement backup/import UI; that is Phase S6.
-- Do not redesign the approved visual system.
-- Do not delete SQLite migrations or rewrite historical local data before the
-  Android cutover is verified.
-- Do not add sharing, teams, push notifications, or speculative planner
-  features.
+- Do not implement the Supabase JSON backup/export/import product feature; that
+  is Phase S6.
+- Do not delete `data/planner.db`, SQLite migrations, snapshots, or legacy code
+  during this phase without explicit approval after successful cloud operation.
+- Do not perform an ad-hoc reverse conversion from Supabase to SQLite.
+- Do not add sharing, teams, push notifications, analytics, or speculative
+  planner features.
+- Do not alter the approved visual design or planner interaction language.
 
 ## Completion Criteria
 
-Phase S4 is complete only when Android and web, signed in as the same user, use
-the same development Supabase planner data; Android builds successfully; OTP
-sessions are securely stored and refresh correctly; loading, network, conflict,
-and signed-out states are verified; Realtime invalidation reflects changes
-from either platform; and all relevant automated and manual checks pass.
+Phase S5 is complete only when the desktop SQLite snapshot has been imported
+without loss of relationships or completion history; source and target counts,
+values, timestamps, dashboard outputs, and progress outputs have been verified;
+RLS ownership isolation passes; repeated development imports are reliable; web
+and Android pass manual cross-device checks; production migrations and the
+final import succeed under the documented freeze; production verification and
+rollback artifacts are preserved; and both clients operate against the
+production Supabase project.
 
 ## Relevant Dependencies from Previous Phases
 
-- S2 provides the applied PostgreSQL schema, generated types, ownership-safe
-  RLS, atomic planner RPCs, and verified email OTP behavior.
-- S3 provides the web session model, route/action guard expectations, Supabase
-  planner mappings, conflict semantics, and shared UI/data contracts.
-- The selected Android secure-storage dependency is
-  `@aparajita/capacitor-secure-storage` 8.x.
-- The canonical development planner timezone is `Europe/Bucharest`.
-- The development Supabase project is `Planner` in West EU (Ireland);
-  production remains out of scope until S5.
+- S2 provides the applied PostgreSQL schema, Auth, RLS policies, planner RPCs,
+  recurrence behavior, and migration history.
+- S3 provides the authenticated web Supabase client and planner parity
+  contracts.
+- S4 provides the authenticated Android Supabase client, Keystore-backed
+  sessions, Realtime invalidation, and verified shared development behavior.
+- `SUPABASE_MIGRATION_PLAN.md` defines the import ordering, validation gates,
+  production freeze, and rollback requirements.
+- The canonical planner timezone is `Europe/Bucharest`.
