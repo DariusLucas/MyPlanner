@@ -9,6 +9,14 @@ empty remote Supabase project as development and not installing Docker/WSL.
 Committed migrations must be applied and verified against that development
 project. A distinct production project is still required before cutover.
 
+**Fresh-cloud-start amendment — 2026-09-02:** the user confirmed that the
+existing SQLite records are disposable development data. The SQLite snapshot,
+SQLite-to-Supabase importer, import verifier, and data rollback artifacts are
+not required. Phase S5 now starts with an empty Supabase dataset and validates
+fresh records created through the authenticated clients. The detailed import
+procedure below is retained as historical reference only and is not an active
+requirement.
+
 This document is the implementation reference for replacing the planner's
 separate desktop and Android SQLite databases with one Supabase-backed planner.
 It does not itself change the active phase. Before implementation begins,
@@ -25,9 +33,9 @@ are intentionally superseded by that approved roadmap change.
 | Mobile connectivity | Online-first. No offline editing or local write queue in this migration. |
 | Initial account scope | One private planner per user; same user signs in on web and Android. |
 | Initial authentication | Minimal passwordless email one-time-code sign-in. No profiles UI yet. |
-| Existing data | Import desktop SQLite data only. Android has not been installed and has no data to merge. |
+| Existing data | Do not import SQLite data; start with an empty Supabase dataset. |
 | Profiles/future auth | Deferred, but the schema uses `auth.users` UUIDs from the first migration so profiles can be added without moving planner data. |
-| Backup phase | Migrate first, then implement Phase 9 backups against Supabase. A migration safety snapshot is still mandatory before import. |
+| Backup phase | Removed from active product scope after cutover; deployed migration history is retained without client exposure. |
 | Cloud sync | Both clients write the same cloud database. Realtime provides prompt refreshes, not a second source of truth. |
 
 ## Why Phase 9 Follows the Migration
@@ -535,8 +543,8 @@ No production cutover occurs until every validation succeeds.
 7. Release the cloud-backed web build.
 8. Build/install the cloud-backed Android app.
 9. Verify bidirectional changes using the same account.
-10. Keep the final SQLite snapshot and import report until the Supabase backup
-    feature is implemented and verified.
+10. Keep the final SQLite snapshot and import report as historical rollback
+    artifacts.
 
 ### Rollback
 
@@ -670,14 +678,11 @@ planner, including changes initiated from either platform.
 **Gate:** import report, automatic verification, manual spot checks, and
 cross-device production test all pass.
 
-### Phase S6 — Supabase backup and stabilization
+### Phase S6 — Supabase stabilization
 
-- Implement the deferred Phase 9 backup/import feature against the final
-  cloud schema.
-- Run the full stabilization audit and update all documentation.
-
-**Gate:** a per-user backup round trip is atomic, ownership-safe, validated,
-and preserves planner history.
+- The previously implemented backup RPC migration remains recorded in deployed
+  schema history but is intentionally not exposed by web or Android clients.
+- Complete the stabilization audit and update active client documentation.
 
 ## Decisions Required at Implementation Start
 
@@ -712,5 +717,5 @@ in as the same user, use the same RLS-protected Supabase planner data; existing
 desktop data has been imported and verified without loss of relationships or
 history; recurrence and task mutations are atomic and duplicate-safe; stale or
 network-failed mutations are handled honestly; no client contains privileged
-credentials; rollback artifacts remain available; and the project is ready to
-implement the cloud-aware Phase 9 backup feature.
+credentials; rollback artifacts remain available; and the project is ready for
+the remaining product roadmap phases.

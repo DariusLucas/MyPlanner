@@ -24,6 +24,7 @@ const expectedMigrationVersions = [
   "20260822130300",
   "20260825120000",
   "20260826120000",
+  "20260906120000",
 ];
 
 async function setAuthenticatedUser(client: Client, userId: string) {

@@ -45,6 +45,28 @@ const shell = read("src/components/app-shell.tsx");
 assert.match(shell, /aria-labelledby="sign-out-title"/, "sign out uses an app-native confirmation dialog");
 assert.doesNotMatch(shell, /window\.confirm/, "sign out does not use a browser alert");
 
+const navigation = read("src/lib/navigation.ts");
+assert.match(navigation, /label:\s*["']Today["'],\s*href:\s*["']\/["']/, "the canonical landing navigation is Today");
+assert.doesNotMatch(navigation, /label:\s*["']Dashboard["']/, "Dashboard is no longer a user-facing navigation label");
+
+const todayCompatibilityRoute = read("src/app/today/page.tsx");
+assert.match(todayCompatibilityRoute, /redirect\(["']\/["']\)/, "/today redirects to the canonical landing route");
+
+const todayLanding = read("src/components/dashboard-view.tsx");
+const checklistIndex = todayLanding.indexOf('<div className="grid items-start gap-6');
+const activityIndex = todayLanding.indexOf("<WeekCompletionStrip");
+const streakIndex = todayLanding.indexOf('<StreakBanner streak={data.streak} />');
+assert.ok(checklistIndex >= 0 && streakIndex > checklistIndex, "Today checklist appears before the supporting streak signal");
+assert.ok(activityIndex > checklistIndex && streakIndex > activityIndex, "weekly completion follows the Today checklist and precedes streak");
+assert.match(todayLanding, /progressCounts\.completed\} of \{progressCounts\.planned\} complete/, "daily completed/planned stays visible");
+assert.match(todayLanding, /<ProgressDial completed=\{progressCounts\.completed\} total=\{progressCounts\.planned\} \/>/, "daily completion percentage stays visible even for an empty day");
+assert.match(todayLanding, /aria-label=\{label\}/, "each weekly completion day exposes a plain-text accessible label");
+assert.match(todayLanding, /aria-current=\{day\.date === today \? "date" : undefined\}/, "the current day is identified semantically");
+
+const progressView = read("src/components/progress-view.tsx");
+assert.match(progressView, /<ActivityLegend \/>/, "Progress retains a visible activity legend");
+assert.match(progressView, /aria-label=\{day\.inRange \? detail : undefined\}/, "Progress heatmap cells retain accessible labels");
+
 const styles = read("src/app/globals.css");
 const modalBackdrop = styles.match(/\.modal-backdrop\s*\{([\s\S]*?)\}/)?.[1] ?? "";
 assert.doesNotMatch(modalBackdrop, /backdrop-filter/, "modal backdrop avoids live backdrop recompositing");

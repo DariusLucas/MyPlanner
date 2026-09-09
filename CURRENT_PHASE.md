@@ -1,85 +1,74 @@
-# Phase S5 — Import, Verification, and Production Cutover
+# Phase U4 — Planning and Routine Clarity
 
 ## Objective
 
-Safely import the existing desktop SQLite planner data into Supabase, prove
-that the imported development data matches the source, and then execute the
-documented production cutover with verified rollback artifacts.
+Make weekly planning feel simpler and make recurring weekly targets immediately
+understandable without expanding MyPlanner into a general habit system.
 
 ## Required Behavior
 
-- Create a SQLite-consistent migration snapshot while preserving WAL state.
-- Validate snapshot integrity, foreign keys, row counts, relationships, and
-  the canonical `Europe/Bucharest` planner timezone before import.
-- Import the desktop data into the development Supabase project using a
-  server-only transactional importer and explicit legacy-to-new ID maps.
-- Preserve source timestamps, nullable values, statuses, task positions,
-  recurrence definitions, completion history, and relationships.
-- Reject invalid enum values, orphaned foreign keys, and unsupported records
-  before target rows are committed.
-- Produce a non-secret import report containing source/target counts, rejected
-  rows, timezone, and validation checks.
-- Verify imported data through normal authenticated RLS clients, including
-  isolation from a second test user.
-- Verify Dashboard, Today, This Week, Career, Content, and Progress outputs
-  against expected data derived from the SQLite snapshot.
-- Test web and Android against the same imported development user, including
-  Realtime refresh, session restoration, network errors, and stale writes.
-- Create or configure the distinct production Supabase project, apply reviewed
-  migrations, import the final verified snapshot exactly once, and perform
-  bidirectional web/Android spot checks before release.
-- Keep the final SQLite snapshot and import report available for rollback.
+- Keep Checklist as the default This Week view and Kanban as an optional view.
+- Reduce duplicate Add task affordances in empty weekly states so each context
+  has one clear primary action.
+- Keep quick-add fast for one-off tasks, with the minimum choices needed to
+  place an action on a day or keep it flexible for the week.
+- Replace ambiguous “Repeat this week” language with clear weekly routine or
+  weekly target language throughout composers, task cards, and supporting copy.
+- Explain that a weekly target resets on Monday and represents a number of
+  check-ins for the week.
+- Preserve task completion, Reopen, Undo, dialog accessibility, reduced motion,
+  Supabase revisions, Realtime refresh, and web/Android parity from Phase U3.
+- Preserve the approved visual design and the Plan → Do → Complete → See
+  Progress loop.
 
 ## Implementation Checklist
 
-- [ ] Inspect the current SQLite schema, migrations, live database, and WAL
-      handling requirements.
-- [ ] Build an immutable SQLite snapshot command with integrity and row-count
-      validation.
-- [ ] Build the server-only SQLite-to-Supabase importer with protected user
-      configuration and transactional rollback.
-- [ ] Build the independent Supabase import verifier and expected-data report.
-- [ ] Run repeated imports against development data and fix all discrepancies.
-- [ ] Verify development RLS access, second-user isolation, relationships,
-      counts, timestamps, recurrence, dashboard, and progress parity.
-- [ ] Run manual web/Android development spot checks using the imported data.
-- [ ] Prepare the documented write freeze, production project, migration,
-      import, release, and rollback steps.
-- [ ] Execute production cutover only after every development gate passes.
-- [ ] Run production verification, bidirectional cross-device testing, and
-      preserve rollback artifacts.
-- [ ] Update migration, Android, Supabase, and operational documentation.
+- [ ] Inventory weekly empty states, Add task affordances, default-view logic,
+      quick-add fields, and recurring-task language across web and Android.
+- [ ] Remove or demote duplicate Add task actions while retaining one obvious
+      action in each weekly planning context.
+- [ ] Verify Checklist remains the default and Kanban remains an optional,
+      explicitly selected view.
+- [ ] Simplify one-off task creation without removing required placement,
+      category, estimate, or revision behavior.
+- [ ] Rename “Repeat this week” and related ambiguous copy to weekly routine or
+      weekly target language.
+- [ ] Add concise reset and check-in guidance where recurring targets are
+      created and displayed.
+- [ ] Verify the revised planning flow at narrow mobile widths and on Android.
+- [ ] Add source, interaction, responsive, and mobile tests for the clarified
+      defaults, actions, and language.
+- [ ] Run dashboard, week, focus-area, mobile, responsive, interaction,
+      typecheck, lint, web build, and Android build checks.
+- [ ] Update the UI/UX audit and roadmap status documentation.
 
 ## Explicitly Out of Scope
 
-- Do not implement the Supabase JSON backup/export/import product feature; that
-  is Phase S6.
-- Do not delete `data/planner.db`, SQLite migrations, snapshots, or legacy code
-  during this phase without explicit approval after successful cloud operation.
-- Do not perform an ad-hoc reverse conversion from Supabase to SQLite.
-- Do not add sharing, teams, push notifications, analytics, or speculative
-  planner features.
-- Do not alter the approved visual design or planner interaction language.
+- Do not add a generic habit tracker, streak system, rewards, scoring, or new
+  recurrence semantics.
+- Do not change the database schema, recurrence ownership, Monday reset rules,
+  Supabase conflict handling, or task history.
+- Do not redesign the orange palette, sidebar, typography, spacing, themes,
+  rounded component language, or established task/dialog interactions.
+- Do not perform the final full-product usability and polish pass; that is
+  Phase U5.
 
 ## Completion Criteria
 
-Phase S5 is complete only when the desktop SQLite snapshot has been imported
-without loss of relationships or completion history; source and target counts,
-values, timestamps, dashboard outputs, and progress outputs have been verified;
-RLS ownership isolation passes; repeated development imports are reliable; web
-and Android pass manual cross-device checks; production migrations and the
-final import succeed under the documented freeze; production verification and
-rollback artifacts are preserved; and both clients operate against the
-production Supabase project.
+Phase U4 is complete when weekly planning presents one clear Add task path per
+context; Checklist is the default and Kanban is an optional choice; one-off
+task creation remains fast; weekly routines clearly communicate their target,
+check-ins, and Monday reset; the clarified behavior is consistent on web and
+Android; existing task data and concurrency behavior remain correct; and all
+relevant checks pass.
 
 ## Relevant Dependencies from Previous Phases
 
-- S2 provides the applied PostgreSQL schema, Auth, RLS policies, planner RPCs,
-  recurrence behavior, and migration history.
-- S3 provides the authenticated web Supabase client and planner parity
-  contracts.
-- S4 provides the authenticated Android Supabase client, Keystore-backed
-  sessions, Realtime invalidation, and verified shared development behavior.
-- `SUPABASE_MIGRATION_PLAN.md` defines the import ordering, validation gates,
-  production freeze, and rollback requirements.
-- The canonical planner timezone is `Europe/Bucharest`.
+- U1 establishes Today as the primary landing experience and action hierarchy.
+- U2 provides daily completion feedback that weekly planning must continue to
+  feed accurately.
+- U3 provides shared completion controls, dialog accessibility, semantic
+  tokens, short-viewport behavior, and reduced-motion coverage.
+- Existing weekly recurrence behavior already supplies count-per-week targets,
+  Monday reset semantics, completion history, and optimistic revisions; U4
+  clarifies that behavior rather than replacing it.

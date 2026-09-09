@@ -2,7 +2,28 @@
 
 **Date:** 2026-08-25  
 **Scope:** Read-only walkthrough of the authenticated web app in Chrome, plus source and mobile-shell review.  
-**Current-phase constraint:** Phase S4 (Android migration) is still the active phase. This document records follow-up work; it does not change the approved visual design or implement future UI phases.
+**Roadmap status:** Adopted as the post-S6 UI/UX roadmap on 2026-09-06. The
+approved visual design remains unchanged.
+
+## Implementation status
+
+- Phase A was completed by Supabase phases S3 through S6: mobile uses the
+  authenticated Supabase runtime, Settings describes the shared cloud model,
+  and router-only link props are stripped from mobile anchors.
+- Phase B was completed as Phase U1 on 2026-09-06: the landing navigation is
+  Today, `/today` resolves to `/`, the active checklist leads the content,
+  daily metrics remain visible for empty and populated days, and streak is a
+  compact supporting signal below actionable content.
+- Phase C was completed as Phase U2 on 2026-09-06: Today now includes a
+  compact Monday-through-Sunday completion strip, selected-day totals,
+  current-day identification, non-color fractions, and accessible labels;
+  Progress retains its full historical heatmap and visible legend.
+- Phase D was completed as Phase U3 on 2026-09-08: task views now share one
+  completion control and consistent Reopen language; the five-second Today
+  Undo stays immediate and revision-safe; dialogs share focus entry, trapping,
+  safe Escape, focus return, announcements, and short-viewport behavior; and
+  semantic design tokens plus reduced-motion coverage apply to web and Android.
+- Phase E is prepared as Phase U4.
 
 ## Executive summary
 
@@ -343,4 +364,3 @@ This plan is intentionally sequenced after the current S4 phase.
 - Task rows, dialogs, buttons, radiuses, colors, and animations feel like one system across Dashboard/Today, Week, Career, Content, Progress, Settings, and mobile.
 - Empty states are calm but still tell the user what to do next.
 - No future polish work is started until S4’s mobile/auth/data requirements are complete.
-

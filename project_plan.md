@@ -2253,9 +2253,9 @@ COMPLETED
 ## Approved Supabase Roadmap Amendment — 2026-08-20
 
 The user-approved `SUPABASE_MIGRATION_PLAN.md` supersedes the earlier
-local-only/no-auth constraints for the migration work. The existing SQLite
-database remains protected and operational until cloud import and both client
-cutovers have been verified.
+local-only/no-auth constraints for the migration work. On 2026-09-02 the user
+confirmed that the existing SQLite records are disposable development data,
+so no SQLite snapshot or cloud import is required.
 
 The ordered work before the deferred backup phase is:
 
@@ -2272,16 +2272,43 @@ COMPLETED
 Phase S4 — Android Migration
 COMPLETED
 
-Phase S5 — Import, Verification, and Production Cutover
-PENDING
+Phase S5 — Fresh Supabase Cutover and Verification
+COMPLETED
 
 Phase S6 — Supabase Backup and Stabilization
+COMPLETED
+```
+
+Phase 9 backup behavior was intentionally removed from the active product scope
+after cutover; the deployed migration history remains preserved for schema
+compatibility. Phase S6 completed production stabilization.
+
+## Approved UI/UX Audit Roadmap — 2026-09-06
+
+The user approved `UI_UX_AUDIT.md` as the next product roadmap. Its Phase A
+architectural-truth items were completed by Supabase phases S3 through S6. The
+remaining work is ordered as follows:
+
+```text
+Phase U1 — Today-First Landing Experience
+COMPLETED
+
+Phase U2 — Daily Completion Visualization
+COMPLETED
+
+Phase U3 — Task Interaction, Modal, and Design Tokens
+COMPLETED
+
+Phase U4 — Planning and Routine Clarity
+PENDING
+
+Phase U5 — Final UI/UX Usability Pass
 PENDING
 ```
 
-Phase 9's backup behavior is deferred and becomes a per-user, ownership-safe
-Supabase JSON export/import after the cutover. The broader stabilization work
-follows that cloud-aware backup implementation.
+Each phase preserves the approved orange palette, sidebar, typography,
+spacing, themes, rounded component language, and the core loop:
+Plan → Do → Complete → See Progress.
 
 ---
 
@@ -2832,7 +2859,7 @@ The current product is intentionally small.
 
 The application should ultimately feel this simple:
 
-## Dashboard
+## Today
 
 ```text
 What do I need to do today?

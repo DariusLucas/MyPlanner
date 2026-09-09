@@ -1,7 +1,7 @@
 # MyPlanner for Android
 
-MyPlanner's Android edition uses the authenticated development Supabase project,
-so Android and web show the same ownership-protected planner data. Planning,
+MyPlanner's Android edition uses the authenticated Supabase project selected by
+the build environment, so Android and web show the same ownership-protected planner data. Planning,
 completion, Kanban, recurrence, milestones, thoughts, focus notes, and progress
 all use the same database and conflict-safe RPC contracts as the web app.
 
@@ -45,6 +45,11 @@ From the repository root:
 npm install
 npm run android:build
 ```
+
+Development builds use `.env.local`. Production-mode builds use the distinct
+ignored `.env.production.local` values when that file exists. Before installing
+a production APK, verify that its public Supabase project URL is the production
+project and keep the last development APK as the S5 rollback artifact.
 
 The build helper compiles the Vite mobile runtime, synchronizes Capacitor,
 registers the secure-storage plugin, finds the Android Studio JDK and SDK, and
