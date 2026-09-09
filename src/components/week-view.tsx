@@ -42,6 +42,8 @@ import {
 } from "@/src/app/today/actions";
 import type { PlannerId, TaskCategory, TaskStatus } from "@/src/lib/today";
 import type { WeekData, WeekTask, WeeklyRecurrence } from "@/src/lib/week";
+import { TaskCompletionButton, useDialogContract } from "@/src/components/interaction-primitives";
+import { COMPLETION_FEEDBACK_MS, DIALOG_EXIT_MS } from "@/src/lib/interaction";
 
 const categories: TaskCategory[] = ["career", "content", "other"];
 const categoryLabels: Record<TaskCategory, string> = {
@@ -160,7 +162,7 @@ export function WeekView({ data }: { data: WeekData }) {
     window.setTimeout(() => {
       setConfirmation(null);
       setConfirmationClosing(false);
-    }, 220);
+    }, DIALOG_EXIT_MS);
   }
 
   async function approveConfirmation() {
@@ -328,6 +330,11 @@ function ConfirmDialog({
   onConfirm: () => Promise<void>;
 }) {
   const [mounted, setMounted] = useState(false);
+  const dialogRef = useDialogContract<HTMLElement>({
+    active: Boolean(request),
+    blocked: pending,
+    onClose: onCancel,
+  });
 
   useEffect(() => setMounted(true), []);
   if (!mounted || !request) return null;
@@ -341,21 +348,25 @@ function ConfirmDialog({
       }}
     >
       <section
+        ref={dialogRef}
+        tabIndex={-1}
         className="confirm-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
+        aria-describedby="confirm-dialog-description"
       >
         <p className="confirm-dialog-kicker">Please confirm</p>
         <h2 id="confirm-dialog-title" className="mt-1 text-lg font-semibold">
           {request.title}
         </h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+        <p id="confirm-dialog-description" className="mt-2 text-sm leading-6 text-muted-foreground">
           {request.description}
         </p>
         <div className="mt-6 flex justify-end gap-2">
           <button
             type="button"
+            autoFocus
             className={quietButton}
             disabled={pending}
             onClick={onCancel}
@@ -400,6 +411,11 @@ export function TaskComposer({
   const [closing, setClosing] = useState(false);
   const [mounted, setMounted] = useState(false);
   const anytime = placement.startsWith("anytime:");
+  const dialogRef = useDialogContract<HTMLFormElement>({
+    blocked: pending || closing,
+    lockScroll: false,
+    onClose: close,
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -432,7 +448,7 @@ export function TaskComposer({
   function close() {
     if (closing || pending) return;
     setClosing(true);
-    setTimeout(onClose, 220);
+    setTimeout(onClose, DIALOG_EXIT_MS);
   }
   async function submit(form: FormData) {
     const created = await onSubmit(form);
@@ -449,19 +465,22 @@ export function TaskComposer({
       }}
     >
       <form
+        ref={dialogRef}
+        tabIndex={-1}
         action={submit}
         className="task-composer"
         aria-busy={pending}
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-task-title"
+        aria-describedby="add-task-description"
       >
         <div className="flex items-center justify-between">
           <div>
             <h2 id="add-task-title" className="font-semibold">
               Add a task
             </h2>
-            <p className="text-xs text-muted-foreground">
+            <p id="add-task-description" className="text-xs text-muted-foreground">
               Choose a day, or keep it flexible for this week.
             </p>
           </div>
@@ -894,28 +913,21 @@ function RecurringTaskCard({
                     setVisualStates((current) => ({ ...current, [instance.id]: nextCompleted }));
                     if (nextCompleted) {
                       setCelebratingId(instance.id);
-                      window.setTimeout(() => setCelebratingId((current) => current === instance.id ? null : current), 720);
+                      window.setTimeout(() => setCelebratingId((current) => current === instance.id ? null : current), COMPLETION_FEEDBACK_MS);
                     }
                     onCompletionChange?.(instance.id, !instanceCompleted);
                     return run(`toggle-${instance.id}`, toggleTask, form);
                   }}
                 >
                   <input type="hidden" name="id" value={instance.id} />
-                  <button
-                    disabled={pending === `toggle-${instance.id}`}
-                    aria-label={
-                      instanceCompleted
-                        ? `Undo check-in ${index + 1} for ${task.title}`
-                        : `Complete check-in ${index + 1} for ${task.title}`
-                    }
-                    className={`recurrence-check ${instanceCompleted ? "recurrence-check-completed" : ""} ${celebratingId === instance.id ? "completion-check-bloom task-check-animate-complete" : ""}`}
-                  >
-                    {instanceCompleted ? (
-                      <Check size={11} strokeWidth={3} />
-                    ) : (
-                      index + 1
-                    )}
-                  </button>
+                  <TaskCompletionButton
+                    type="submit"
+                    title={`check-in ${index + 1} for ${task.title}`}
+                    completed={instanceCompleted}
+                    pending={pending === `toggle-${instance.id}`}
+                    animating={celebratingId === instance.id}
+                    incompleteContent={index + 1}
+                  />
                 </form>
               );
             })}
@@ -1114,19 +1126,14 @@ function TaskCard({
       <div className="flex gap-3">
         <form action={toggle}>
           <input type="hidden" name="id" value={task.id} />
-          <button
-            disabled={pending === `toggle-${task.id}`}
-            aria-label={
-              visualCompleted
-                ? `Reopen ${task.title}`
-                : `Mark ${task.title} complete`
-            }
-            className={`task-check ${visualCompleted ? "task-check-completed" : ""} ${checkAnimationClass} ${checkAnimation === "complete" ? "completion-check-bloom" : ""}`}
-          >
-            <span className="task-check-surface">
-              {visualCompleted ? <Check size={12} strokeWidth={3} /> : null}
-            </span>
-          </button>
+          <TaskCompletionButton
+            type="submit"
+            title={task.title}
+            completed={visualCompleted}
+            pending={pending === `toggle-${task.id}`}
+            animating={checkAnimation === "complete"}
+            className={checkAnimationClass}
+          />
         </form>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium leading-5">{task.title}</p>
@@ -1485,7 +1492,7 @@ function AnytimeKanbanTaskCard({
     setVisualCompleted(nextCompleted);
     if (nextCompleted) {
       setCelebrating(true);
-      window.setTimeout(() => setCelebrating(false), 720);
+      window.setTimeout(() => setCelebrating(false), COMPLETION_FEEDBACK_MS);
     }
     onCompletionChange(task.id, nextCompleted);
     return run(`toggle-${task.id}`, toggleTask, form);
@@ -1497,17 +1504,13 @@ function AnytimeKanbanTaskCard({
       <div className="flex items-start gap-3">
         <form action={toggle}>
           <input type="hidden" name="id" value={task.id} />
-          <button
-            disabled={pending === `toggle-${task.id}`}
-            aria-label={
-              visualCompleted
-                ? `Reopen ${task.title}`
-                : `Complete ${task.title}`
-            }
-            className={`recurrence-check ${visualCompleted ? "recurrence-check-completed" : ""} ${celebrating ? "completion-check-bloom task-check-animate-complete" : ""}`}
-          >
-            {visualCompleted ? <Check size={11} strokeWidth={3} /> : null}
-          </button>
+          <TaskCompletionButton
+            type="submit"
+            title={task.title}
+            completed={visualCompleted}
+            pending={pending === `toggle-${task.id}`}
+            animating={celebrating}
+          />
         </form>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium leading-5">{task.title}</p>

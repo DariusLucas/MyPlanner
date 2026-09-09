@@ -2,6 +2,7 @@ import { addDays, addWeeks, endOfWeek, format, parseISO, startOfWeek } from "dat
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Database } from "@/src/lib/supabase/database.types";
 import type { DashboardData, QuickThought } from "@/src/lib/dashboard";
+import { buildWeekCompletion } from "@/src/lib/daily-completion";
 import type { FocusArea, FocusAreaData, FocusMilestone } from "@/src/lib/focus-areas";
 import { calculateProductiveStreak, calculateProgress, localDateInTimeZone, type ProgressCategory } from "@/src/lib/progress";
 import type { TaskCategory, TaskPriority, TaskStatus, TodayTask } from "@/src/lib/today";
@@ -73,13 +74,15 @@ export async function getDashboardData(): Promise<DashboardData> {
   await ensureRecurringInstances(weekStart);
   const recentCompletedStart = format(addDays(parseISO(date), -1), "yyyy-MM-dd");
   const recentCompletedEnd = format(addDays(parseISO(date), 2), "yyyy-MM-dd");
-  const [taskResult, completedResult, completionResult, thoughtResult] = await Promise.all([
+  const weekEnd = format(addDays(parseISO(weekStart), 6), "yyyy-MM-dd");
+  const [taskResult, completedResult, completionResult, thoughtResult, weekResult] = await Promise.all([
     mobileSupabase.from("tasks").select("*").not("status", "in", "(completed,skipped)").lte("date", date).order("date").order("position").order("id"),
     mobileSupabase.from("tasks").select("*").eq("status", "completed").gte("completed_at", `${recentCompletedStart}T00:00:00.000Z`).lt("completed_at", `${recentCompletedEnd}T00:00:00.000Z`).order("completed_at", { ascending: false }).order("id", { ascending: false }),
     mobileSupabase.from("tasks").select("completed_at").eq("status", "completed").not("completed_at", "is", null).order("completed_at"),
     mobileSupabase.from("quick_thoughts").select("*").order("created_at", { ascending: false }).order("id", { ascending: false }),
+    mobileSupabase.from("tasks").select("date, anytime_week_start, status").gte("date", weekStart).lte("date", weekEnd),
   ]);
-  fail(taskResult.error); fail(completedResult.error); fail(completionResult.error); fail(thoughtResult.error);
+  fail(taskResult.error); fail(completedResult.error); fail(completionResult.error); fail(thoughtResult.error); fail(weekResult.error);
   const tasks = (taskResult.data ?? []).map(taskFromRow);
   const completedTasks = (completedResult.data ?? []).map(taskFromRow);
   const thoughts = (thoughtResult.data ?? []).map(thoughtFromRow);
@@ -94,6 +97,11 @@ export async function getDashboardData(): Promise<DashboardData> {
   return {
     date, active, overdue, completedToday,
     counts: { completed: completedToday.length, remaining, planned: remaining + completedToday.length },
+    weekCompletion: buildWeekCompletion((weekResult.data ?? []).map((task) => ({
+      date: task.date,
+      anytimeWeekStart: task.anytime_week_start,
+      status: task.status as TaskStatus,
+    })), weekStart),
     streak: { ...streak, state: streak.graceDaysUsed === 0 ? "hot" : streak.graceDaysUsed === 1 ? "cooling" : "cold" },
     recentThoughts: thoughts.slice(0, 3), allThoughts: thoughts,
   };

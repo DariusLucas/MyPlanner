@@ -11,6 +11,7 @@ import {
 import type { DashboardData, QuickThought } from "@/src/lib/dashboard";
 import type { FocusArea, FocusAreaData, FocusMilestone } from "@/src/lib/focus-areas";
 import { calculateProductiveStreak, localDateInTimeZone } from "@/src/lib/progress";
+import { buildWeekCompletion } from "@/src/lib/daily-completion";
 import type { ProgressTask } from "@/src/lib/progress";
 import type {
   TaskCategory,
@@ -204,22 +205,26 @@ export async function getDashboardData(now = new Date()): Promise<DashboardData>
 
   const recentCompletedStart = format(addDays(parseISO(date), -1), "yyyy-MM-dd");
   const recentCompletedEnd = format(addDays(parseISO(date), 2), "yyyy-MM-dd");
+  const weekEnd = format(addDays(parseISO(weekStart), 6), "yyyy-MM-dd");
   const [
     { data: activeRows, error: activeError },
     { data: completedRows, error: completedError },
     { data: completionRows, error: completionError },
     { data: thoughtRows, error: thoughtError },
+    { data: weekRows, error: weekError },
   ] =
     await Promise.all([
       client.from("tasks").select("*").not("status", "in", "(completed,skipped)").lte("date", date).order("date").order("position").order("id"),
       client.from("tasks").select("*").eq("status", "completed").gte("completed_at", `${recentCompletedStart}T00:00:00.000Z`).lt("completed_at", `${recentCompletedEnd}T00:00:00.000Z`).order("completed_at", { ascending: false }).order("id", { ascending: false }),
       client.from("tasks").select("completed_at").eq("status", "completed").not("completed_at", "is", null).order("completed_at"),
       client.from("quick_thoughts").select("*").order("created_at", { ascending: false }).order("id", { ascending: false }),
+      client.from("tasks").select("date, anytime_week_start, status").gte("date", weekStart).lte("date", weekEnd),
     ]);
   fail(activeError);
   fail(completedError);
   fail(completionError);
   fail(thoughtError);
+  fail(weekError);
 
   const tasks = (activeRows ?? []).map(taskFromRow);
   const completedTasks = (completedRows ?? []).map(taskFromRow);
@@ -266,6 +271,14 @@ export async function getDashboardData(now = new Date()): Promise<DashboardData>
       remaining,
       planned: remaining + completedToday.length,
     },
+    weekCompletion: buildWeekCompletion(
+      (weekRows ?? []).map((task) => ({
+        date: task.date,
+        anytimeWeekStart: task.anytime_week_start,
+        status: task.status as TaskStatus,
+      })),
+      weekStart,
+    ),
     streak: calculateDashboardStreak(completionDates, date),
     recentThoughts: thoughts.slice(0, 3),
     allThoughts: thoughts,

@@ -9,7 +9,6 @@ import {
   ArrowRight,
   ArrowUp,
   CalendarDays,
-  Check,
   Clock3,
   MoreHorizontal,
   Plus,
@@ -33,6 +32,7 @@ import type {
   TaskCategory,
   TaskPriority,
 } from "@/src/lib/today";
+import { TaskCompletionButton, useDialogContract } from "@/src/components/interaction-primitives";
 
 const categoryLabels: Record<TaskCategory, string> = {
   career: "Career",
@@ -296,18 +296,12 @@ function TaskItem({
           }}
         >
           <input type="hidden" name="id" value={task.id} />
-          <button
+          <TaskCompletionButton
             type="submit"
-            aria-label={
-              task.status === "completed"
-                ? `Undo ${task.title}`
-                : `Complete ${task.title}`
-            }
-            disabled={taskPending}
-            className={`grid size-5 shrink-0 place-items-center rounded-full border transition ${task.status === "completed" ? "border-[var(--orange)] bg-[var(--orange)] text-white" : "border-muted-foreground/50 hover:border-[var(--orange)]"}`}
-          >
-            {task.status === "completed" && <Check size={12} strokeWidth={3} />}
-          </button>
+            title={task.title}
+            completed={task.status === "completed"}
+            pending={taskPending}
+          />
         </form>
         <div className="min-w-0 flex-1">
           <p
@@ -439,6 +433,7 @@ function TodayDeleteDialog({
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  const dialogRef = useDialogContract({ blocked: pending, onClose: onCancel });
   if (!mounted) return null;
   return createPortal(
     <div
@@ -449,10 +444,13 @@ function TodayDeleteDialog({
       }}
     >
       <section
+        ref={dialogRef}
+        tabIndex={-1}
         className="confirm-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby={`delete-task-${task.id}`}
+        aria-describedby={`delete-task-description-${task.id}`}
       >
         <p className="confirm-dialog-kicker">Please confirm</p>
         <h2
@@ -461,7 +459,7 @@ function TodayDeleteDialog({
         >
           Delete “{task.title}”?
         </h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+        <p id={`delete-task-description-${task.id}`} className="mt-2 text-sm leading-6 text-muted-foreground">
           This task will be permanently removed from your plan.
         </p>
         <div className="mt-6 flex justify-end gap-2">

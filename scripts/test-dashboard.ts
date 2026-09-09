@@ -10,6 +10,7 @@ const { eq } = await import("drizzle-orm");
 const { db } = await import("../src/db/client");
 const { quickThoughts, tasks } = await import("../src/db/schema");
 const { calculateStreak, getDashboardData, localDayBounds } = await import("../src/lib/dashboard");
+const { buildWeekCompletion } = await import("../src/lib/daily-completion");
 const { toggleTaskPersistence } = await import("../src/lib/task-completion");
 migrate(db, { migrationsFolder: "./src/db/migrations" });
 db.delete(quickThoughts).run();
@@ -32,6 +33,19 @@ assert.deepEqual(data.active.map((task) => task.title), ["Today active", "Anytim
 assert.deepEqual(data.overdue.map((task) => task.title), ["Overdue active"]);
 assert.deepEqual(data.completedToday.map((task) => task.title), ["Completed today"]);
 assert.deepEqual(data.counts, { completed: 1, remaining: 3, planned: 4 });
+assert.equal(data.weekCompletion.length, 7, "dashboard includes Monday-through-Sunday completion data");
+
+const weekCompletion = buildWeekCompletion([
+  { date: "2026-10-19", anytimeWeekStart: null, status: "completed" },
+  { date: "2026-10-19", anytimeWeekStart: null, status: "not_started" },
+  { date: "2026-10-20", anytimeWeekStart: null, status: "completed" },
+  { date: "2026-10-21", anytimeWeekStart: null, status: "not_started" },
+  { date: "2026-10-19", anytimeWeekStart: "2026-10-19", status: "completed" },
+], "2026-10-19");
+assert.deepEqual(weekCompletion[0], { date: "2026-10-19", completed: 1, planned: 2, remaining: 1, percentage: 50 });
+assert.deepEqual(weekCompletion[1], { date: "2026-10-20", completed: 1, planned: 1, remaining: 0, percentage: 100 });
+assert.deepEqual(weekCompletion[2], { date: "2026-10-21", completed: 0, planned: 1, remaining: 1, percentage: 0 });
+assert.deepEqual(weekCompletion[6], { date: "2026-10-25", completed: 0, planned: 0, remaining: 0, percentage: 0 });
 
 const activeId = data.active[0]!.id;
 assert.equal(toggleTaskPersistence(Number(activeId)), true);
@@ -52,7 +66,7 @@ assert.deepEqual(calculateStreak(["2026-10-20", "2026-10-23", "2026-10-26"], "20
 
 data = getDashboardData(now);
 assert.equal(data.recentThoughts.length, 0);
-console.log("Dashboard Today contract, DST bounds, completion undo, streak grace, and thought CRUD passed.");
+console.log("Dashboard Today contract, weekly completion, DST bounds, completion undo, streak grace, and thought CRUD passed.");
 }
 
 main().catch((error) => {
