@@ -7,18 +7,26 @@ const dashboard = fs.readFileSync("src/components/dashboard-view.tsx", "utf8");
 const focus = fs.readFileSync("src/components/focus-area-view.tsx", "utf8");
 const week = fs.readFileSync("src/components/week-view.tsx", "utf8");
 const progress = fs.readFileSync("src/components/progress-view.tsx", "utf8");
+const interactions = fs.readFileSync("src/components/interaction-primitives.tsx", "utf8");
 
 assert.match(css, /html\s*\{[^}]*min-width:\s*320px/, "the app keeps its supported minimum viewport");
 assert.match(shell, /content-region min-w-0/, "the shell allows content to shrink without page overflow");
-assert.match(shell, /mobile-nav-button/g, "mobile navigation uses dedicated touch targets");
-assert.match(css, /\.mobile-nav-button\s*\{[^}]*width:\s*40px[^}]*height:\s*40px/, "mobile navigation targets stay comfortably sized");
-assert.match(css, /\.mobile-nav-button\s*\{[^}]*display:\s*none/, "mobile navigation controls cannot leak into the desktop sidebar");
-assert.match(css, /@media \(max-width: 1023px\)[\s\S]*\.mobile-nav-button \{ display: grid; \}/, "navigation drawer controls remain available below the desktop breakpoint");
+assert.match(shell, /className="mobile-bottom-nav lg:hidden"/, "mobile uses a dedicated bottom navigation surface");
+assert.match(shell, /mobileNavigation\.map/, "mobile navigation exposes every planner destination");
+assert.match(shell, /href === "\/settings" \? UserRound/, "Settings is presented as the mobile profile destination");
+assert.doesNotMatch(shell, /"Profile"/, "the mobile account destination keeps the accurate Settings label");
+assert.doesNotMatch(shell, /mobile-nav-button|mobile-nav-scrim|mobileOpen/, "legacy hamburger drawer state is removed");
+assert.match(css, /\.mobile-bottom-nav-item\s*\{[^}]*height:\s*48px/, "mobile navigation targets stay comfortably sized");
+assert.match(css, /\.mobile-bottom-nav-item\[data-active="true"\][^}]*flex-grow:\s*1\.72/, "the active mobile destination expands into a labelled capsule");
+assert.match(css, /\.dark \.mobile-bottom-nav-item\[data-active="true"\]/, "only dark mode uses the dark active navigation capsule");
+assert.match(css, /\.theme-toggle-indicator[^}]*transition:\s*transform 300ms/, "the theme selection indicator moves smoothly");
+assert.match(css, /\.content-surface\s*\{\s*padding-bottom:\s*calc\(6\.75rem/, "mobile content clears the floating navigation");
 
 assert.match(css, /\.task-check\s*\{[^}]*width:\s*36px[^}]*height:\s*36px/, "task completion targets stay touchable");
 for (const [name, source] of [["Dashboard", dashboard], ["Career/Content", focus], ["This Week", week]] as const) {
-  assert.match(source, /task-check-surface/, `${name} keeps the compact visual checkbox inside its larger hit target`);
+  assert.match(source, /TaskCompletionButton/, `${name} uses the shared touch-target contract`);
 }
+assert.match(interactions, /task-check-surface/, "the shared control keeps a compact visual checkbox inside its larger hit target");
 
 assert.match(css, /\.task-composer\s*\{[^}]*max-height:\s*calc\(100dvh - 2rem\)[^}]*overflow-y:\s*auto/, "task dialogs remain reachable on short screens");
 assert.match(css, /\.progress-chart-scroll\s*\{[^}]*overflow-x:\s*auto/, "wide progress charts remain locally scrollable");

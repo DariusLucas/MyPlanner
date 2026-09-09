@@ -10,66 +10,14 @@ body {
 }
 
 @media (max-width: 1023px) {
-  body:has(button[aria-label="Close navigation"].fixed.inset-0) {
-    overflow: hidden;
-    overscroll-behavior: none;
-  }
-
   .workspace-frame {
-    /* Desktop modal blur pre-promotes this element with will-change: filter.
-       Android then treats it as the containing block for the fixed drawer,
-       so the drawer scrolls away from its visible touch targets. */
     will-change: auto;
-  }
-
-  .sidebar-panel {
-    z-index: 60;
-    top: 0;
-    bottom: 0;
-    height: 100dvh;
-    overflow: hidden;
-    border-right: 1px solid var(--border);
-    background: var(--background);
-    box-shadow: 16px 0 38px rgba(42, 34, 26, 0.16);
-    opacity: 1;
-    isolation: isolate;
-    pointer-events: auto;
-    touch-action: manipulation;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-
-  .dark .sidebar-panel {
-    box-shadow: 16px 0 42px rgba(0, 0, 0, 0.36);
-  }
-
-  button[aria-label="Close navigation"].fixed.inset-0 {
-    z-index: 50;
-    background: color-mix(in srgb, var(--foreground) 24%, transparent);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-
-  .sidebar-panel .nav-item,
-  .sidebar-panel button {
-    pointer-events: auto;
-    touch-action: manipulation;
   }
 }
 
 @supports (padding: env(safe-area-inset-top)) {
-  .workspace-header {
-    height: calc(3.5rem + env(safe-area-inset-top));
-    padding-top: env(safe-area-inset-top);
-  }
-
-  .sidebar-panel {
-    padding-top: calc(1rem + env(safe-area-inset-top));
-    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
-  }
-
   .content-surface {
-    padding-bottom: calc(1.75rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(6.75rem + env(safe-area-inset-bottom));
   }
 }
 

@@ -21,7 +21,8 @@ const RouterContext = createContext<MobileRoute | null>(null);
 
 function currentHref() {
   const hash = window.location.hash.replace(/^#/, "");
-  return hash.startsWith("/") ? hash : "/";
+  const href = hash.startsWith("/") ? hash : "/";
+  return href === "/today" || href.startsWith("/today?") ? "/" : href;
 }
 
 export function MobileRouterProvider({ children }: { children: ReactNode }) {
@@ -29,6 +30,10 @@ export function MobileRouterProvider({ children }: { children: ReactNode }) {
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
+    const hashHref = window.location.hash.replace(/^#/, "");
+    if (hashHref === "/today" || hashHref.startsWith("/today?")) {
+      window.history.replaceState(null, "", "#/");
+    }
     const syncFromLocation = () => setHref(currentHref());
     window.addEventListener("hashchange", syncFromLocation);
     window.addEventListener("popstate", syncFromLocation);

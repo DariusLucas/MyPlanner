@@ -17,7 +17,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    return <div className={`${compact ? "size-9" : "h-9 w-[112px]"} rounded-full bg-muted`} aria-hidden="true" />;
+    return <div className={`${compact ? "size-9" : "h-[46px] w-[132px]"} rounded-full bg-muted`} aria-hidden="true" />;
   }
 
   if (compact) {
@@ -29,8 +29,12 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
     return <button type="button" title={`${current.label} theme · switch to ${next.label}`} aria-label={`${current.label} theme. Switch to ${next.label}`} onClick={() => setTheme(next.value)} className="theme-compact-button grid size-9 place-items-center rounded-xl border border-border bg-card/70 text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Icon size={15} strokeWidth={1.75} /></button>;
   }
 
+  const themeIndex = themes.findIndex(({ value }) => value === theme);
+  const selectedIndex = themeIndex >= 0 ? themeIndex : 2;
+
   return (
-    <div className="inline-flex rounded-full border border-border bg-card/80 p-1 shadow-sm" aria-label="Choose theme" role="group">
+    <div className="theme-toggle" data-theme={theme} aria-label="Choose theme" role="group">
+      <span className="theme-toggle-indicator" style={{ transform: `translateX(${selectedIndex * 100}%)` }} aria-hidden="true" />
       {themes.map(({ value, label, icon: Icon }) => (
         <button
           key={value}
@@ -39,9 +43,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
           aria-label={`${label} theme`}
           aria-pressed={theme === value}
           onClick={() => setTheme(value)}
-          className={`theme-option-button rounded-full p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-            theme === value ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"
-          }`}
+          className="theme-option-button"
         >
           <Icon size={15} strokeWidth={1.8} />
         </button>

@@ -32,16 +32,21 @@ for (const rpc of ["create_task", "update_planned_task", "set_task_completed", "
 }
 
 const app = read("mobile/src/mobile-app.tsx");
+const mobileData = read("mobile/src/data.ts");
 for (const route of ["/", "/week", "/today", "/career", "/content", "/progress"]) {
   assert.ok(app.includes(`\"${route}\"`), `Missing mobile route ${route}`);
 }
 assert.match(app, /kind:\s*["']settings["']/);
+assert.match(app, /pathname === ["']\/["'] \|\| pathname === ["']\/today["']/, "Mobile /today compatibility route must load Today");
+assert.doesNotMatch(app, /pathname === ["']\/week["'] \|\| pathname === ["']\/today["']/, "Mobile /today must not load This Week");
 assert.match(app, /signInWithOtp|requestEmailOtp/);
 assert.match(app, /postgres_changes/);
 assert.doesNotMatch(app, /initializeDatabase/);
 assert.match(app, /userEmail=\{session\.user\.email\}/, "Mobile sidebar must show the authenticated account");
 assert.match(app, /screen\?\.href === route\.href/, "Mobile routes must not animate stale screen data");
 assert.match(app, /MobilePageSkeleton/, "Mobile routes must render page skeletons while loading");
+assert.match(mobileData, /buildWeekCompletion/, "Mobile Today loads the shared weekly completion contract");
+assert.match(mobileData, /weekResult/, "Mobile Today queries current-week task totals");
 assert.doesNotMatch(app, /Opening your planner/, "Mobile loading must not show legacy loading copy");
 
 const mobileLink = read("mobile/src/next-link.tsx");
@@ -51,13 +56,14 @@ assert.match(mobileLink, /void \[prefetch, replace, scroll, shallow, locale\]/);
 const mobileRouter = read("mobile/src/router.tsx");
 assert.match(mobileRouter, /setHref\(nextHref\)/, "Mobile navigation must update React before Android hashchange");
 assert.match(mobileRouter, /addEventListener\(["']popstate["']/, "Mobile navigation must preserve Android back navigation");
+assert.match(mobileRouter, /href === ["']\/today["']/, "Mobile router must canonicalize the legacy Today path");
 
 const mobileStyles = read("mobile/src/mobile.css");
 assert.match(mobileStyles, /\.workspace-frame\s*\{[\s\S]*will-change:\s*auto/, "Mobile drawer must not inherit the desktop filter containing block");
-assert.match(mobileStyles, /body:has\(button\[aria-label=["']Close navigation["']\]\.fixed\.inset-0\)[\s\S]*overflow:\s*hidden/, "Opening mobile navigation must lock page scrolling");
-assert.match(mobileStyles, /\.sidebar-panel\s*\{[\s\S]*background:\s*var\(--background\)/, "Mobile drawer must be opaque");
-assert.match(mobileStyles, /button\[aria-label=["']Close navigation["']\]\.fixed\.inset-0\s*\{[\s\S]*backdrop-filter:\s*none/, "Mobile drawer overlay must not blur the page");
-assert.match(mobileStyles, /\.sidebar-panel \.nav-item[\s\S]*touch-action:\s*manipulation/, "Mobile drawer links must remain touchable");
+assert.match(read("src/components/app-shell.tsx"), /mobile-bottom-nav/, "Android uses the shared floating bottom navigation");
+assert.doesNotMatch(read("src/components/app-shell.tsx"), /mobile-nav-scrim|mobileOpen/, "Android no longer carries hamburger drawer state");
+assert.match(mobileStyles, /padding-bottom:\s*calc\(6\.75rem \+ env\(safe-area-inset-bottom\)\)/, "Android content clears the navigation and system gesture area");
+assert.match(app, /settings-account-card/, "Mobile Settings owns account and sign-out controls");
 assert.match(mobileStyles, /mobile-skeleton-shimmer/, "Mobile page skeleton animation is missing");
 
 const realtimeMigration = read("supabase/migrations/20260826120000_android_realtime.sql");

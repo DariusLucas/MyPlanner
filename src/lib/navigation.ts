@@ -16,7 +16,7 @@ export type NavigationItem = {
 };
 
 export const primaryNavigation: NavigationItem[] = [
-  { label: "Dashboard", href: "/", icon: House },
+  { label: "Today", href: "/", icon: House },
   { label: "This Week", href: "/week", icon: CalendarDays },
   { label: "Career", href: "/career", icon: BriefcaseBusiness },
   { label: "Content", href: "/content", icon: Clapperboard },

@@ -12,7 +12,7 @@ if (!root) throw new Error("MyPlanner could not find its app root.");
 
 createRoot(root).render(
   <StrictMode>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <MobileRouterProvider>
         <MobileApp />
       </MobileRouterProvider>

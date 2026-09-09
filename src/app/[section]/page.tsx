@@ -11,17 +11,24 @@ import {
   getWeekData,
 } from "@/src/lib/supabase/planner";
 import { normalizeProgressCategory, normalizeProgressRange } from "@/src/lib/progress-visuals";
+import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { signOut } from "@/src/app/auth-actions";
+import { ThemeToggle } from "@/src/components/theme-toggle";
+import { SettingsAccountCard } from "@/src/components/settings-account-card";
 
 export const dynamic = "force-dynamic";
-
-const sections: Record<string, { title: string; description: string }> = {
-  settings: { title: "Settings", description: "Theme controls are available in the sidebar. Additional settings will be introduced only when they support an active workflow." },
-};
 
 type SectionSearchParams = {
   week?: string | string[];
   range?: string | string[];
   category?: string | string[];
+};
+
+const sections: Record<string, { title: string; description: string }> = {
+  settings: {
+    title: "Settings",
+    description: "Theme controls are available in the sidebar. Additional settings will be introduced only when they support an active workflow.",
+  },
 };
 
 export default async function SectionPage({ params, searchParams }: { params: Promise<{ section: string }>; searchParams: Promise<SectionSearchParams> }) {
@@ -46,6 +53,21 @@ export default async function SectionPage({ params, searchParams }: { params: Pr
   }
   const content = sections[section];
   if (!content) notFound();
-
-  return <section className="mx-auto flex min-h-[360px] w-full max-w-[1500px] flex-col justify-center"><div className="max-w-xl"><p className="text-xs font-semibold uppercase tracking-[0.13em] text-muted-foreground">Workspace</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.055em]">{content.title}</h1><p className="mt-3 text-sm leading-6 text-muted-foreground">{content.description}</p></div></section>;
+  const client = await createSupabaseServerClient();
+  const { data } = await client.auth.getClaims();
+  const email = typeof data?.claims.email === "string" ? data.claims.email : "Your Planner account";
+  return (
+    <section className="settings-shell mx-auto w-full max-w-[760px] space-y-6">
+      <header>
+        <p className="dashboard-eyebrow">Your space</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-.055em]">{content.title}</h1>
+        <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Manage your account and planner preferences.</p>
+      </header>
+      <SettingsAccountCard email={email} signOutAction={signOut} />
+      <article className="settings-preference-row">
+        <div><h2 className="text-sm font-semibold">Appearance</h2><p className="mt-1 text-xs text-muted-foreground">Use a light, dark, or system-matched theme.</p></div>
+        <ThemeToggle />
+      </article>
+    </section>
+  );
 }

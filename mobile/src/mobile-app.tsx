@@ -8,6 +8,8 @@ import { DashboardView } from "@/src/components/dashboard-view";
 import { FocusAreaView } from "@/src/components/focus-area-view";
 import { ProgressView } from "@/src/components/progress-view";
 import { WeekView } from "@/src/components/week-view";
+import { ConfirmationDialog } from "@/src/components/interaction-primitives";
+import { ThemeToggle } from "@/src/components/theme-toggle";
 import type { DashboardData } from "@/src/lib/dashboard";
 import type { FocusAreaData } from "@/src/lib/focus-areas";
 import type { ProgressData } from "@/src/lib/progress";
@@ -33,8 +35,8 @@ function normalizeWeek(value: string | null) {
 }
 
 async function loadScreen(pathname: string, search: URLSearchParams): Promise<Screen> {
-  if (pathname === "/") return { kind: "dashboard", data: await getDashboardData() };
-  if (pathname === "/week" || pathname === "/today") return { kind: "week", data: await getWeekData(normalizeWeek(search.get("week"))) };
+  if (pathname === "/" || pathname === "/today") return { kind: "dashboard", data: await getDashboardData() };
+  if (pathname === "/week") return { kind: "week", data: await getWeekData(normalizeWeek(search.get("week"))) };
   if (pathname === "/career" || pathname === "/content") return { kind: "focus", data: await getFocusAreaData(pathname.slice(1) as "career" | "content") };
   if (pathname === "/progress") {
     const range = normalizeProgressRange(search.get("range") ?? undefined);
@@ -90,6 +92,7 @@ function MobileLogin({ message }: { message?: string | null }) {
 
 function Settings({ session, syncState }: { session: Session; syncState: SyncState }) {
   const [pending, setPending] = useState(false);
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const details = [
     { icon: Cloud, title: "Shared planner data", text: "Android and web use the same ownership-protected Supabase planner." },
@@ -104,16 +107,22 @@ function Settings({ session, syncState }: { session: Session; syncState: SyncSta
   }
   return (
     <section className="mx-auto w-full max-w-[1000px] space-y-6">
-      <header><p className="dashboard-eyebrow">Android runtime</p><h1 className="mt-2 text-3xl font-semibold tracking-[-.055em]">Mobile settings</h1><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Signed in as {session.user.email ?? "your Planner account"}. Your planner timezone is Europe/Bucharest.</p></header>
+      <header><p className="dashboard-eyebrow">Your space</p><h1 className="mt-2 text-3xl font-semibold tracking-[-.055em]">Settings</h1><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Manage your account and mobile planner connection.</p></header>
       {error && <div role="alert" className="rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm">{error}</div>}
+      <article className="settings-account-card">
+        <div className="settings-account-avatar" aria-hidden="true"><Mail size={20} /></div>
+        <div className="min-w-0 flex-1"><p className="settings-account-kicker">Planner account</p><p className="mt-1 truncate text-sm font-semibold">{session.user.email ?? "Your Planner account"}</p><p className="mt-1 text-xs text-muted-foreground">Signed in with an email one-time code</p></div>
+        <button type="button" disabled={pending} onClick={() => setConfirmingSignOut(true)} className="settings-sign-out-button"><LogOut size={15} /> {pending ? "Signing out…" : "Sign out"}</button>
+      </article>
+      <article className="settings-preference-row"><div><h2 className="text-sm font-semibold">Appearance</h2><p className="mt-1 text-xs text-muted-foreground">Use a light, dark, or system-matched theme.</p></div><ThemeToggle /></article>
       <div className="grid gap-3 sm:grid-cols-2">{details.map(({ icon: Icon, title, text }) => <article key={title} className="rounded-[22px] border border-border bg-card/80 p-5 shadow-sm"><span className="grid size-10 place-items-center rounded-[14px] bg-accent text-accent-foreground"><Icon size={18} /></span><h2 className="mt-4 text-sm font-semibold">{title}</h2><p className="mt-1.5 text-xs leading-5 text-muted-foreground">{text}</p></article>)}</div>
-      <button type="button" disabled={pending} onClick={signOut} className="thought-quiet-button"><LogOut size={15} /> {pending ? "Signing out…" : "Sign out"}</button>
+      <ConfirmationDialog open={confirmingSignOut} title="Sign out?" description="Are you sure you want to sign out of this planner?" confirmLabel="Sign out" pending={pending} onCancel={() => setConfirmingSignOut(false)} onConfirm={() => void signOut()} />
     </section>
   );
 }
 
 function MobilePageSkeleton({ pathname, standalone = false }: { pathname: string; standalone?: boolean }) {
-  const variant = pathname === "/week" || pathname === "/today"
+  const variant = pathname === "/week"
     ? "week"
     : pathname === "/progress"
       ? "progress"
@@ -224,5 +233,5 @@ export function MobileApp() {
   if (session === undefined) return <MobilePageSkeleton pathname={route.pathname} standalone />;
   if (!session) return <MobileLogin message={authMessage} />;
   const visibleScreen = screen?.href === route.href && screen.ownerId === session.user.id ? screen.value : null;
-  return <AppShell userEmail={session.user.email}>{error ? <RuntimeState error={error} retry={() => setRetry((value) => value + 1)} /> : visibleScreen ? renderScreen(visibleScreen, session, syncState) : <MobilePageSkeleton pathname={route.pathname} />}</AppShell>;
+  return <AppShell userEmail={session.user.email} signOutAction={signOutMobilePlanner}>{error ? <RuntimeState error={error} retry={() => setRetry((value) => value + 1)} /> : visibleScreen ? renderScreen(visibleScreen, session, syncState) : <MobilePageSkeleton pathname={route.pathname} />}</AppShell>;
 }

@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, Plane, X } from "lucide-react";
+import { LogOut, PanelLeftClose, PanelLeftOpen, Plane, UserRound } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { primaryNavigation, utilityNavigation, type NavigationItem } from "@/src/lib/navigation";
 import { ThemeToggle } from "./theme-toggle";
+import { useDialogContract } from "./interaction-primitives";
 
 function NavigationGroup({ label, items, onNavigate, pendingHref }: { label?: string; items: NavigationItem[]; onNavigate: (href: string) => void; pendingHref: string | null }) {
   const pathname = usePathname();
@@ -39,38 +40,31 @@ function NavigationGroup({ label, items, onNavigate, pendingHref }: { label?: st
 
 export function AppShell({ children, signOutAction, userEmail }: { children: React.ReactNode; signOutAction?: () => Promise<void>; userEmail?: string | null }) {
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [signOutOpen, setSignOutOpen] = useState(false);
-  const closeMobile = () => setMobileOpen(false);
+  const signOutDialogRef = useDialogContract<HTMLElement>({ active: signOutOpen, onClose: () => setSignOutOpen(false) });
 
-  useEffect(() => setPendingHref(null), [pathname]);
   useEffect(() => {
-    if (!signOutOpen) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSignOutOpen(false);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [signOutOpen]);
+    setPendingHref(null);
+  }, [pathname]);
 
   const navigate = (href: string) => {
     setPendingHref(href === pathname ? null : href);
-    closeMobile();
   };
+
+  const visualPathname = pendingHref ?? pathname;
+  const mobileNavigation = [...primaryNavigation, ...utilityNavigation];
 
   if (pathname === "/login") return <>{children}</>;
 
   return (
     <div className="min-h-screen bg-background text-foreground lg:p-3">
-      {mobileOpen && <button type="button" aria-label="Close navigation" className="fixed inset-0 z-30 bg-foreground/20 backdrop-blur-[1px] lg:hidden" onClick={closeMobile} />}
       <div className="workspace-frame lg:grid" data-sidebar-collapsed={sidebarCollapsed}>
-      <aside className={`sidebar-panel fixed inset-y-0 left-0 z-40 flex w-[244px] flex-col bg-sidebar px-3 py-4 transition-transform lg:sticky lg:top-3 lg:h-[calc(100vh-1.5rem)] lg:w-auto lg:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside className="sidebar-panel fixed inset-y-0 left-0 z-40 hidden w-[244px] flex-col bg-sidebar px-3 py-4 lg:sticky lg:top-3 lg:flex lg:h-[calc(100vh-1.5rem)] lg:w-auto lg:translate-x-0">
         <div className="sidebar-top-brand mb-7 flex h-11 items-center gap-3 px-2" aria-label="Planner">
           <span className="sidebar-plane grid size-9 shrink-0 place-items-center" aria-hidden="true"><Plane size={27} strokeWidth={1.5} /></span>
           <span className="sidebar-brand-copy whitespace-nowrap text-[16px] font-semibold tracking-[-0.04em]">Planner</span>
-          <button type="button" aria-label="Close navigation" className="mobile-nav-button ml-auto rounded-xl text-muted-foreground hover:bg-muted lg:hidden" onClick={closeMobile}><X size={18} /></button>
         </div>
 
         <div className="sidebar-navigation">
@@ -106,21 +100,42 @@ export function AppShell({ children, signOutAction, userEmail }: { children: Rea
       </aside>
 
       <div className="content-region min-w-0">
-        <header className="workspace-header sticky top-0 z-20 flex h-14 items-center justify-between bg-card/95 px-4 lg:hidden">
-          <button type="button" aria-label="Open navigation" className="mobile-nav-button rounded-xl text-muted-foreground hover:bg-muted lg:hidden" onClick={() => { setSidebarCollapsed(false); setMobileOpen(true); }}><Menu size={19} /></button>
-          <div className="workspace-mobile-brand" aria-label="Planner"><span className="workspace-mobile-brand-mark"><Plane size={16} strokeWidth={1.7} /></span><span>Planner</span></div>
-          <span className="workspace-mobile-caption">Today</span>
-        </header>
-        <main className="content-surface w-full px-4 py-7 sm:px-6 lg:px-8 lg:py-9 xl:px-10 xl:py-10">
+        <main className="content-surface w-full px-4 py-6 sm:px-6 lg:px-8 lg:py-9 xl:px-10 xl:py-10">
           {pendingHref && pendingHref !== pathname && <div className="route-progress" role="status" aria-label="Loading page"><span /></div>}
           <div key={pathname} className="page-transition">{children}</div>
         </main>
       </div>
       </div>
 
+      <nav className="mobile-bottom-nav lg:hidden" aria-label="Primary navigation">
+        <div className="mobile-bottom-nav-track">
+          {mobileNavigation.map(({ label, href, icon: Icon }) => {
+            const active = href === "/" ? visualPathname === "/" : visualPathname.startsWith(href);
+            const MobileIcon = href === "/settings" ? UserRound : Icon;
+            const mobileLabel = href === "/week" ? "Week" : label;
+            return (
+              <Link
+                key={href}
+                href={href as Route}
+                prefetch
+                aria-current={active ? "page" : undefined}
+                aria-label={label}
+                title={label}
+                className="mobile-bottom-nav-item"
+                data-active={active}
+                onClick={() => navigate(href)}
+              >
+                <MobileIcon size={19} strokeWidth={active ? 2 : 1.65} />
+                <span>{mobileLabel}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
       {signOutOpen && signOutAction && (
         <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setSignOutOpen(false)}>
-          <section className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="sign-out-title" aria-describedby="sign-out-description">
+          <section ref={signOutDialogRef} tabIndex={-1} className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="sign-out-title" aria-describedby="sign-out-description">
             <div className="flex items-start gap-3">
               <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-accent text-accent-foreground"><LogOut size={18} /></span>
               <div>
