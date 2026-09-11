@@ -11,6 +11,23 @@ const databasePath = path.join(
 process.env.DATABASE_URL = databasePath;
 
 async function main() {
+  const weekSource = fs.readFileSync("src/components/week-view.tsx", "utf8");
+  assert.match(
+    weekSource,
+    /useState<"checklist" \| "board">\("checklist"\)/,
+    "Checklist remains the default week view",
+  );
+  assert.equal(
+    (weekSource.match(/<InlineTaskComposer/g) ?? []).length,
+    1,
+    "only the selected day exposes a contextual quick-add composer",
+  );
+  assert.match(weekSource, /selectedDate === date/, "one day is explicitly selected for quick add");
+  assert.match(weekSource, /Nothing planned yet\. Add your first task when you are ready\./, "the empty week has one clear next action");
+  assert.match(weekSource, /Make this a weekly routine/, "routine creation is progressively disclosed");
+  assert.match(weekSource, /Choose your check-ins for each week\. The target resets every Monday\./, "weekly targets explain check-ins and Monday reset");
+  assert.doesNotMatch(weekSource, /Repeat this week|No repeat|\d+x per week/, "ambiguous recurrence language is removed");
+
   const { migrate } = await import("drizzle-orm/better-sqlite3/migrator");
   const { db } = await import("../src/db/client");
   const { tasks } = await import("../src/db/schema");

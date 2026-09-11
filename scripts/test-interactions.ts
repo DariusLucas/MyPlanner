@@ -38,5 +38,9 @@ assert.match(css, /\.task-composer\s*>\s*:last-child\s*\{[^}]*border-radius:\s*1
 assert.match(css, /\.confirm-dialog \.dialog-actions\s*\{[^}]*position:\s*static;[^}]*padding:\s*0;[^}]*border:\s*0;[^}]*background:\s*none;[^}]*box-shadow:\s*none/, "confirmation actions remain plain without a footer layer");
 assert.match(css, /@media \(max-height: 600px\)/, "short viewport and Android keyboard layout is covered");
 assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\*::before[\s\S]*animation-duration:\s*0\.01ms/, "reduced motion covers all component animation layers");
+assert.match(week, /role="group" aria-label="Week view"/, "the Checklist and Kanban choice has an accessible group label");
+assert.match(week, /aria-pressed=\{view === "checklist"\}/, "the default week view exposes its selected state");
+assert.match(week, /aria-pressed=\{selected\}/, "the selected quick-add day exposes its state");
+assert.match(week, /aria-label="Weekly check-in target"/, "weekly routine choices explain what their numbers mean");
 
 console.log("Shared completion, dialog accessibility, responsive action, token, and reduced-motion contracts passed.");

@@ -8,6 +8,7 @@ const focus = fs.readFileSync("src/components/focus-area-view.tsx", "utf8");
 const week = fs.readFileSync("src/components/week-view.tsx", "utf8");
 const progress = fs.readFileSync("src/components/progress-view.tsx", "utf8");
 const interactions = fs.readFileSync("src/components/interaction-primitives.tsx", "utf8");
+const themeToggle = fs.readFileSync("src/components/theme-toggle.tsx", "utf8");
 
 assert.match(css, /html\s*\{[^}]*min-width:\s*320px/, "the app keeps its supported minimum viewport");
 assert.match(shell, /content-region min-w-0/, "the shell allows content to shrink without page overflow");
@@ -20,6 +21,8 @@ assert.match(css, /\.mobile-bottom-nav-item\s*\{[^}]*height:\s*48px/, "mobile na
 assert.match(css, /\.mobile-bottom-nav-item\[data-active="true"\][^}]*flex-grow:\s*1\.72/, "the active mobile destination expands into a labelled capsule");
 assert.match(css, /\.dark \.mobile-bottom-nav-item\[data-active="true"\]/, "only dark mode uses the dark active navigation capsule");
 assert.match(css, /\.theme-toggle-indicator[^}]*transition:\s*transform 300ms/, "the theme selection indicator moves smoothly");
+assert.match(css, /\.theme-toggle-labelled \.theme-option-button\s*\{[^}]*display:\s*flex[^}]*font-size:/, "labelled theme choices keep visible icon-and-text labels");
+assert.match(themeToggle, /labelled && <span>\{label\}<\/span>/, "each labelled theme choice shows its plain-text label beside the icon");
 assert.match(css, /\.content-surface\s*\{\s*padding-bottom:\s*calc\(6\.75rem/, "mobile content clears the floating navigation");
 
 assert.match(css, /\.task-check\s*\{[^}]*width:\s*36px[^}]*height:\s*36px/, "task completion targets stay touchable");
@@ -48,6 +51,12 @@ assert.match(week, /optimisticStatuses/, "workflow moves render immediately whil
 assert.doesNotMatch(week, /setDragOverStatus/, "native dragover events do not trigger render loops");
 assert.match(week, /window\.setTimeout\(\(\) => void moveTask\(id, status\), 0\)/, "desktop drops finish their native lifecycle before relocating a card");
 assert.match(week, /setMobileStatus\(status\);[\s\S]*void moveTask\(task\.id, status\)/, "mobile follows a task to its new workflow stage");
+assert.match(css, /\.week-day-card-empty\s*\{[^}]*min-height:\s*108px/, "empty days stay compact instead of becoming large blank panels");
+assert.match(css, /\.week-day-card-selected\s*\{[^}]*border-color:/, "the quick-add day remains visually identifiable");
+assert.match(css, /\.week-day-select-button, \.routine-disclosure-button, \.routine-one-off-button\s*\{[^}]*min-height:\s*44px/, "planning choices remain touchable on narrow screens");
+assert.match(week, /selected=\{selectedDate === date\}/, "the selected quick-add day is shared by web and Android layouts");
+assert.match(week, /anytimeProgress\.total > 0/, "an empty flexible-work section does not show meaningless zero progress");
+assert.match(week, /tasks\.length > 0 && <ProgressRing/, "empty day cards do not show meaningless zero progress rings");
 assert.doesNotMatch(progress, /href=\{`\/progress\?/, "progress filters do not wait for a server navigation");
 assert.match(progress, /window\.history\.pushState/, "progress filters keep the URL in sync without a route round trip");
 

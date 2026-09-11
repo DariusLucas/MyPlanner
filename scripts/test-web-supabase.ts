@@ -56,18 +56,24 @@ const todayLanding = read("src/components/dashboard-view.tsx");
 const checklistIndex = todayLanding.indexOf('<div className="grid items-start gap-6');
 const activityIndex = todayLanding.indexOf("<WeekCompletionStrip");
 const streakIndex = todayLanding.indexOf('<StreakBanner streak={data.streak} />');
-assert.ok(checklistIndex >= 0 && streakIndex > checklistIndex, "Today checklist appears before the supporting streak signal");
-assert.ok(activityIndex > checklistIndex && streakIndex > activityIndex, "weekly completion follows the Today checklist and precedes streak");
-assert.match(todayLanding, /progressCounts\.completed\} of \{progressCounts\.planned\} complete/, "daily completed/planned stays visible");
-assert.match(todayLanding, /<ProgressDial completed=\{progressCounts\.completed\} total=\{progressCounts\.planned\} \/>/, "daily completion percentage stays visible even for an empty day");
+assert.ok(checklistIndex >= 0 && streakIndex >= 0 && streakIndex < checklistIndex, "the compact streak stays inside the Today hero before the checklist");
+assert.equal((todayLanding.match(/<StreakBanner streak=\{data\.streak\} \/>/g) ?? []).length, 1, "Today renders exactly one compact streak signal");
+assert.ok(activityIndex > checklistIndex, "weekly completion follows the Today checklist");
+assert.match(todayLanding, /progressCounts\.planned === 0 \? "Nothing left today"/, "an unplanned day states plainly that nothing is left");
+assert.match(todayLanding, /`\$\{progressCounts\.completed\} of \$\{progressCounts\.planned\} complete`/, "daily completed/planned stays visible");
+assert.match(todayLanding, /progressCounts\.planned > 0 && <ProgressDial completed=\{progressCounts\.completed\} total=\{progressCounts\.planned\} \/>/, "daily completion percentage appears only when there is planned work");
+assert.doesNotMatch(todayLanding, /function EmptyToday\(\{ completed, onAdd \}/, "the empty Today state does not duplicate the global Add task action");
 assert.match(todayLanding, /aria-label=\{label\}/, "each weekly completion day exposes a plain-text accessible label");
 assert.match(todayLanding, /aria-current=\{day\.date === today \? "date" : undefined\}/, "the current day is identified semantically");
 
 const progressView = read("src/components/progress-view.tsx");
+assert.ok(progressView.indexOf('{ label: "Tasks completed"') < progressView.indexOf('{ label: "Current streak"'), "Progress leads with finished work before supporting streaks");
 assert.match(progressView, /<ActivityLegend \/>/, "Progress retains a visible activity legend");
 assert.match(progressView, /aria-label=\{day\.inRange \? detail : undefined\}/, "Progress heatmap cells retain accessible labels");
 
 const styles = read("src/app/globals.css");
+const focusArea = read("src/components/focus-area-view.tsx");
+assert.ok(focusArea.indexOf('<TaskSection title="Active"') < focusArea.indexOf("<MilestonesPanel"), "focused workspaces put active tasks before supporting milestones");
 const modalBackdrop = styles.match(/\.modal-backdrop\s*\{([\s\S]*?)\}/)?.[1] ?? "";
 assert.doesNotMatch(modalBackdrop, /backdrop-filter/, "modal backdrop avoids live backdrop recompositing");
 assert.match(styles, /body:has\(\.modal-backdrop, \.thought-dialog-backdrop\) \.workspace-frame/, "modal blur is applied to one composited workspace layer");

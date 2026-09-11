@@ -33,6 +33,7 @@ for (const rpc of ["create_task", "update_planned_task", "set_task_completed", "
 
 const app = read("mobile/src/mobile-app.tsx");
 const mobileData = read("mobile/src/data.ts");
+const sharedWeek = read("src/components/week-view.tsx");
 for (const route of ["/", "/week", "/today", "/career", "/content", "/progress"]) {
   assert.ok(app.includes(`\"${route}\"`), `Missing mobile route ${route}`);
 }
@@ -65,6 +66,10 @@ assert.doesNotMatch(read("src/components/app-shell.tsx"), /mobile-nav-scrim|mobi
 assert.match(mobileStyles, /padding-bottom:\s*calc\(6\.75rem \+ env\(safe-area-inset-bottom\)\)/, "Android content clears the navigation and system gesture area");
 assert.match(app, /settings-account-card/, "Mobile Settings owns account and sign-out controls");
 assert.match(mobileStyles, /mobile-skeleton-shimmer/, "Mobile page skeleton animation is missing");
+assert.match(app, /kind === "week"\) return <WeekView/, "Android renders the shared clarified week experience");
+assert.match(sharedWeek, /Simple view: see what is left and check off what you finish\./, "Android explains the default Checklist view plainly");
+assert.match(sharedWeek, /Every target starts fresh on Monday\./, "Android explains weekly routine reset behavior");
+assert.equal((sharedWeek.match(/<InlineTaskComposer/g) ?? []).length, 1, "Android has one selected-day contextual quick add");
 
 const realtimeMigration = read("supabase/migrations/20260826120000_android_realtime.sql");
 for (const table of ["app_settings", "tasks", "task_recurrences", "daily_focus", "quick_thoughts", "content_milestones"]) {
@@ -78,5 +83,12 @@ assert.match(progress, /addEventListener\(["']hashchange["']/);
 
 const androidManifest = read("android/app/src/main/AndroidManifest.xml");
 assert.match(androidManifest, /android\.intent\.category\.LAUNCHER/);
+assert.match(androidManifest, /android\.intent\.action\.VIEW/);
+assert.match(androidManifest, /android:scheme="com\.myplanner\.app"/);
+assert.match(androidManifest, /android:host="auth"/);
+assert.match(read("mobile/src/supabase.ts"), /exchangeCodeForSession/);
+assert.match(read("mobile/src/supabase.ts"), /setSession/);
+assert.match(app, /appUrlOpen/);
+assert.match(app, /emailRedirectTo|mobileAuthRedirectTo/);
 
 console.log("Mobile runtime contract tests passed.");
