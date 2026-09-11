@@ -35,6 +35,38 @@ export const mobileSupabase = createClient<Database>(
   },
 );
 
+export const mobileAuthRedirectTo = "com.myplanner.app://auth/callback";
+
+function authParamsFromUrl(url: string) {
+  const parsed = new URL(url);
+  const hash = new URLSearchParams(parsed.hash.replace(/^#/, ""));
+  return {
+    code: parsed.searchParams.get("code"),
+    accessToken: hash.get("access_token") ?? parsed.searchParams.get("access_token"),
+    refreshToken: hash.get("refresh_token") ?? parsed.searchParams.get("refresh_token"),
+  };
+}
+
+export async function handleMobileAuthUrl(url: string) {
+  if (!url.startsWith(mobileAuthRedirectTo)) return false;
+
+  const { code, accessToken, refreshToken } = authParamsFromUrl(url);
+  if (code) {
+    const { error } = await mobileSupabase.auth.exchangeCodeForSession(code);
+    if (error) throw error;
+    return true;
+  }
+  if (accessToken && refreshToken) {
+    const { error } = await mobileSupabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (error) throw error;
+    return true;
+  }
+  throw new Error("The sign-in link was incomplete. Request a new email and try again.");
+}
+
 export class MobileAuthError extends Error {
   constructor(message = "Your session has expired. Sign in again.") {
     super(message);

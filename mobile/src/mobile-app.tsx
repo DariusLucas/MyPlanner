@@ -17,7 +17,7 @@ import { normalizeProgressCategory, normalizeProgressRange, progressRangeStart, 
 import type { WeekData } from "@/src/lib/week";
 import { requestEmailOtp, verifyEmailOtp } from "@/src/lib/supabase/auth";
 import { currentWeekStart, getDashboardData, getFocusAreaData, getProgressData, getWeekData } from "./data";
-import { MobileAuthError, initializeMobilePlanner, mobileSupabase, signOutMobilePlanner } from "./supabase";
+import { handleMobileAuthUrl, initializeMobilePlanner, mobileAuthRedirectTo, MobileAuthError, mobileSupabase, signOutMobilePlanner } from "./supabase";
 import { useMobileRouter } from "./router";
 
 type Screen =
@@ -58,7 +58,7 @@ function MobileLogin({ message }: { message?: string | null }) {
   const [error, setError] = useState<string | null>(null);
   async function sendCode(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setPending(true); setError(null);
-    try { await requestEmailOtp(mobileSupabase, email); setStep("code"); }
+    try { await requestEmailOtp(mobileSupabase, email, { redirectTo: mobileAuthRedirectTo }); setStep("code"); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "The sign-in code could not be sent."); }
     finally { setPending(false); }
   }
@@ -107,14 +107,14 @@ function Settings({ session, syncState }: { session: Session; syncState: SyncSta
   }
   return (
     <section className="mx-auto w-full max-w-[1000px] space-y-6">
-      <header><p className="dashboard-eyebrow">Your space</p><h1 className="mt-2 text-3xl font-semibold tracking-[-.055em]">Settings</h1><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Manage your account and mobile planner connection.</p></header>
+      <header><h1 className="text-3xl font-semibold tracking-[-.055em]">Profile</h1></header>
       {error && <div role="alert" className="rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm">{error}</div>}
       <article className="settings-account-card">
         <div className="settings-account-avatar" aria-hidden="true"><Mail size={20} /></div>
         <div className="min-w-0 flex-1"><p className="settings-account-kicker">Planner account</p><p className="mt-1 truncate text-sm font-semibold">{session.user.email ?? "Your Planner account"}</p><p className="mt-1 text-xs text-muted-foreground">Signed in with an email one-time code</p></div>
         <button type="button" disabled={pending} onClick={() => setConfirmingSignOut(true)} className="settings-sign-out-button"><LogOut size={15} /> {pending ? "Signing out…" : "Sign out"}</button>
       </article>
-      <article className="settings-preference-row"><div><h2 className="text-sm font-semibold">Appearance</h2><p className="mt-1 text-xs text-muted-foreground">Use a light, dark, or system-matched theme.</p></div><ThemeToggle /></article>
+      <article className="settings-preference-row"><div><h2 className="text-sm font-semibold">Appearance</h2><p className="mt-1 text-xs text-muted-foreground">Use a light, dark, or system-matched theme.</p></div><ThemeToggle labelled /></article>
       <div className="grid gap-3 sm:grid-cols-2">{details.map(({ icon: Icon, title, text }) => <article key={title} className="rounded-[22px] border border-border bg-card/80 p-5 shadow-sm"><span className="grid size-10 place-items-center rounded-[14px] bg-accent text-accent-foreground"><Icon size={18} /></span><h2 className="mt-4 text-sm font-semibold">{title}</h2><p className="mt-1.5 text-xs leading-5 text-muted-foreground">{text}</p></article>)}</div>
       <ConfirmationDialog open={confirmingSignOut} title="Sign out?" description="Are you sure you want to sign out of this planner?" confirmLabel="Sign out" pending={pending} onCancel={() => setConfirmingSignOut(false)} onConfirm={() => void signOut()} />
     </section>
@@ -177,12 +177,27 @@ export function MobileApp() {
 
   useEffect(() => {
     let active = true;
+    const consumeAuthUrl = async (url: string) => {
+      try {
+        await handleMobileAuthUrl(url);
+      } catch (cause) {
+        if (active) setAuthMessage(cause instanceof Error ? cause.message : "The sign-in link could not be used.");
+      }
+    };
+    App.getLaunchUrl().then((launch) => {
+      if (launch?.url) void consumeAuthUrl(launch.url);
+    });
+    const urlListener = App.addListener("appUrlOpen", ({ url }) => void consumeAuthUrl(url));
     mobileSupabase.auth.getSession().then(({ data }) => { if (active) setSession(data.session); });
     const { data } = mobileSupabase.auth.onAuthStateChange((_event, nextSession) => {
       if (nextSession) setAuthMessage(null);
       setSession(nextSession);
     });
-    return () => { active = false; data.subscription.unsubscribe(); };
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+      void urlListener.then((handle) => handle.remove());
+    };
   }, []);
 
   useEffect(() => {

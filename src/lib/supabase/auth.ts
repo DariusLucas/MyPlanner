@@ -4,10 +4,14 @@ import type { Database } from "./database.types";
 export async function requestEmailOtp(
   client: SupabaseClient<Database>,
   email: string,
+  options: { redirectTo?: string } = {},
 ) {
   const { error } = await client.auth.signInWithOtp({
     email: email.trim().toLowerCase(),
-    options: { shouldCreateUser: true },
+    options: {
+      shouldCreateUser: true,
+      ...(options.redirectTo ? { emailRedirectTo: options.redirectTo } : {}),
+    },
   });
   if (error) throw error;
 }
