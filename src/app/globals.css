@@ -191,7 +191,7 @@ select {
 .dashboard-hero { position: relative; display: flex; min-height: 154px; align-items: flex-end; justify-content: space-between; gap: 1.5rem; overflow: hidden; padding: 1.5rem 1.6rem; border: 1px solid color-mix(in srgb, var(--orange) 25%, var(--border)); border-radius: 28px; background: radial-gradient(circle at 92% 4%, color-mix(in srgb, var(--orange-soft) 76%, transparent), transparent 38%), linear-gradient(120deg, color-mix(in srgb, var(--card) 92%, var(--orange-soft)), var(--card) 67%); box-shadow: 0 14px 34px color-mix(in srgb, var(--orange) 8%, transparent), inset 0 1px 0 color-mix(in srgb, white 44%, transparent); }
 .dashboard-hero::after { content: ""; position: absolute; right: 8%; bottom: -52px; width: 180px; height: 180px; border: 1px solid color-mix(in srgb, var(--orange) 18%, transparent); border-radius: 50%; box-shadow: 0 0 0 18px color-mix(in srgb, var(--orange) 5%, transparent), 0 0 0 38px color-mix(in srgb, var(--orange) 3%, transparent); pointer-events: none; }
 .dashboard-hero-copy, .dashboard-hero-action { position: relative; z-index: 1; }
-.dashboard-hero-copy { min-width: 0; }
+.dashboard-hero-copy { display: flex; min-width: 0; flex-direction: column; justify-content: flex-end; }
 .dashboard-hero-kicker { display: flex; align-items: center; gap: .42rem; color: var(--muted-foreground); font-size: .68rem; font-weight: 650; }
 .dashboard-hero-kicker-mark { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 8px; background: color-mix(in srgb, var(--orange) 15%, var(--card)); color: var(--orange); }
 .dashboard-hero-kicker-divider { width: 3px; height: 3px; border-radius: 999px; background: color-mix(in srgb, var(--muted-foreground) 52%, transparent); }
@@ -230,6 +230,8 @@ select {
   background: linear-gradient(105deg, color-mix(in srgb, var(--orange-soft) 55%, var(--card)), var(--card) 62%);
   box-shadow: 0 7px 20px color-mix(in srgb, var(--orange) 6%, transparent);
 }
+.dashboard-hero .streak-banner { width: max-content; max-width: 100%; min-height: 34px; gap: .65rem; margin: .55rem 0 .1rem; border: 0; border-radius: 0; padding: 0 .25rem; background: transparent; box-shadow: none; }
+.dashboard-hero .streak-banner .streak-icon { width: 28px; height: 28px; border-radius: 9px; }
 .streak-icon { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 12px; background: color-mix(in srgb, var(--orange) 13%, var(--card)); color: var(--orange); }
 .streak-cooling { border-color: color-mix(in srgb, #9b8b73 28%, var(--border)); background: linear-gradient(105deg, color-mix(in srgb, #c8bca7 18%, var(--card)), var(--card) 62%); }
 .streak-cooling .streak-icon { background: color-mix(in srgb, #b8a98f 20%, var(--card)); color: #9c7658; }
@@ -544,6 +546,8 @@ select {
 .theme-option-button:active svg { transform: scale(.82) rotate(-8deg); }
 .theme-option-button svg { transition: transform 260ms cubic-bezier(.22,1,.36,1); }
 .theme-option-button:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.theme-toggle-labelled { width: 228px; }
+.theme-toggle-labelled .theme-option-button { display: flex; align-items: center; justify-content: center; gap: 0.3rem; padding: 0 0.45rem; font-size: 0.68rem; font-weight: 650; }
 .dark .theme-toggle-indicator { background: color-mix(in srgb, var(--orange) 22%, var(--card)); box-shadow: 0 4px 12px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.08); }
 body,
 .content-surface,
@@ -554,6 +558,8 @@ body,
 @media (max-width: 520px) {
   .settings-account-card { align-items: flex-start; flex-wrap: wrap; }
   .settings-account-card .settings-sign-out-button { width: 100%; }
+  .settings-preference-row { align-items: stretch; flex-direction: column; }
+  .settings-preference-row .theme-toggle { width: 100%; }
 }
 .week-task-menu-button {
   display: grid;
@@ -565,6 +571,13 @@ body,
 }
 .week-task-menu-button:hover { background: var(--muted); color: var(--foreground); }
 .week-view-toggle { min-height: 34px; }
+.week-progress-summary {
+  margin-top: 0.55rem;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
+.week-progress-summary strong { color: var(--foreground); font-weight: 700; }
+.week-view-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 0.65rem 0.85rem; }
 
 .week-day-card {
   min-height: 250px;
@@ -573,7 +586,19 @@ body,
   border-radius: 26px;
   background: var(--card);
   box-shadow: 0 8px 24px color-mix(in srgb, var(--foreground) 5%, transparent);
+  transition: border-color 180ms ease, box-shadow 180ms ease, min-height 180ms ease;
 }
+.week-day-card-selected {
+  border-color: color-mix(in srgb, var(--orange) 68%, var(--border));
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--orange) 13%, transparent);
+}
+.week-day-card-empty { min-height: 108px; }
+.week-day-select-button {
+  min-width: 0;
+  border-radius: 12px;
+  text-align: left;
+}
+.week-day-select-button:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; }
 .week-sunday-card {
   border-color: color-mix(in srgb, var(--orange) 30%, var(--border));
   background:
@@ -682,6 +707,32 @@ body,
   background: color-mix(in srgb, var(--orange) 13%, var(--card));
   color: var(--accent-foreground);
 }
+.routine-disclosure-button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+.routine-disclosure-button:hover { border-color: color-mix(in srgb, var(--orange) 48%, var(--border)); color: var(--foreground); }
+.routine-target-panel {
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--orange) 32%, var(--border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--orange-soft) 30%, transparent);
+}
+.routine-one-off-button {
+  flex: 0 0 auto;
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+.routine-one-off-button:hover { color: var(--foreground); }
 .week-anytime-card {
   padding: 1rem;
   border: 1px solid color-mix(in srgb, var(--orange) 30%, var(--border));
@@ -692,6 +743,7 @@ body,
   grid-column: 1 / -1;
   min-height: 190px;
 }
+.week-sunday-card.week-day-card-empty { min-height: 108px; }
 .week-task-card {
   padding: 0.75rem;
   border: 1px solid var(--border);
@@ -1776,7 +1828,10 @@ body:has(.modal-backdrop, .thought-dialog-backdrop) .workspace-frame {
   .kanban-card-mobile .kanban-status-select { margin-top: .35rem; }
   .kanban-card-mobile .kanban-status-trigger { min-height: 44px; }
   .kanban-mobile-empty { padding: 1.35rem .75rem; border: 1px dashed var(--border); border-radius: 14px; color: var(--muted-foreground); font-size: .75rem; text-align: center; }
-  .week-plan-next-button { flex: 1 1 100%; }
+  .week-header-actions { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1fr) 40px; }
+  .week-header-actions > * { width: 100%; justify-content: center; }
+  .week-header-actions > :not(.week-plan-next-button) { gap: 0.3rem; padding-inline: 0.55rem; font-size: 0.75rem; white-space: nowrap; }
+  .week-plan-next-button { grid-column: 1 / -1; }
   .week-inline-entry-row { flex-wrap: wrap; }
   .week-inline-title { flex-basis: calc(100% - 2.9rem); }
   .week-inline-submit { order: 3; flex: 1 1 auto; }
@@ -1833,6 +1888,7 @@ body:has(.modal-backdrop, .thought-dialog-backdrop) .workspace-frame {
   .week-view-toggle { min-height: 40px; }
   .week-inline-add-trigger { min-height: 40px; }
   .week-inline-categories button { min-height: 36px; padding-inline: 0.65rem; }
+  .week-day-select-button, .routine-disclosure-button, .routine-one-off-button { min-height: 44px; }
   .choice-chip { min-height: 40px; }
   .kanban-delete-button { min-height: 38px; padding-inline: 0.6rem; }
   .kanban-status-trigger, .kanban-status-option { min-height: 40px; }
@@ -1967,6 +2023,76 @@ body:has(.modal-backdrop, .thought-dialog-backdrop) .workspace-frame {
   .task-edit-shell-open {
     transition: none !important;
   }
+}
+@media (max-width: 460px) {
+  .week-anytime-header { align-items: stretch; flex-direction: column; gap: 0.75rem; }
+  .week-anytime-header > div:last-child { justify-content: space-between; }
+}
+
+@media (min-width: 1024px) {
+  html { scrollbar-gutter: stable; }
+
+  /* Non-progress screens are intentionally one-viewport surfaces. Progress keeps natural scrolling. */
+  body:not(:has(.progress-shell)) > div.min-h-screen {
+    height: 100vh;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  main.content-surface {
+    margin-bottom: 0;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .dashboard-shell > * + *,
+  .focus-area-shell > * + *,
+  .week-page-shell > * + *,
+  .settings-shell > * + * {
+    margin-top: 1rem;
+  }
+
+  .dashboard-shell {
+    min-height: calc(100vh - 5.5rem);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dashboard-shell > .grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  .dashboard-shell > .grid > * {
+    min-height: 0;
+  }
+
+  .progress-header > div:first-child {
+    align-self: flex-start;
+  }
+
+  .dashboard-shell > *,
+  .focus-area-shell > *,
+  .week-page-shell > *,
+  .settings-shell > * {
+    margin-bottom: 1rem;
+  }
+
+  .dashboard-shell > :last-child,
+  .focus-area-shell > :last-child,
+  .week-page-shell > :last-child,
+  .settings-shell > :last-child {
+    margin-bottom: 0;
+  }
+
+  .dashboard-card-heading { padding: .85rem 1rem; }
+  .dashboard-shell .thought-input { min-height: 72px; }
+  .dashboard-shell .thoughts-empty-compact { min-height: 64px; padding: .65rem .8rem; }
+  .dashboard-shell .thoughts-empty-compact > span { width: 28px; height: 28px; }
+  .week-completion-heading { padding: .6rem .85rem .45rem; }
+  .week-completion-day { min-height: 64px; padding: .38rem .4rem; }
+  .week-completion-legend { padding: .3rem .85rem; }
 }
 
 @media (max-height: 600px) {

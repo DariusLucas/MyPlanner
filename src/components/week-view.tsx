@@ -69,6 +69,7 @@ type Runner = (
 ) => Promise<void>;
 type OptimisticCompletions = Record<string, boolean>;
 type AnytimeProgress = { completed: number; total: number; value: number };
+type WeekProgress = AnytimeProgress & { remaining: number };
 type ConfirmationRequest = {
   title: string;
   description: string;
@@ -119,8 +120,39 @@ function getAnytimeProgress(
   };
 }
 
+function getWeekProgress(
+  data: WeekData,
+  optimisticCompletions: OptimisticCompletions,
+): WeekProgress {
+  const visibleTasks = new Map<PlannerId, WeekTask>();
+  [
+    ...data.overdue,
+    ...data.days.flatMap((day) => day.tasks),
+    ...data.anytime,
+    ...data.recurringAnytime.flatMap((recurrence) =>
+      recurrence.tasks.slice(0, recurrence.countPerWeek),
+    ),
+  ].forEach((task) => visibleTasks.set(task.id, task));
+  const tasks = [...visibleTasks.values()];
+  const completed = tasks.filter(
+    (task) => optimisticCompletions[task.id] ?? task.status === "completed",
+  ).length;
+  const total = tasks.length;
+  return {
+    completed,
+    total,
+    remaining: total - completed,
+    value: total ? Math.round((completed / total) * 100) : 0,
+  };
+}
+
 export function WeekView({ data }: { data: WeekData }) {
   const [view, setView] = useState<"checklist" | "board">("checklist");
+  const [selectedDate, setSelectedDate] = useState(
+    data.days.find((day) => isToday(parseISO(day.date)))?.date ??
+      data.days[0]?.date ??
+      data.weekStart,
+  );
   const [composer, setComposer] = useState(false);
   const [editing, setEditing] = useState<PlannerId | null>(null);
   const [pending, setPending] = useState<string | null>(null);
@@ -147,6 +179,17 @@ export function WeekView({ data }: { data: WeekData }) {
     [data],
   );
   const anytimeProgress = getAnytimeProgress(data, optimisticCompletions);
+  const weekProgress = getWeekProgress(data, optimisticCompletions);
+
+  useEffect(() => {
+    setSelectedDate((current) =>
+      data.days.some((day) => day.date === current)
+        ? current
+        : data.days.find((day) => isToday(parseISO(day.date)))?.date ??
+          data.days[0]?.date ??
+          data.weekStart,
+    );
+  }, [data.weekStart, data.days]);
 
   function setOptimisticCompletion(id: PlannerId, completed: boolean) {
     setOptimisticCompletions((current) => ({ ...current, [id]: completed }));
@@ -202,8 +245,21 @@ export function WeekView({ data }: { data: WeekData }) {
             <h1 className="mt-1.5 text-3xl font-semibold tracking-[-.055em] sm:text-[2.6rem]">
               {thisWeek ? "This Week" : nextWeek ? "Next Week" : "Week plan"}
             </h1>
+            <p className="week-progress-summary" aria-live="polite">
+              {weekProgress.total ? (
+                <>
+                  <strong>{weekProgress.remaining} left</strong>
+                  <span aria-hidden="true"> · </span>
+                  {weekProgress.completed} done
+                  <span aria-hidden="true"> · </span>
+                  {weekProgress.total} planned
+                </>
+              ) : (
+                "Nothing planned yet. Add your first task when you are ready."
+              )}
+            </p>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="week-header-actions flex flex-wrap items-center gap-1.5">
             {thisWeek && (
               <Link
                 href={`/week?week=${nextStart}`}
@@ -264,19 +320,30 @@ export function WeekView({ data }: { data: WeekData }) {
             </button>
           </div>
         )}
-        <div className="flex w-fit gap-1 rounded-xl border border-border bg-card/70 p-1">
-          <button
-            onClick={() => setView("checklist")}
-            className={`week-view-toggle rounded-lg px-3 py-1.5 text-sm ${view === "checklist" ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground"}`}
-          >
-            Checklist
-          </button>
-          <button
-            onClick={() => setView("board")}
-            className={`week-view-toggle rounded-lg px-3 py-1.5 text-sm ${view === "board" ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground"}`}
-          >
-            Kanban
-          </button>
+        <div className="week-view-picker">
+          <div className="flex w-fit gap-1 rounded-xl border border-border bg-card/70 p-1" role="group" aria-label="Week view">
+            <button
+              type="button"
+              aria-pressed={view === "checklist"}
+              onClick={() => setView("checklist")}
+              className={`week-view-toggle rounded-lg px-3 py-1.5 text-sm ${view === "checklist" ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground"}`}
+            >
+              Checklist
+            </button>
+            <button
+              type="button"
+              aria-pressed={view === "board"}
+              onClick={() => setView("board")}
+              className={`week-view-toggle rounded-lg px-3 py-1.5 text-sm ${view === "board" ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground"}`}
+            >
+              Kanban
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {view === "checklist"
+              ? "Simple view: see what is left and check off what you finish."
+              : "Optional workflow view: move scheduled tasks through stages."}
+          </p>
         </div>
         <div key={view} className="week-view-switch">
           {view === "checklist" ? (
@@ -287,6 +354,9 @@ export function WeekView({ data }: { data: WeekData }) {
               pending={pending}
               run={run}
               anytimeProgress={anytimeProgress}
+              optimisticCompletions={optimisticCompletions}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
               onCompletionChange={setOptimisticCompletion}
             />
           ) : (
@@ -408,6 +478,7 @@ export function TaskComposer({
   const [placement, setPlacement] = useState(`anytime:${weekStart}`);
   const [category, setCategory] = useState<TaskCategory>(defaultCategory);
   const [recurrenceCount, setRecurrenceCount] = useState("0");
+  const [showRoutine, setShowRoutine] = useState(false);
   const [closing, setClosing] = useState(false);
   const [mounted, setMounted] = useState(false);
   const anytime = placement.startsWith("anytime:");
@@ -516,6 +587,7 @@ export function TaskComposer({
               onClick={() => {
                 setPlacement(date);
                 setRecurrenceCount("0");
+                setShowRoutine(false);
               }}
               className={
                 placement === date
@@ -529,41 +601,60 @@ export function TaskComposer({
         </div>
         {anytime && (
           <div className="mt-4">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
-              Repeat this week
-            </p>
-            <p className="mb-2 text-xs text-muted-foreground">
-              Choose a weekly target. It resets every Monday.
-            </p>
-            <div className="choice-grid">
+            {!showRoutine ? (
               <button
                 type="button"
-                onClick={() => setRecurrenceCount("0")}
-                className={
-                  recurrenceCount === "0"
-                    ? "choice-chip choice-chip-active"
-                    : "choice-chip"
-                }
+                aria-expanded="false"
+                onClick={() => {
+                  setShowRoutine(true);
+                  setRecurrenceCount("1");
+                }}
+                className="routine-disclosure-button"
               >
-                No repeat
+                <CalendarDays size={15} /> Make this a weekly routine
               </button>
-              {Array.from({ length: 7 }, (_, index) => index + 1).map(
-                (count) => (
+            ) : (
+              <div className="routine-target-panel">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
+                      Weekly routine
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      Choose your check-ins for each week. The target resets every Monday.
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    key={count}
-                    onClick={() => setRecurrenceCount(String(count))}
-                    className={
-                      recurrenceCount === String(count)
-                        ? "choice-chip choice-chip-active"
-                        : "choice-chip"
-                    }
+                    onClick={() => {
+                      setShowRoutine(false);
+                      setRecurrenceCount("0");
+                    }}
+                    className="routine-one-off-button"
                   >
-                    {count}x
+                    Keep one-off
                   </button>
-                ),
-              )}
-            </div>
+                </div>
+                <div className="choice-grid mt-2" aria-label="Weekly check-in target">
+                  {Array.from({ length: 7 }, (_, index) => index + 1).map(
+                    (count) => (
+                      <button
+                        type="button"
+                        key={count}
+                        onClick={() => setRecurrenceCount(String(count))}
+                        className={
+                          recurrenceCount === String(count)
+                            ? "choice-chip choice-chip-active"
+                            : "choice-chip"
+                        }
+                      >
+                        {count} {count === 1 ? "check-in" : "check-ins"}
+                      </button>
+                    ),
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
         {lockCategory ? (
@@ -626,15 +717,11 @@ export function TaskComposer({
 }
 
 function InlineTaskComposer({
-  weekStart,
   date,
-  anytime = false,
   pending,
   run,
 }: {
-  weekStart: string;
   date: string;
-  anytime?: boolean;
   pending: string | null;
   run: Runner;
 }) {
@@ -642,7 +729,7 @@ function InlineTaskComposer({
   const [category, setCategory] = useState<TaskCategory>("career");
   const inputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const key = `quick-${anytime ? `anytime-${weekStart}` : date}`;
+  const key = `quick-${date}`;
   const submitting = pending === key;
 
   useEffect(() => {
@@ -678,12 +765,8 @@ function InlineTaskComposer({
           ref={inputRef}
           name="title"
           className="week-inline-title"
-          placeholder={anytime ? "Add a flexible task…" : "Add a task…"}
-          aria-label={
-            anytime
-              ? "Task title for Anytime this week"
-              : `Task title for ${format(parseISO(date), "EEEE")}`
-          }
+          placeholder="Add a task…"
+          aria-label={`Task title for ${format(parseISO(date), "EEEE")}`}
           required
           maxLength={200}
         />
@@ -716,12 +799,8 @@ function InlineTaskComposer({
           </button>
         ))}
       </div>
-      <input type="hidden" name="date" value={anytime ? weekStart : date} />
-      <input
-        type="hidden"
-        name="anytimeWeekStart"
-        value={anytime ? weekStart : ""}
-      />
+      <input type="hidden" name="date" value={date} />
+      <input type="hidden" name="anytimeWeekStart" value="" />
       <input type="hidden" name="recurrenceCount" value="0" />
       <input type="hidden" name="category" value={category} />
       <input type="hidden" name="priority" value="normal" />
@@ -738,6 +817,9 @@ function Checklist({
   pending,
   run,
   anytimeProgress,
+  optimisticCompletions,
+  selectedDate,
+  onSelectDate,
   onCompletionChange,
 }: {
   data: WeekData;
@@ -746,9 +828,11 @@ function Checklist({
   pending: string | null;
   run: Runner;
   anytimeProgress: AnytimeProgress;
+  optimisticCompletions: OptimisticCompletions;
+  selectedDate: string;
+  onSelectDate: (date: string) => void;
   onCompletionChange: (id: PlannerId, completed: boolean) => void;
 }) {
-  const itemCount = data.anytime.length + data.recurringAnytime.length;
   return (
     <div className="space-y-4">
       {data.overdue.length > 0 && (
@@ -769,41 +853,38 @@ function Checklist({
                 run={run}
                 editing={editing === task.id}
                 setEditing={setEditing}
+                onCompletionChange={onCompletionChange}
               />
             ))}
           </div>
         </section>
       )}
       <section className="week-anytime-card">
-        <div className="flex items-center justify-between gap-4">
+        <div className="week-anytime-header flex items-center justify-between gap-4">
           <div>
             <h2 className="text-sm font-semibold">Anytime this week</h2>
             <p className="text-xs text-muted-foreground">
-              Flexible work and weekly routines, ready when you are.
+              Flexible tasks and weekly routines can be done on any day.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">
-              {itemCount} items
-            </span>
-            <ProgressRing
-              value={anytimeProgress.value}
-              completed={anytimeProgress.completed}
-              total={anytimeProgress.total}
-            />
-          </div>
+          {anytimeProgress.total > 0 && <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground">
+                {anytimeProgress.total - anytimeProgress.completed} left · {anytimeProgress.completed} done
+              </span>
+              <ProgressRing
+                value={anytimeProgress.value}
+                completed={anytimeProgress.completed}
+                total={anytimeProgress.total}
+              />
+            </div>}
         </div>
-        <InlineTaskComposer
-          weekStart={data.weekStart}
-          date={data.weekStart}
-          anytime
-          pending={pending}
-          run={run}
-        />
         {data.recurringAnytime.length > 0 && (
           <div className="mt-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
               Weekly routines
+            </p>
+            <p className="mb-2 text-xs leading-5 text-muted-foreground">
+              Each circle is one check-in. Every target starts fresh on Monday.
             </p>
             <div className="space-y-2">
               {data.recurringAnytime.map((recurrence) => (
@@ -835,7 +916,7 @@ function Checklist({
             ))
           ) : data.recurringAnytime.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No flexible tasks yet.
+              No flexible tasks or routines.
             </p>
           ) : null}
         </div>
@@ -848,11 +929,14 @@ function Checklist({
             tasks={tasks}
             glow={index % 2 === 0}
             sunday={index === 6}
+            selected={selectedDate === date}
+            onSelect={() => onSelectDate(date)}
             editing={editing}
             setEditing={setEditing}
             pending={pending}
             run={run}
-            weekStart={data.weekStart}
+            optimisticCompletions={optimisticCompletions}
+            onCompletionChange={onCompletionChange}
           />
         ))}
       </div>
@@ -892,7 +976,7 @@ function RecurringTaskCard({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium leading-5">{task.title}</p>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            Weekly target · {completed} of {total} complete · resets Monday
+            Weekly routine · {completed} of {total} {total === 1 ? "check-in" : "check-ins"} done · resets every Monday
             {recurrence.missedLastWeek > 0 && (
               <> · {recurrence.missedLastWeek} missed last week</>
             )}
@@ -959,35 +1043,50 @@ function RecurringTaskCard({
 }
 function DayCard({
   date,
-  weekStart,
   tasks,
   glow,
   sunday,
+  selected,
+  onSelect,
   editing,
   setEditing,
   pending,
   run,
+  optimisticCompletions,
+  onCompletionChange,
 }: {
   date: string;
-  weekStart: string;
   tasks: WeekTask[];
   glow: boolean;
   sunday: boolean;
+  selected: boolean;
+  onSelect: () => void;
   editing: PlannerId | null;
   setEditing: (value: PlannerId | null) => void;
   pending: string | null;
   run: Runner;
+  optimisticCompletions: OptimisticCompletions;
+  onCompletionChange: (id: PlannerId, completed: boolean) => void;
 }) {
-  const completed = tasks.filter((task) => task.status === "completed").length;
+  const completed = tasks.filter(
+    (task) => optimisticCompletions[task.id] ?? task.status === "completed",
+  ).length;
+  const remaining = tasks.length - completed;
   const progress = tasks.length
     ? Math.round((completed / tasks.length) * 100)
     : 0;
   return (
     <section
-      className={`week-day-card ${glow ? "week-glow-card" : ""} ${sunday ? "week-sunday-card" : ""}`}
+      className={`week-day-card ${glow ? "week-glow-card" : ""} ${sunday ? "week-sunday-card" : ""} ${selected ? "week-day-card-selected" : ""} ${tasks.length === 0 ? "week-day-card-empty" : ""}`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <button
+          type="button"
+          className="week-day-select-button"
+          aria-pressed={selected}
+          aria-label={`${selected ? "Selected" : "Select"} ${format(parseISO(date), "EEEE, MMMM d")} for quick add`}
+          onClick={onSelect}
+        >
           <h2 className="text-lg font-semibold tracking-[-.03em]">
             {format(parseISO(date), "EEEE")}
             {isToday(parseISO(date)) && (
@@ -1000,12 +1099,15 @@ function DayCard({
             {format(parseISO(date), "MMMM d")}
             {sunday && " · a softer landing"}
           </p>
-        </div>
-        <ProgressRing
-          value={progress}
-          completed={completed}
-          total={tasks.length}
-        />
+          <p className="mt-1 text-xs font-medium text-muted-foreground">
+            {tasks.length ? `${remaining} left · ${completed} done` : selected ? "Selected for quick add" : "No tasks"}
+          </p>
+        </button>
+        {tasks.length > 0 && <ProgressRing
+            value={progress}
+            completed={completed}
+            total={tasks.length}
+          />}
       </div>
       <div
         className={`mt-4 space-y-2 ${sunday ? "xl:grid xl:grid-cols-2 xl:gap-2 xl:space-y-0" : ""}`}
@@ -1019,22 +1121,18 @@ function DayCard({
               run={run}
               editing={editing === task.id}
               setEditing={setEditing}
+              onCompletionChange={onCompletionChange}
             />
           ))
-        ) : (
-          <div className="rounded-2xl border border-dashed border-border px-3 py-5 text-sm text-muted-foreground">
-            {sunday
-              ? "Keep the day open. Rest is part of the plan."
-              : "Clear day."}
-          </div>
-        )}
+        ) : null}
       </div>
-      <InlineTaskComposer
-        weekStart={weekStart}
-        date={date}
-        pending={pending}
-        run={run}
-      />
+      {selected && (
+        <InlineTaskComposer
+          date={date}
+          pending={pending}
+          run={run}
+        />
+      )}
     </section>
   );
 }
@@ -1139,7 +1237,9 @@ function TaskCard({
           <p className="text-sm font-medium leading-5">{task.title}</p>
           <p className="mt-1 text-[11px] text-muted-foreground">
             {categoryLabels[task.category]}
-            {task.recurrenceCount ? ` · ${task.recurrenceCount}x per week` : ""}
+            {task.recurrenceCount
+              ? ` · Weekly routine: ${task.recurrenceCount} ${task.recurrenceCount === 1 ? "check-in" : "check-ins"}`
+              : ""}
             {overdue && (
               <> · Overdue from {format(parseISO(task.date), "MMM d")}</>
             )}
@@ -1282,7 +1382,7 @@ function Board({
           <div>
             <h2 className="text-sm font-semibold">Anytime this week</h2>
             <p className="text-xs text-muted-foreground">
-              Flexible tasks and weekly routines.
+              Flexible tasks and weekly routines can be done on any day.
             </p>
           </div>
           <ProgressRing
@@ -1295,6 +1395,9 @@ function Board({
           <div className="mt-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
               Weekly routines
+            </p>
+            <p className="mb-2 text-xs leading-5 text-muted-foreground">
+              Each circle is one check-in. Every target starts fresh on Monday.
             </p>
             <div className="space-y-2">
               {recurringAnytime.map((recurrence) => (
@@ -1866,10 +1969,13 @@ function EditForm({
         </div>
         {anytime ? (
           <div className="mt-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
-              Repeat this week
+            <p className="text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
+              Weekly routine
             </p>
-            <div className="choice-grid">
+            <p className="mt-1 mb-2 text-xs leading-5 text-muted-foreground">
+              Choose your check-ins for each week. The target resets every Monday.
+            </p>
+            <div className="choice-grid" aria-label="Weekly check-in target">
               <button
                 type="button"
                 onClick={() => setRecurrenceCount("0")}
@@ -1879,7 +1985,7 @@ function EditForm({
                     : "choice-chip"
                 }
               >
-                No repeat
+                One-off task
               </button>
               {Array.from({ length: 7 }, (_, index) => index + 1).map(
                 (count) => (
@@ -1893,7 +1999,7 @@ function EditForm({
                         : "choice-chip"
                     }
                   >
-                    {count}x
+                    {count} {count === 1 ? "check-in" : "check-ins"}
                   </button>
                 ),
               )}
