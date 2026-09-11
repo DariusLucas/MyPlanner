@@ -15,6 +15,7 @@ for (const alias of [
   ["@/src/app/today/actions", "./src/actions/tasks.ts"],
   ["@/src/app/dashboard-actions", "./src/actions/thoughts.ts"],
   ["@/src/app/content-actions", "./src/actions/milestones.ts"],
+  ["@/src/app/category-actions", "./src/actions/categories.ts"],
 ]) {
   assert.ok(vite.includes(alias[0]), `Missing Vite alias for ${alias[0]}`);
   assert.ok(vite.includes(alias[1]), `Missing mobile replacement ${alias[1]}`);
@@ -34,7 +35,7 @@ for (const rpc of ["create_task", "update_planned_task", "set_task_completed", "
 const app = read("mobile/src/mobile-app.tsx");
 const mobileData = read("mobile/src/data.ts");
 const sharedWeek = read("src/components/week-view.tsx");
-for (const route of ["/", "/week", "/today", "/career", "/content", "/progress"]) {
+for (const route of ["/", "/week", "/today", "/category/", "/progress"]) {
   assert.ok(app.includes(`\"${route}\"`), `Missing mobile route ${route}`);
 }
 assert.match(app, /kind:\s*["']settings["']/);
@@ -47,6 +48,7 @@ assert.match(app, /postgres_changes/);
 assert.doesNotMatch(app, /initializeDatabase/);
 assert.match(app, /userEmail=\{session\.user\.email\}/, "Mobile sidebar must show the authenticated account");
 assert.match(app, /screen\?\.href === route\.href/, "Mobile routes must not animate stale screen data");
+assert.match(app, /CategoryProvider categories=\{categories\}/, "Android shares user categories with navigation and task forms");
 assert.match(app, /MobilePageSkeleton/, "Mobile routes must render page skeletons while loading");
 assert.match(mobileData, /buildWeekCompletion/, "Mobile Today loads the shared weekly completion contract");
 assert.match(mobileData, /weekResult/, "Mobile Today queries current-week task totals");

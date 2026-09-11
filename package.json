@@ -24,6 +24,7 @@
     "test:recurrence": "tsx scripts/test-recurrence.ts",
     "test:dashboard": "tsx scripts/test-dashboard.ts",
     "test:focus-areas": "tsx scripts/test-focus-areas.ts",
+    "test:categories": "tsx scripts/test-categories.ts",
     "test:progress": "tsx scripts/test-progress.ts",
     "test:week-planning": "tsx scripts/test-week-planning.ts",
     "test:responsive": "tsx scripts/test-responsive.ts",

@@ -2322,6 +2322,22 @@ Phase A1 — Email/Password and Google Authentication
 IN PROGRESS — application and hosted provider setup verified; live account checks pending
 ```
 
+## Approved Category Generalization — 2026-09-11
+
+The user approved replacing the fixed Career, Content, and Personal model with
+user-defined categories. New accounts start with Today, This Week, and Progress;
+each category the user creates receives its own task and milestone page. The
+navigation must remain bounded on desktop and use a single Spaces launcher on
+mobile so the interface does not become crowded.
+
+```text
+Phase C1 — User-Defined Categories
+COMPLETED
+```
+
+Existing category history must be migrated, not deleted. Removing a category
+from the visible planner must preserve its historical task and progress data.
+
 ---
 
 # 74. NEW PHASE 2R — PRODUCT SIMPLIFICATION REFACTOR
