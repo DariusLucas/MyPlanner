@@ -47,11 +47,51 @@ export type Database = {
         Relationships: [
         ]
       }
+      categories: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          icon: string
+          color: string
+          position: number
+          archived_at: string | null
+          revision: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          icon?: string
+          color?: string
+          position?: number
+          archived_at?: string | null
+          revision?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          icon?: string
+          color?: string
+          position?: number
+          archived_at?: string | null
+          revision?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       content_milestones: {
         Row: {
           id: string
           user_id: string
           category: string
+          category_id: string | null
           label: string
           type: string
           target_value: number | null
@@ -64,6 +104,7 @@ export type Database = {
           id?: string
           user_id: string
           category?: string
+          category_id?: string | null
           label: string
           type?: string
           target_value?: number | null
@@ -76,6 +117,7 @@ export type Database = {
           id?: string
           user_id?: string
           category?: string
+          category_id?: string | null
           label?: string
           type?: string
           target_value?: number | null
@@ -324,6 +366,7 @@ export type Database = {
           title: string
           description: string | null
           category: string
+          category_id: string | null
           priority: string
           estimated_minutes: number | null
           count_per_week: number
@@ -339,6 +382,7 @@ export type Database = {
           title: string
           description?: string | null
           category: string
+          category_id?: string | null
           priority?: string
           estimated_minutes?: number | null
           count_per_week: number
@@ -354,6 +398,7 @@ export type Database = {
           title?: string
           description?: string | null
           category?: string
+          category_id?: string | null
           priority?: string
           estimated_minutes?: number | null
           count_per_week?: number
@@ -373,6 +418,7 @@ export type Database = {
           title: string
           description: string | null
           category: string
+          category_id: string | null
           goal_id: string | null
           sprint_id: string | null
           sprint_week_id: string | null
@@ -396,6 +442,7 @@ export type Database = {
           title: string
           description?: string | null
           category: string
+          category_id?: string | null
           goal_id?: string | null
           sprint_id?: string | null
           sprint_week_id?: string | null
@@ -419,6 +466,7 @@ export type Database = {
           title?: string
           description?: string | null
           category?: string
+          category_id?: string | null
           goal_id?: string | null
           sprint_id?: string | null
           sprint_week_id?: string | null
@@ -517,6 +565,22 @@ export type Database = {
     }
     Views: { [_ in never]: never }
     Functions: {
+      assign_recurrence_category: {
+        Args: {
+          p_recurrence_id: string
+          p_expected_revision: number
+          p_category_id: string
+        }
+        Returns: Json
+      }
+      assign_task_category: {
+        Args: {
+          p_task_id: string
+          p_expected_revision: number
+          p_category_id: string
+        }
+        Returns: Json
+      }
       complete_task: {
         Args: {
           p_task_id: string

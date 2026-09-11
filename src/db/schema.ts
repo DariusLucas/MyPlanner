@@ -87,11 +87,24 @@ export const dailyFocus = sqliteTable(
   }),
 );
 
+export const categories = sqliteTable("categories", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  icon: text("icon").notNull().default("target"),
+  position: integer("position").notNull().default(0),
+  archivedAt: text("archived_at"),
+  revision: integer("revision").notNull().default(1),
+  ...timestamps,
+}, (table) => ({
+  position: index("categories_position_idx").on(table.archivedAt, table.position),
+}));
+
 export const taskRecurrences = sqliteTable("task_recurrences", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title").notNull(),
   description: text("description"),
   category: text("category", { enum: ["career", "content", "other"] }).notNull(),
+  categoryId: text("category_id").references(() => categories.id),
   priority: text("priority", { enum: ["high", "normal", "low"] }).notNull().default("normal"),
   estimatedMinutes: integer("estimated_minutes"),
   countPerWeek: integer("count_per_week").notNull(),
@@ -105,6 +118,7 @@ export const tasks = sqliteTable("tasks", {
   title: text("title").notNull(),
   description: text("description"),
   category: text("category", { enum: ["career", "content", "other"] }).notNull(),
+  categoryId: text("category_id").references(() => categories.id),
   goalId: integer("goal_id").references(() => goals.id, { onDelete: "set null" }),
   sprintId: integer("sprint_id").references(() => sprints.id, { onDelete: "set null" }),
   sprintWeekId: integer("sprint_week_id").references(() => sprintWeeks.id, { onDelete: "set null" }),
@@ -132,10 +146,9 @@ export const tasks = sqliteTable("tasks", {
 export const contentMilestones = sqliteTable("content_milestones", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   category: text("category", { enum: ["career", "content"] }).notNull().default("content"),
+  categoryId: text("category_id").references(() => categories.id),
   label: text("label").notNull(),
-  type: text("type", { enum: ["views", "likes", "followers", "applications", "interviews", "offers", "custom"] })
-    .notNull()
-    .default("custom"),
+  type: text("type").notNull().default("custom"),
   targetValue: integer("target_value"),
   achievedAt: text("achieved_at"),
   ...timestamps,
