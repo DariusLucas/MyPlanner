@@ -1,9 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  BriefcaseBusiness,
   CalendarDays,
   ChartSpline,
-  Clapperboard,
   House,
   UserRound,
 } from "lucide-react";
@@ -18,11 +16,9 @@ export type NavigationItem = {
 export const primaryNavigation: NavigationItem[] = [
   { label: "Today", href: "/", icon: House },
   { label: "This Week", href: "/week", icon: CalendarDays },
-  { label: "Career", href: "/career", icon: BriefcaseBusiness },
-  { label: "Content", href: "/content", icon: Clapperboard },
   { label: "Progress", href: "/progress", icon: ChartSpline },
 ];
 
 export const utilityNavigation: NavigationItem[] = [
-  { label: "Profile", href: "/settings", icon: UserRound },
+  { label: "Account", href: "/account", icon: UserRound },
 ];

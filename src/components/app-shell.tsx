@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { LogOut, PanelLeftClose, PanelLeftOpen, Plane, UserRound } from "lucide-react";
+import { LogOut, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plane, Plus, Shapes, X } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { primaryNavigation, utilityNavigation, type NavigationItem } from "@/src/lib/navigation";
 import { ThemeToggle } from "./theme-toggle";
 import { useDialogContract } from "./interaction-primitives";
+import { useCategories } from "./category-context";
+import { CategoryDialog } from "./category-dialog";
+import { categoryIcon, type PlannerCategory } from "@/src/lib/categories";
 
 function NavigationGroup({ label, items, onNavigate, pendingHref }: { label?: string; items: NavigationItem[]; onNavigate: (href: string) => void; pendingHref: string | null }) {
   const pathname = usePathname();
@@ -40,21 +43,72 @@ function NavigationGroup({ label, items, onNavigate, pendingHref }: { label?: st
 
 export function AppShell({ children, signOutAction, userEmail }: { children: React.ReactNode; signOutAction?: () => Promise<void>; userEmail?: string | null }) {
   const pathname = usePathname();
+  const categories = useCategories();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [signOutOpen, setSignOutOpen] = useState(false);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<PlannerCategory | null>(null);
+  const [categoryCanScrollDown, setCategoryCanScrollDown] = useState(false);
+  const categoryListRef = useRef<HTMLDivElement>(null);
+  const [spacesOpen, setSpacesOpen] = useState(false);
+  const [spacesClosing, setSpacesClosing] = useState(false);
+  const spacesCloseTimerRef = useRef<number | null>(null);
   const signOutDialogRef = useDialogContract<HTMLElement>({ active: signOutOpen, onClose: () => setSignOutOpen(false) });
+  const closeSpacesAnimated = () => {
+    if (!spacesOpen || spacesClosing) return;
+    setSpacesClosing(true);
+    spacesCloseTimerRef.current = window.setTimeout(() => {
+      setSpacesOpen(false);
+      setSpacesClosing(false);
+      spacesCloseTimerRef.current = null;
+    }, 220);
+  };
+  const openSpaces = () => {
+    if (spacesCloseTimerRef.current !== null) {
+      window.clearTimeout(spacesCloseTimerRef.current);
+      spacesCloseTimerRef.current = null;
+    }
+    setSpacesClosing(false);
+    setSpacesOpen(true);
+  };
+  const spacesDialogRef = useDialogContract<HTMLElement>({ active: spacesOpen, onClose: closeSpacesAnimated });
 
   useEffect(() => {
     setPendingHref(null);
   }, [pathname]);
+
+  useEffect(() => () => {
+    if (spacesCloseTimerRef.current !== null) window.clearTimeout(spacesCloseTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    const list = categoryListRef.current;
+    if (!list) return;
+    const updateScrollCue = () => {
+      const maxScroll = list.scrollHeight - list.clientHeight;
+      setCategoryCanScrollDown(maxScroll - list.scrollTop > 4);
+    };
+    updateScrollCue();
+    list.addEventListener("scroll", updateScrollCue, { passive: true });
+    const observer = new ResizeObserver(updateScrollCue);
+    observer.observe(list);
+    return () => { list.removeEventListener("scroll", updateScrollCue); observer.disconnect(); };
+  }, [categories.length]);
 
   const navigate = (href: string) => {
     setPendingHref(href === pathname ? null : href);
   };
 
   const visualPathname = pendingHref ?? pathname;
-  const mobileNavigation = [...primaryNavigation, ...utilityNavigation];
+  const mobilePagesActive = spacesOpen || spacesClosing;
+  const categoryNavigation: NavigationItem[] = categories.map((category) => ({
+    label: category.name,
+    href: `/category/${category.id}`,
+    icon: categoryIcon(category.icon),
+  }));
+  const activeCategory = categories.find((category) => visualPathname === `/category/${category.id}`);
+  const SpacesIcon = activeCategory ? categoryIcon(activeCategory.icon) : Shapes;
 
   if (pathname === "/login") return <>{children}</>;
 
@@ -69,6 +123,16 @@ export function AppShell({ children, signOutAction, userEmail }: { children: Rea
 
         <div className="sidebar-navigation">
           <NavigationGroup items={primaryNavigation} onNavigate={navigate} pendingHref={pendingHref} />
+          <div className="sidebar-category-group mt-5 border-t border-border pt-4">
+            <div className="mb-2 flex items-center justify-between gap-2 px-3">
+              <p className="nav-group-label text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Your pages</p>
+              <button type="button" className="sidebar-category-add-icon" onClick={() => setCategoryDialogOpen(true)} aria-label="Create category" title="Create category"><Plus size={14} /></button>
+            </div>
+            <div className="sidebar-category-scroll">
+              {categoryNavigation.length ? <div className="sidebar-category-list-wrap"><div className={`sidebar-scroll-cue ${categoryCanScrollDown ? "sidebar-scroll-cue-visible" : ""}`} aria-hidden="true" /><div ref={categoryListRef} className="space-y-1">{categories.map((category) => { const Icon = categoryIcon(category.icon); const href = `/category/${category.id}`; const active = visualPathname.startsWith(href); return <div key={category.id} className={`category-nav-row nav-item ${active ? "category-nav-row-active" : ""}`}><Link href={href as Route} prefetch onClick={() => navigate(href)} title={category.name} className="category-nav-link flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Icon size={17} strokeWidth={1.65} /><span className="nav-label min-w-0 flex-1 truncate whitespace-nowrap">{category.name}</span></Link><button type="button" className="category-nav-menu-button" aria-label={`Edit ${category.name}`} title={`Edit ${category.name}`} onClick={() => setEditingCategory(category)}><MoreHorizontal size={16} /></button></div>; })}</div></div> : <button type="button" onClick={() => setCategoryDialogOpen(true)} className="sidebar-category-empty"><span className="grid size-8 place-items-center rounded-xl bg-accent text-accent-foreground"><Plus size={15} /></span><span><strong>Add a category</strong><small>Gym, work, study…</small></span></button>}
+            </div>
+            {categoryNavigation.length ? <button type="button" onClick={() => setCategoryDialogOpen(true)} className="sidebar-new-category"><Plus size={15} /><span className="nav-label">New category</span></button> : null}
+          </div>
         </div>
 
         <div className="sidebar-footer mt-auto">
@@ -109,10 +173,9 @@ export function AppShell({ children, signOutAction, userEmail }: { children: Rea
 
       <nav className="mobile-bottom-nav lg:hidden" aria-label="Primary navigation">
         <div className="mobile-bottom-nav-track">
-          {mobileNavigation.map(({ label, href, icon: Icon }) => {
-            const active = href === "/" ? visualPathname === "/" : visualPathname.startsWith(href);
-            const MobileIcon = href === "/settings" ? UserRound : Icon;
-            const mobileLabel = href === "/week" ? "Week" : label;
+          {primaryNavigation.map(({ label, href, icon: Icon }) => {
+            const active = !mobilePagesActive && (href === "/" ? visualPathname === "/" : visualPathname.startsWith(href));
+            const mobileLabel = href === "/week" ? "This Week" : label;
             return (
               <Link
                 key={href}
@@ -123,15 +186,38 @@ export function AppShell({ children, signOutAction, userEmail }: { children: Rea
                 title={label}
                 className="mobile-bottom-nav-item"
                 data-active={active}
-                onClick={() => navigate(href)}
+                onClick={() => { closeSpacesAnimated(); navigate(href); }}
               >
-                <MobileIcon size={19} strokeWidth={active ? 2 : 1.65} />
+                <Icon size={19} strokeWidth={active ? 2 : 1.65} />
                 <span>{mobileLabel}</span>
               </Link>
             );
           })}
+          <button type="button" aria-current={activeCategory && !mobilePagesActive ? "page" : undefined} aria-label="Open Pages" title="Pages" className="mobile-bottom-nav-item" data-active={Boolean(activeCategory || mobilePagesActive)} onClick={openSpaces}>
+            <SpacesIcon size={19} strokeWidth={mobilePagesActive || activeCategory ? 2 : 1.65} />
+            <span>{activeCategory?.name ?? "Pages"}</span>
+          </button>
+          {utilityNavigation.map(({ label, href, icon: Icon }) => {
+            const active = !mobilePagesActive && visualPathname.startsWith(href);
+            return <Link key={href} href={href as Route} prefetch aria-current={active ? "page" : undefined} aria-label={label} title={label} className="mobile-bottom-nav-item" data-active={active} onClick={() => { closeSpacesAnimated(); navigate(href); }}><Icon size={19} strokeWidth={active ? 2 : 1.65} /><span>{label}</span></Link>;
+          })}
         </div>
       </nav>
+
+      {(spacesOpen || spacesClosing) && (
+        <div className={`modal-backdrop mobile-spaces-backdrop ${spacesClosing ? "mobile-spaces-backdrop-closing" : ""}`} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && closeSpacesAnimated()}>
+          <section ref={spacesDialogRef} tabIndex={-1} className={`mobile-spaces-sheet ${spacesClosing ? "mobile-spaces-sheet-closing" : ""}`} role="dialog" aria-modal="true" aria-labelledby="spaces-title">
+            <div className="flex items-center justify-between gap-3"><div><p className="dashboard-eyebrow">Navigate</p><h2 id="spaces-title" className="mt-1 text-xl font-semibold">Pages</h2></div><button type="button" className="milestone-icon-button" onClick={closeSpacesAnimated} aria-label="Close Pages"><X size={17} /></button></div>
+            <div className="mobile-spaces-list">
+              {categories.length ? categories.map((category) => { const Icon = categoryIcon(category.icon); const active = category.id === activeCategory?.id; return <Link key={category.id} href={`/category/${category.id}` as Route} className="mobile-space-row" data-active={active} onClick={() => { closeSpacesAnimated(); navigate(`/category/${category.id}`); }}><span><Icon size={19} /></span><strong>{category.name}</strong></Link>; }) : <div className="mobile-spaces-empty"><Shapes size={22} /><p>No categories yet.</p><small>Create one for any part of life you want to move forward.</small></div>}
+            </div>
+            <button type="button" className="premium-primary-button w-full justify-center" onClick={() => { closeSpacesAnimated(); setCategoryDialogOpen(true); }}><Plus size={16} /> New category</button>
+          </section>
+        </div>
+      )}
+
+      <CategoryDialog open={categoryDialogOpen} onClose={() => setCategoryDialogOpen(false)} />
+      <CategoryDialog open={Boolean(editingCategory)} category={editingCategory ?? undefined} onClose={() => setEditingCategory(null)} onDeleted={() => setEditingCategory(null)} />
 
       {signOutOpen && signOutAction && (
         <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setSignOutOpen(false)}>
