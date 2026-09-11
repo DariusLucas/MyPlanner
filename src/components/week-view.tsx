@@ -484,6 +484,7 @@ export function TaskComposer({
   const anytime = placement.startsWith("anytime:");
   const dialogRef = useDialogContract<HTMLFormElement>({
     blocked: pending || closing,
+    dismissOnHistoryBack: true,
     lockScroll: false,
     onClose: close,
   });
@@ -526,6 +527,9 @@ export function TaskComposer({
     if (created) close();
   }
   if (!mounted) return null;
+  const shouldAutoFocusTitle = !window.matchMedia(
+    "(max-width: 1023px) and (pointer: coarse)",
+  ).matches;
 
   return createPortal(
     <div
@@ -539,14 +543,14 @@ export function TaskComposer({
         ref={dialogRef}
         tabIndex={-1}
         action={submit}
-        className="task-composer"
+        className="task-composer task-composer-add"
         aria-busy={pending}
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-task-title"
         aria-describedby="add-task-description"
       >
-        <div className="flex items-center justify-between">
+        <div className="task-composer-header flex items-center justify-between">
           <div>
             <h2 id="add-task-title" className="font-semibold">
               Add a task
@@ -559,147 +563,151 @@ export function TaskComposer({
             <X size={16} />
           </button>
         </div>
-        {pending && <div role="status" className="task-save-status"><LoaderCircle size={14} className="animate-spin" /> Saving your task…</div>}
-        <input
-          name="title"
-          className={`${inputClass} mt-4`}
-          placeholder="What needs doing?"
-          autoFocus
-          required
-        />
-        <p className="mt-4 mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
-          When
-        </p>
-        <div className="choice-grid">
-          <button
-            type="button"
-            onClick={() => setPlacement(`anytime:${weekStart}`)}
-            className={
-              anytime ? "choice-chip choice-chip-active" : "choice-chip"
-            }
-          >
-            Anytime
-          </button>
-          {days.map((date) => (
+        <div className="task-composer-fields">
+          {pending && <div role="status" className="task-save-status"><LoaderCircle size={14} className="animate-spin" /> Saving your task…</div>}
+          <input
+            name="title"
+            className={`${inputClass} mt-4`}
+            placeholder="What needs doing?"
+            autoFocus={shouldAutoFocusTitle}
+            required
+          />
+          <p className="mt-4 mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
+            When
+          </p>
+          <div className="choice-grid">
             <button
               type="button"
-              key={date}
-              onClick={() => {
-                setPlacement(date);
-                setRecurrenceCount("0");
-                setShowRoutine(false);
-              }}
+              onClick={() => setPlacement(`anytime:${weekStart}`)}
               className={
-                placement === date
-                  ? "choice-chip choice-chip-active"
-                  : "choice-chip"
+                anytime ? "choice-chip choice-chip-active" : "choice-chip"
               }
             >
-              {format(parseISO(date), "EEE d")}
+              Anytime
             </button>
-          ))}
-        </div>
-        {anytime && (
-          <div className="mt-4">
-            {!showRoutine ? (
+            {days.map((date) => (
               <button
                 type="button"
-                aria-expanded="false"
+                key={date}
                 onClick={() => {
-                  setShowRoutine(true);
-                  setRecurrenceCount("1");
+                  setPlacement(date);
+                  setRecurrenceCount("0");
+                  setShowRoutine(false);
                 }}
-                className="routine-disclosure-button"
+                className={
+                  placement === date
+                    ? "choice-chip choice-chip-active"
+                    : "choice-chip"
+                }
               >
-                <CalendarDays size={15} /> Make this a weekly routine
+                {format(parseISO(date), "EEE d")}
               </button>
-            ) : (
-              <div className="routine-target-panel">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
-                      Weekly routine
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      Choose your check-ins for each week. The target resets every Monday.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowRoutine(false);
-                      setRecurrenceCount("0");
-                    }}
-                    className="routine-one-off-button"
-                  >
-                    Keep one-off
-                  </button>
-                </div>
-                <div className="choice-grid mt-2" aria-label="Weekly check-in target">
-                  {Array.from({ length: 7 }, (_, index) => index + 1).map(
-                    (count) => (
-                      <button
-                        type="button"
-                        key={count}
-                        onClick={() => setRecurrenceCount(String(count))}
-                        className={
-                          recurrenceCount === String(count)
-                            ? "choice-chip choice-chip-active"
-                            : "choice-chip"
-                        }
-                      >
-                        {count} {count === 1 ? "check-in" : "check-ins"}
-                      </button>
-                    ),
-                  )}
-                </div>
-              </div>
-            )}
+            ))}
           </div>
-        )}
-        {lockCategory ? (
-          <p className="mt-4 rounded-xl border border-border bg-muted/45 px-3 py-2.5 text-sm text-muted-foreground">
-            Adding to <span className="font-semibold text-foreground">{categoryLabels[category]}</span>
-          </p>
-        ) : <><p className="mt-4 mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
-          Category
-        </p>
-        <div className="choice-grid choice-grid-compact">
-          {categories.map((value) => (
-            <button
-              type="button"
-              key={value}
-              onClick={() => setCategory(value)}
-              className={
-                category === value
-                  ? "choice-chip choice-chip-active"
-                  : "choice-chip"
-              }
-            >
-              {categoryLabels[value]}
-            </button>
-          ))}
-        </div></>}
-        <input
-          type="hidden"
-          name="date"
-          value={anytime ? weekStart : placement}
-        />
-        <input
-          type="hidden"
-          name="anytimeWeekStart"
-          value={anytime ? weekStart : ""}
-        />
-        <input
-          type="hidden"
-          name="recurrenceCount"
-          value={anytime ? recurrenceCount : "0"}
-        />
-        <input type="hidden" name="category" value={category} />
-        <input type="hidden" name="priority" value="normal" />
-        <input type="hidden" name="description" value="" />
-        <input type="hidden" name="estimatedMinutes" value="" />
-        <div className="mt-4 flex justify-end gap-2">
+          {anytime && (
+            <div className="mt-4">
+              {!showRoutine ? (
+                <button
+                  type="button"
+                  aria-expanded="false"
+                  onClick={() => {
+                    setShowRoutine(true);
+                    setRecurrenceCount("1");
+                  }}
+                  className="routine-disclosure-button"
+                >
+                  <CalendarDays size={15} /> Make this a weekly routine
+                </button>
+              ) : (
+                <div className="routine-target-panel">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
+                        Weekly routine
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                        Choose your check-ins for each week. The target resets every Monday.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowRoutine(false);
+                        setRecurrenceCount("0");
+                      }}
+                      className="routine-one-off-button"
+                    >
+                      Keep one-off
+                    </button>
+                  </div>
+                  <div className="choice-grid mt-2" aria-label="Weekly check-in target">
+                    {Array.from({ length: 7 }, (_, index) => index + 1).map(
+                      (count) => (
+                        <button
+                          type="button"
+                          key={count}
+                          onClick={() => setRecurrenceCount(String(count))}
+                          className={
+                            recurrenceCount === String(count)
+                              ? "choice-chip choice-chip-active"
+                              : "choice-chip"
+                          }
+                        >
+                          {count} {count === 1 ? "check-in" : "check-ins"}
+                        </button>
+                      ),
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {lockCategory ? (
+            <p className="mt-4 rounded-xl border border-border bg-muted/45 px-3 py-2.5 text-sm text-muted-foreground">
+              Adding to <span className="font-semibold text-foreground">{categoryLabels[category]}</span>
+            </p>
+          ) : <>
+            <p className="mt-4 mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
+              Category
+            </p>
+            <div className="choice-grid choice-grid-compact">
+              {categories.map((value) => (
+                <button
+                  type="button"
+                  key={value}
+                  onClick={() => setCategory(value)}
+                  className={
+                    category === value
+                      ? "choice-chip choice-chip-active"
+                      : "choice-chip"
+                  }
+                >
+                  {categoryLabels[value]}
+                </button>
+              ))}
+            </div>
+          </>}
+          <input
+            type="hidden"
+            name="date"
+            value={anytime ? weekStart : placement}
+          />
+          <input
+            type="hidden"
+            name="anytimeWeekStart"
+            value={anytime ? weekStart : ""}
+          />
+          <input
+            type="hidden"
+            name="recurrenceCount"
+            value={anytime ? recurrenceCount : "0"}
+          />
+          <input type="hidden" name="category" value={category} />
+          <input type="hidden" name="priority" value="normal" />
+          <input type="hidden" name="description" value="" />
+          <input type="hidden" name="estimatedMinutes" value="" />
+        </div>
+        <div className="task-composer-actions mt-4 flex justify-end gap-2">
           <button type="button" disabled={pending} className={quietButton} onClick={close}>
             Cancel
           </button>

@@ -1,31 +1,24 @@
 import { createClient } from "@supabase/supabase-js";
-import { createInterface } from "node:readline/promises";
-import { stdin as input, stdout as output } from "node:process";
 import { getLocalSupabaseEnvironment } from "./supabase-env";
 import type { Database } from "../src/lib/supabase/database.types";
 
 async function main() {
   const { publishableKey, supabaseUrl } = getLocalSupabaseEnvironment();
-  const prompt = createInterface({ input, output });
   const client = createClient<Database>(supabaseUrl, publishableKey, {
     auth: { persistSession: false },
   });
+  const email = process.env.PLANNER_AUTH_TEST_EMAIL?.trim().toLowerCase();
+  const password = process.env.PLANNER_AUTH_TEST_PASSWORD;
+  if (!email || !password) {
+    throw new Error("Set PLANNER_AUTH_TEST_EMAIL and PLANNER_AUTH_TEST_PASSWORD locally before running this check.");
+  }
 
   try {
-    const email = (await prompt.question("Email for your private planner: ")).trim().toLowerCase();
     if (!email.includes("@")) throw new Error("Enter a valid email address.");
-
-    const request = await client.auth.signInWithOtp({
+    const verification = await client.auth.signInWithPassword({
       email,
-      options: { shouldCreateUser: true },
+      password,
     });
-    if (request.error) throw request.error;
-
-    console.log(
-      "Check your email for the one-time code. If it contains only a sign-in link, configure custom SMTP and the {{ .Token }} template described in SUPABASE.md.",
-    );
-    const token = (await prompt.question("One-time code: ")).trim();
-    const verification = await client.auth.verifyOtp({ email, token, type: "email" });
     if (verification.error) throw verification.error;
     const user = verification.data.user;
     if (!user) throw new Error("Authentication succeeded without a user session.");
@@ -40,10 +33,9 @@ async function main() {
       throw new Error("Authenticated RLS settings check returned unexpected data.");
     }
 
-    await client.auth.signOut();
-    console.log("Email OTP, authenticated session, and per-user RLS check passed.");
+    console.log("Email/password session and per-user RLS check passed.");
   } finally {
-    prompt.close();
+    await client.auth.signOut();
   }
 }
 

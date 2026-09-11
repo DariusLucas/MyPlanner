@@ -25,11 +25,13 @@ const focusableSelector = [
 export function useDialogContract<T extends HTMLElement = HTMLElement>({
   active = true,
   blocked = false,
+  dismissOnHistoryBack = false,
   lockScroll = true,
   onClose,
 }: {
   active?: boolean;
   blocked?: boolean;
+  dismissOnHistoryBack?: boolean;
   lockScroll?: boolean;
   onClose: () => void;
 }): RefObject<T | null> {
@@ -38,6 +40,8 @@ export function useDialogContract<T extends HTMLElement = HTMLElement>({
   const wasActiveRef = useRef(false);
   const blockedRef = useRef(blocked);
   const closeRef = useRef(onClose);
+  const historyMarkerRef = useRef<string | null>(null);
+  const historyCleanupTimerRef = useRef<number | null>(null);
 
   blockedRef.current = blocked;
   closeRef.current = onClose;
@@ -50,9 +54,33 @@ export function useDialogContract<T extends HTMLElement = HTMLElement>({
 
   useEffect(() => {
     if (!active) return;
+    if (historyCleanupTimerRef.current !== null) {
+      window.clearTimeout(historyCleanupTimerRef.current);
+      historyCleanupTimerRef.current = null;
+    }
+    if (dismissOnHistoryBack && !historyMarkerRef.current) {
+      historyMarkerRef.current = `myplanner-dialog-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+    const historyMarker = dismissOnHistoryBack ? historyMarkerRef.current : null;
+    let ownsHistoryEntry = false;
     const currentDialog = () => dialogRef.current ?? [...document.querySelectorAll<HTMLElement>("[role='dialog'][aria-modal='true']")].at(-1) ?? null;
     const previousOverflow = document.body.style.overflow;
     if (lockScroll) document.body.style.overflow = "hidden";
+
+    if (historyMarker) {
+      const previousState = window.history.state;
+      if (previousState?.__myPlannerDialog !== historyMarker) {
+        const state = previousState && typeof previousState === "object"
+          ? previousState
+          : {};
+        window.history.pushState(
+          { ...state, __myPlannerDialog: historyMarker },
+          "",
+          window.location.href,
+        );
+      }
+      ownsHistoryEntry = true;
+    }
 
     const focusFrame = window.requestAnimationFrame(() => {
       const dialog = currentDialog();
@@ -90,15 +118,37 @@ export function useDialogContract<T extends HTMLElement = HTMLElement>({
       }
     }
 
+    function handlePopState() {
+      if (!historyMarker || !ownsHistoryEntry) return;
+      if (window.history.state?.__myPlannerDialog === historyMarker) return;
+      if (blockedRef.current) {
+        window.history.forward();
+        return;
+      }
+      ownsHistoryEntry = false;
+      closeRef.current();
+    }
+
     document.addEventListener("keydown", handleKeyDown);
+    if (historyMarker) window.addEventListener("popstate", handlePopState);
     return () => {
       window.cancelAnimationFrame(focusFrame);
       document.removeEventListener("keydown", handleKeyDown);
+      if (historyMarker) window.removeEventListener("popstate", handlePopState);
+      if (historyMarker && ownsHistoryEntry && window.history.state?.__myPlannerDialog === historyMarker) {
+        ownsHistoryEntry = false;
+        historyCleanupTimerRef.current = window.setTimeout(() => {
+          historyCleanupTimerRef.current = null;
+          if (window.history.state?.__myPlannerDialog === historyMarker) {
+            window.history.back();
+          }
+        }, 0);
+      }
       if (lockScroll) document.body.style.overflow = previousOverflow;
       const opener = openerRef.current;
       window.requestAnimationFrame(() => opener?.isConnected && opener.focus());
     };
-  }, [active, lockScroll]);
+  }, [active, dismissOnHistoryBack, lockScroll]);
 
   return dialogRef;
 }

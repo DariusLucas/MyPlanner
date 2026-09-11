@@ -23,7 +23,7 @@ export function SettingsAccountCard({ email, signOutAction }: { email: string; s
           <p className="mt-1 truncate text-sm font-semibold">{email}</p>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} /> Signed in</span>
-            <span className="inline-flex items-center gap-1.5"><Mail size={14} /> Email one-time code</span>
+            <span className="inline-flex items-center gap-1.5"><Mail size={14} /> Email/password or Google</span>
           </div>
         </div>
         <button type="button" disabled={pending} onClick={() => setConfirming(true)} className="settings-sign-out-button"><LogOut size={15} /> {pending ? "Signing out…" : "Sign out"}</button>

@@ -38,8 +38,17 @@ assert.match(planner, /p_expected_revision/, "planner mutations pass optimistic 
 assert.match(planner, /changed in another session/, "stale writes produce a visible conflict message");
 
 const login = read("src/app/login/login-form.tsx");
-assert.match(login, /requestEmailOtp/, "login requests an email code");
-assert.match(login, /verifyEmailOtp/, "login verifies an email code");
+assert.match(login, /signInWithEmailPassword/, "login accepts email and password");
+assert.match(login, /signUpWithEmailPassword/, "login supports password account creation");
+assert.match(login, /signInWithGoogle/, "login supports Google OAuth");
+assert.match(login, /forgot-password/, "existing passwordless users can create a password");
+
+const authCallback = read("src/app/auth/callback/route.ts");
+assert.match(authCallback, /exchangeCodeForSession/, "OAuth and email callbacks exchange their PKCE code");
+assert.match(authCallback, /app_settings/, "newly authenticated accounts initialize planner settings");
+
+const resetPassword = read("src/app/reset-password/reset-password-form.tsx");
+assert.match(resetPassword, /updatePassword/, "password recovery finishes with a new password");
 
 const shell = read("src/components/app-shell.tsx");
 assert.match(shell, /aria-labelledby="sign-out-title"/, "sign out uses an app-native confirmation dialog");

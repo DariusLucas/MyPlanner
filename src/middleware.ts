@@ -24,9 +24,12 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await client.auth.getUser();
   const loginRoute = request.nextUrl.pathname === "/login";
+  const publicAuthRoute = loginRoute
+    || request.nextUrl.pathname === "/forgot-password"
+    || request.nextUrl.pathname === "/auth/callback";
   const pageNavigation = request.method === "GET" || request.method === "HEAD";
 
-  if (!user && !loginRoute && pageNavigation) {
+  if (!user && !publicAuthRoute && pageNavigation) {
     const target = request.nextUrl.clone();
     target.pathname = "/login";
     target.search = "";

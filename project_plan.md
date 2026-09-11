@@ -2310,6 +2310,18 @@ Each phase preserves the approved orange palette, sidebar, typography,
 spacing, themes, rounded component language, and the core loop:
 Plan → Do → Complete → See Progress.
 
+## Approved Authentication Transition — 2026-09-11
+
+The user approved replacing the user-facing email magic-link/one-time-code flow
+with email/password plus Google sign-in on web and Android. Existing Supabase
+users and planner ownership must be preserved through password recovery and
+verified-email identity linking.
+
+```text
+Phase A1 — Email/Password and Google Authentication
+IN PROGRESS — application and hosted provider setup verified; live account checks pending
+```
+
 ---
 
 # 74. NEW PHASE 2R — PRODUCT SIMPLIFICATION REFACTOR

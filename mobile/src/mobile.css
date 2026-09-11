@@ -17,6 +17,7 @@ body {
 
 @supports (padding: env(safe-area-inset-top)) {
   .content-surface {
+    padding-top: calc(1.5rem + env(safe-area-inset-top));
     padding-bottom: calc(6.75rem + env(safe-area-inset-bottom));
   }
 }

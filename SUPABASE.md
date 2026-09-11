@@ -50,28 +50,95 @@ and Android. A personal access token is not required for the current direct
 database workflow. The service-role key remains unconfigured until the
 server-only import/verification phase needs it.
 
-## S2 passwordless Auth check
+## Email/password and Google Auth
 
-The development project has email Auth enabled. Supabase's built-in sender
-currently locks the `Magic link or OTP` template to a magic-link body. To use
-the approved six-digit email-code flow, first configure a custom SMTP provider
-under **Authentication → Emails → SMTP Settings**, then change the template
-body under **Authentication → Emails → Templates → Magic link or OTP** so it
-contains `{{ .Token }}`.
+MyPlanner uses email/password as its dependable default and Google as an
+optional convenience method. The previous magic-link/one-time-code UI is no
+longer used. Existing passwordless users keep the same account and planner data:
+choose **Forgot or need to create a password?**, open the recovery email, and
+set a password. Do not create a second account with another email address.
 
-The Android client also supports the existing magic-link template as a fallback.
-Add `com.myplanner.app://auth/callback` to **Authentication → URL Configuration
-→ Redirect URLs** in the Supabase dashboard. The Android app registers that
-custom URL and exchanges the returned session in-app instead of leaving the
-user in Chrome. This is required for magic-link sign-in; it does not change the
-preferred six-digit code flow once the email template is configured with
-`{{ .Token }}`.
+In each Supabase project, open **Authentication → Sign In / Providers → Email**:
 
-After that dashboard configuration, run `npm run test:supabase-auth`. Enter a
-real email address, copy the received code into the prompt, and confirm that
-the script reports that email OTP, the authenticated session, and the
-per-user RLS check passed. The script creates only that Auth user and its own
-`app_settings` row in the development project.
+- Keep email sign-up enabled.
+- Decide whether new accounts must confirm their email; production should keep
+  confirmation enabled.
+- Set the minimum password length to at least 8 characters.
+- If the plan supports it, enable leaked-password protection.
+
+Under **Authentication → URL Configuration**, set the production Site URL and
+add every callback the app is allowed to use. Development needs:
+
+```text
+http://127.0.0.1:3000/auth/callback
+http://127.0.0.1:3000/auth/callback?next=/reset-password
+http://localhost:3000/auth/callback
+http://localhost:3000/auth/callback?next=/reset-password
+com.myplanner.app://auth/callback
+com.myplanner.app://auth/callback?next=reset-password
+```
+
+Add the equivalent exact HTTPS callback URLs for the deployed web app. The
+Android callback is already registered in `AndroidManifest.xml`; OAuth and
+password recovery return through the same encrypted-session flow.
+
+### Google provider setup
+
+Google requires credentials owned by the Google Cloud account; they must never
+be committed to this repository. In Google Auth Platform:
+
+1. Configure Branding, Audience, and the `openid`, email, and profile scopes.
+2. Create an OAuth client of type **Web application**.
+3. Add the web app origins, including the local origin while testing.
+4. Add Supabase's provider callbacks as authorized redirect URIs:
+
+```text
+https://uychwbumaseqbjkcyiyd.supabase.co/auth/v1/callback
+https://iicwadngdwxgjodxkdnb.supabase.co/auth/v1/callback
+```
+
+The current private setup uses one Google OAuth client whose redirect allowlist
+contains both Supabase project callbacks. Its client ID and secret are stored
+only in each project's **Authentication → Sign In / Providers → Google**
+settings. A public or multi-environment deployment can split these into distinct
+clients later for stronger isolation. Google automatically links to an existing
+Supabase user when it returns the same verified email, so the planner `user_id`
+and its data remain unchanged.
+
+### Resend SMTP values
+
+Both hosted projects currently have custom SMTP enabled, but the development
+project has no sender address and neither project shows a usable SMTP username
+or password. For Resend, use these exact values in **Authentication → Emails →
+SMTP Settings**:
+
+```text
+Host: smtp.resend.com
+Port: 465
+Username: resend
+Password: a Resend API key with sending permission
+Sender email: an address on a verified Resend domain
+Sender name: MyPlanner
+```
+
+`onboarding@resend.dev` is suitable only for initial testing to the Resend
+account owner. For real users, verify a domain in Resend and use a dedicated
+authentication sender such as `no-reply@auth.example.com`. Create the API key
+in Resend and enter it directly in Supabase; never commit it to this repository
+or paste it into source files. After saving, send one password-reset email and
+check Supabase Auth logs before changing the app's email flow further.
+
+### Auth verification
+
+Store a dedicated existing test account only in the local environment:
+
+```text
+PLANNER_AUTH_TEST_EMAIL=...
+PLANNER_AUTH_TEST_PASSWORD=...
+```
+
+Then run `npm run test:supabase-auth`. It signs in with email/password and checks
+the authenticated per-user RLS boundary without printing either credential.
 
 ## Required remote dashboard values
 

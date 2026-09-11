@@ -40,7 +40,9 @@ for (const route of ["/", "/week", "/today", "/career", "/content", "/progress"]
 assert.match(app, /kind:\s*["']settings["']/);
 assert.match(app, /pathname === ["']\/["'] \|\| pathname === ["']\/today["']/, "Mobile /today compatibility route must load Today");
 assert.doesNotMatch(app, /pathname === ["']\/week["'] \|\| pathname === ["']\/today["']/, "Mobile /today must not load This Week");
-assert.match(app, /signInWithOtp|requestEmailOtp/);
+assert.match(app, /signInWithEmailPassword/, "Android accepts email and password");
+assert.match(app, /openMobileGoogleSignIn/, "Android supports Google OAuth");
+assert.match(app, /requestPasswordReset/, "Android lets existing passwordless users create a password");
 assert.match(app, /postgres_changes/);
 assert.doesNotMatch(app, /initializeDatabase/);
 assert.match(app, /userEmail=\{session\.user\.email\}/, "Mobile sidebar must show the authenticated account");
@@ -83,12 +85,19 @@ assert.match(progress, /addEventListener\(["']hashchange["']/);
 
 const androidManifest = read("android/app/src/main/AndroidManifest.xml");
 assert.match(androidManifest, /android\.intent\.category\.LAUNCHER/);
+assert.match(androidManifest, /android:screenOrientation="portrait"/, "Android must stay in portrait orientation");
 assert.match(androidManifest, /android\.intent\.action\.VIEW/);
 assert.match(androidManifest, /android:scheme="com\.myplanner\.app"/);
 assert.match(androidManifest, /android:host="auth"/);
 assert.match(read("mobile/src/supabase.ts"), /exchangeCodeForSession/);
 assert.match(read("mobile/src/supabase.ts"), /setSession/);
+assert.match(read("mobile/src/supabase.ts"), /@capacitor\/browser/);
+assert.match(read("mobile/src/supabase.ts"), /skipBrowserRedirect|automaticRedirect/);
 assert.match(app, /appUrlOpen/);
 assert.match(app, /emailRedirectTo|mobileAuthRedirectTo/);
+
+assert.match(sharedWeek, /dismissOnHistoryBack:\s*true/, "Android back must dismiss the add-task dialog before navigating");
+assert.match(sharedWeek, /\(max-width: 1023px\) and \(pointer: coarse\)/, "Opening add task must not summon the keyboard on a phone");
+assert.match(mobileStyles, /padding-top:\s*calc\(1\.5rem \+ env\(safe-area-inset-top\)\)/, "Android pages must clear the status bar");
 
 console.log("Mobile runtime contract tests passed.");

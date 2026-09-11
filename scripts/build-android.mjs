@@ -17,6 +17,13 @@ const defaultSdk =
       ? path.join(homedir(), "Library", "Android", "sdk")
       : path.join(homedir(), "Android", "Sdk");
 const androidSdk = process.env.ANDROID_HOME ?? process.env.ANDROID_SDK_ROOT ?? defaultSdk;
+const modeIndex = process.argv.indexOf("--mode");
+const mode = modeIndex >= 0 ? process.argv[modeIndex + 1] : "production";
+
+if (mode !== "development" && mode !== "production") {
+  console.error(`Unsupported Android build mode: ${mode}. Use development or production.`);
+  process.exit(1);
+}
 
 if (!javaHome) {
   console.error("Android Studio's bundled JDK was not found and JAVA_HOME is not set.");
@@ -44,7 +51,8 @@ function run(command, args, cwd = workspace) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-run(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "android:sync"]);
+run(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "mobile:build", "--", "--mode", mode]);
+run(process.platform === "win32" ? "npx.cmd" : "npx", ["cap", "sync", "android"]);
 run(process.platform === "win32" ? "gradlew.bat" : "./gradlew", ["assembleDebug"], android);
 
 const builtApk = path.join(android, "app", "build", "outputs", "apk", "debug", "app-debug.apk");

@@ -1,60 +1,62 @@
-# UI/UX Roadmap Complete — Awaiting Next Approved Phase
+# Phase A1 — Email/Password and Google Authentication
 
 ## Status
 
-The approved UI/UX roadmap is complete through Phase U5.
+Application implementation, local verification, hosted provider setup, and the
+live Google account check are complete. The user-controlled password recovery
+check remains before the phase can be closed.
 
-## Completed Objective
+## Objective
 
-MyPlanner now presents the core loop clearly across web and Android:
+Replace the user-facing email magic-link/one-time-code flow with email/password
+and Google sign-in on web and Android without changing planner ownership or
+losing existing Supabase data.
 
-Plan → Do → Complete → See Progress.
+## Required Behavior
 
-Opening the app leads with what remains today, keeps finished work visible,
-makes task creation and completion obvious, explains weekly planning and
-routines in plain language, and keeps Progress directly accessible.
+- Existing passwordless users can set a password through recovery email.
+- New users can create an email/password account and confirm it when required.
+- Returning users can sign in with email/password.
+- Users can continue with Google on web and Android.
+- Google OAuth returns to the web PKCE callback or Android deep link.
+- Google identities with the same verified email resolve to the existing
+  Supabase user and planner data.
+- Password recovery supports web and Android callbacks.
+- Android sessions remain encrypted with the Android Keystore.
 
-## Verified Behavior
+## Implementation Checklist
 
-- Today is the canonical landing experience and leads with actionable work.
-- Remaining, completed, daily, and weekly progress are easy to find.
-- Empty, completed, and overdue states use clear, non-punitive language.
-- Task creation, completion, Undo/Reopen, and selected-day quick-add are
-  consistent across the shared web and Android experience.
-- Career and Content put active and completed work before supporting
-  milestones.
-- Progress leads with completed work and retains accessible filters, charts,
-  heatmap labels, and a visible legend.
-- Profile/Settings exposes clearly labelled Light, Dark, and System theme choices.
-- Desktop, narrow mobile, short viewport, light theme, dark theme, realistic,
-  empty, completed, and overdue states were visually checked.
-- All relevant regression tests, type checking, linting, web build, mobile
-  build, Capacitor sync, and Android debug APK build passed.
-
-## Current Implementation Checklist
-
-- [x] Phase U1 — Today-First Landing Experience
-- [x] Phase U2 — Daily Completion Visualization
-- [x] Phase U3 — Task Interaction, Modal, and Design Tokens
-- [x] Phase U4 — Planning and Routine Clarity
-- [x] Phase U5 — Final UI/UX Usability Pass
+- [x] Add shared password, recovery, update-password, and Google OAuth helpers.
+- [x] Replace the web OTP form with sign-in, sign-up, Google, and recovery UI.
+- [x] Add the web OAuth/email callback and guarded password-update page.
+- [x] Replace the Android OTP form with matching authentication options.
+- [x] Add Android external-browser OAuth and recovery deep-link handling.
+- [x] Preserve automatic planner initialization for newly authenticated users.
+- [x] Update setup documentation and auth contract tests.
+- [x] Verify lint, types, web build, mobile build, Capacitor sync, and Android APK.
+- [x] Configure Google Auth Platform branding/audience/contact details.
+- [x] Create the Google OAuth client and securely add it to Supabase.
+- [x] Add exact hosted web and Android callback URLs to both Supabase projects.
+- [x] Complete live Google sign-in and verify existing planner data is preserved.
+- [ ] Complete live email/password and password-recovery checks.
 
 ## Explicitly Out of Scope
 
-- Do not begin a new product phase until the user approves one.
-- Do not add planner modules, habits, gamification, sharing, teams,
-  notifications, or speculative analytics.
-- Do not change the approved visual language, database schema, ownership,
-  recurrence semantics, conflict handling, or historical completion data.
+- Do not add unrelated providers, MFA, teams, sharing, or account administration.
+- Do not change planner schema, RLS ownership, historical data, or visual language.
+- Do not remove any existing Supabase user or create a replacement planner owner.
 
 ## Completion Criteria
 
-This checkpoint is complete when the repository records U5 as completed, no
-audit-only route remains, and the verified application is ready for the user
-to choose the next product phase.
+- Email/password, password recovery, and Google work end-to-end on web and Android.
+- Existing passwordless users retain the same Supabase user ID and planner data.
+- All automated checks and native builds pass.
+- No OAuth client secret is committed, bundled, logged, or copied into chat.
 
 ## Relevant Dependencies
 
-- `project_plan.md` records every approved UI/UX phase as completed.
-- `UI_UX_AUDIT.md` records the final visual walkthrough and verification.
-- `artifacts/MyPlanner-android-debug.apk` is the verified Android build.
+- Supabase development project: `uychwbumaseqbjkcyiyd`.
+- Supabase production project: `iicwadngdwxgjodxkdnb`.
+- Google Cloud project selected for this integration: `planner-508311`.
+- Google Auth Platform remains private in external testing mode, with the
+  intended Google account registered as its sole test user.
