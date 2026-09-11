@@ -12,9 +12,9 @@ import type { PlannerId, TaskCategory, TodayTask } from "@/src/lib/today";
 import { TaskComposer } from "@/src/components/week-view";
 import { TaskCompletionButton, useDialogContract } from "@/src/components/interaction-primitives";
 import { COMPLETION_FEEDBACK_MS, COMPLETION_UNDO_MS, DIALOG_EXIT_MS } from "@/src/lib/interaction";
+import { useCategories } from "@/src/components/category-context";
+import { categoryName } from "@/src/lib/categories";
 
-const categoryLabels: Record<TaskCategory, string> = { career: "Career", content: "Content", other: "Personal" };
-const taskCategories = Object.keys(categoryLabels) as TaskCategory[];
 type UndoItem = { id: PlannerId; title: string; revision: number };
 type DeferredTask = { task: TodayTask; overdue: boolean; index: number };
 
@@ -357,14 +357,19 @@ function TaskGroupLabel({ label, count }: { label: string; count: number }) {
 }
 
 function DashboardTask({ task, overdue = false, pending, finishing, deferred, restoring, undoing, onComplete, onUndo, onEdit }: { task: TodayTask; overdue?: boolean; pending: boolean; finishing: boolean; deferred: boolean; restoring: boolean; undoing: boolean; onComplete: () => void; onUndo: () => void; onEdit: () => void }) {
-  return <article className={`dashboard-task-row group ${finishing ? "dashboard-task-finishing" : ""} ${deferred && !finishing ? "dashboard-task-awaiting" : ""}`}><TaskCompletionButton title={task.title} completed={deferred} pending={pending || undoing || restoring} pendingContent={undoing || restoring ? null : undefined} animating={finishing} onClick={deferred ? onUndo : onComplete} className={`mt-0 ${deferred ? "task-check-undoable" : ""}`} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-medium leading-5">{task.title}</p>{overdue && !deferred && <span className="overdue-pill">From {format(parseISO(task.date), "MMM d")}</span>}</div><p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">{categoryLabels[task.category]}{task.estimatedMinutes ? <><span>·</span><Clock3 size={11} /> {task.estimatedMinutes} min</> : null}{deferred ? <><span>·</span>Completed</> : task.status !== "not_started" ? <><span>·</span>{task.status.replace("_", " ")}</> : null}</p></div><button type="button" onClick={onEdit} aria-label={`Edit ${task.title}`} className="dashboard-task-edit-button"><Pencil size={14} /></button></article>;
+  const categories = useCategories();
+  return <article className={`dashboard-task-row group ${finishing ? "dashboard-task-finishing" : ""} ${deferred && !finishing ? "dashboard-task-awaiting" : ""}`}><TaskCompletionButton title={task.title} completed={deferred} pending={pending || undoing || restoring} pendingContent={undoing || restoring ? null : undefined} animating={finishing} onClick={deferred ? onUndo : onComplete} className={`mt-0 ${deferred ? "task-check-undoable" : ""}`} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-medium leading-5">{task.title}</p>{overdue && !deferred && <span className="overdue-pill">From {format(parseISO(task.date), "MMM d")}</span>}</div><p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">{categoryName(categories, task.category)}{task.estimatedMinutes ? <><span>·</span><Clock3 size={11} /> {task.estimatedMinutes} min</> : null}{deferred ? <><span>·</span>Completed</> : task.status !== "not_started" ? <><span>·</span>{task.status.replace("_", " ")}</> : null}</p></div><button type="button" onClick={onEdit} aria-label={`Edit ${task.title}`} className="dashboard-task-edit-button"><Pencil size={14} /></button></article>;
 }
 
 function CompletedTask({ task, pending, onUndo, onEdit }: { task: TodayTask; pending: boolean; onUndo: () => void; onEdit: () => void }) {
-  return <article className="dashboard-completed-task group"><TaskCompletionButton title={task.title} completed pending={pending} onClick={onUndo} className="task-check-undoable" /><p className="min-w-0 flex-1 truncate text-sm line-through decoration-[var(--orange)]/55">{task.title}</p><span className="shrink-0 text-[10px]">{task.completedAt ? format(new Date(task.completedAt), "HH:mm") : categoryLabels[task.category]}</span>{!task.recurrenceId && <button type="button" onClick={onEdit} className="dashboard-task-edit-button" aria-label={`Edit ${task.title}`}><Pencil size={13} /></button>}</article>;
+  const categories = useCategories();
+  return <article className="dashboard-completed-task group"><TaskCompletionButton title={task.title} completed pending={pending} onClick={onUndo} className="task-check-undoable" /><p className="min-w-0 flex-1 truncate text-sm line-through decoration-[var(--orange)]/55">{task.title}</p><span className="shrink-0 text-[10px]">{task.completedAt ? format(new Date(task.completedAt), "HH:mm") : categoryName(categories, task.category)}</span>{!task.recurrenceId && <button type="button" onClick={onEdit} className="dashboard-task-edit-button" aria-label={`Edit ${task.title}`}><Pencil size={13} /></button>}</article>;
 }
 
 function DashboardTaskEditor({ task, pending, deletePending, onSave, onDelete, onClose }: { task: TodayTask; pending: boolean; deletePending: boolean; onSave: (form: FormData) => Promise<boolean>; onDelete: (form: FormData) => Promise<boolean>; onClose: () => void }) {
+  const categoryOptions = useCategories();
+  const taskCategories = categoryOptions.map((category) => category.id);
+  const categoryLabels = Object.fromEntries(categoryOptions.map((category) => [category.id, category.name]));
   const taskWeekStart = format(startOfWeek(parseISO(task.date), { weekStartsOn: 1 }), "yyyy-MM-dd");
   const dates = Array.from({ length: 7 }, (_, index) => format(addDays(parseISO(taskWeekStart), index), "yyyy-MM-dd"));
   const [date, setDate] = useState(task.date);

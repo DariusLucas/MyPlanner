@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   Activity,
   CalendarCheck2,
@@ -8,22 +8,23 @@ import {
   CheckCircle2,
   CircleGauge,
   Flame,
+  SlidersHorizontal,
 } from "lucide-react";
 import { eachDayOfInterval, endOfMonth, format, parseISO, startOfMonth } from "date-fns";
-import { calculateProgress, type ProgressCategory, type ProgressData, type ProgressTask } from "@/src/lib/progress";
+import { calculateProgress, type ProgressData, type ProgressTask } from "@/src/lib/progress";
 import {
   buildHeatmap,
   buildProgressPeriods,
-  normalizeProgressCategory,
+  normalizeProgressCategories,
   normalizeProgressRange,
   progressGrouping,
   progressRangeKeys,
   progressRangeStart,
-  type ProgressCategoryFilter,
   type HeatmapDay,
   type ProgressPeriod,
   type ProgressRangeKey,
 } from "@/src/lib/progress-visuals";
+import { categoryColors, type PlannerCategory } from "@/src/lib/categories";
 
 const rangeLabels: Record<ProgressRangeKey, string> = {
   "3m": "3 months",
@@ -31,17 +32,19 @@ const rangeLabels: Record<ProgressRangeKey, string> = {
   "1y": "1 year",
   all: "All time",
 };
-const categoryLabels: Record<ProgressCategoryFilter, string> = {
-  all: "All work",
-  career: "Career",
-  content: "Content",
-  personal: "Personal",
-};
-const categoryKeys: ProgressCategory[] = ["career", "content", "personal"];
+const chartColors = ["var(--orange)", "#5f7187", "#a87345", "#6d8262", "#8a6f85", "#577f82", "#89784f", "#6f6d93"];
 
+function categoryEntries(categories: PlannerCategory[], counts: Record<string, number>) {
+  const known = categories.map((category, index) => ({ id: category.id, name: category.name, color: categoryColors[category.color] ?? chartColors[index % chartColors.length]! }));
+  const knownIds = new Set(known.map((category) => category.id));
+  const extra = Object.keys(counts).filter((id) => !knownIds.has(id) && ((counts[id] ?? 0) > 0 || categories.length === 0)).map((id, index) => ({ id, name: id === "personal" ? "Personal" : id === "career" ? "Career" : id === "content" ? "Content" : "Archived category", color: chartColors[(known.length + index) % chartColors.length]! }));
+  return [...known, ...extra];
+}
 type ProgressViewProps = {
   range: ProgressRangeKey;
-  category: ProgressCategoryFilter;
+  category?: string;
+  selectedCategories?: string[];
+  categories?: PlannerCategory[];
 } & (
   | { taskHistory: ProgressTask[]; today: string; timeZone: string; data?: never }
   | { data: ProgressData; taskHistory?: never; today?: never; timeZone?: never }
@@ -56,23 +59,26 @@ function browserFilterParams() {
 }
 
 export function ProgressView(props: ProgressViewProps) {
-  const { range, category } = props;
+  const { range } = props;
   const taskHistory = "taskHistory" in props ? props.taskHistory : undefined;
   const today = "today" in props ? props.today : undefined;
   const timeZone = "timeZone" in props ? props.timeZone : undefined;
   const suppliedData = "data" in props ? props.data : undefined;
-  const [filters, setFilters] = useState({ range, category });
+  const suppliedCategoryKeys = suppliedData ? Object.keys(suppliedData.categoryCounts) : [];
+  const categories = props.categories ?? suppliedCategoryKeys.map((id, position) => ({ id, name: id === "personal" ? "Personal" : id.charAt(0).toUpperCase() + id.slice(1), icon: "target" as const, color: "orange" as const, position, archivedAt: null, revision: 1, createdAt: "", updatedAt: "" }));
+  const initialCategories = props.selectedCategories ?? (props.category && props.category !== "all" ? [props.category] : []);
+  const [filters, setFilters] = useState({ range, categories: initialCategories });
 
   useEffect(() => {
-    setFilters({ range, category });
-  }, [range, category]);
+    setFilters({ range, categories: props.selectedCategories ?? (props.category && props.category !== "all" ? [props.category] : []) });
+  }, [range, props.category, props.selectedCategories]);
 
   useEffect(() => {
     function restoreFiltersFromUrl() {
       const params = browserFilterParams();
       setFilters({
         range: normalizeProgressRange(params.get("range") ?? undefined),
-        category: normalizeProgressCategory(params.get("category") ?? undefined),
+        categories: normalizeProgressCategories(params.get("categories") ?? params.get("category") ?? undefined),
       });
     }
     window.addEventListener("popstate", restoreFiltersFromUrl);
@@ -89,7 +95,7 @@ export function ProgressView(props: ProgressViewProps) {
           startDate: progressRangeStart(filters.range, today),
           today,
           timeZone,
-          category: filters.category === "all" ? undefined : filters.category,
+          categories: filters.categories,
         })
       : suppliedData!,
     [filters, suppliedData, taskHistory, timeZone, today],
@@ -98,20 +104,25 @@ export function ProgressView(props: ProgressViewProps) {
   const periods = buildProgressPeriods(data, grouping);
   const monthly = buildProgressPeriods(data, "month");
   const hasHistory = data.tasksPlanned > 0 || data.completedTasks > 0;
-  const filterDescription = `${rangeLabels[filters.range]} · ${categoryLabels[filters.category]}`;
+  const selectedNames = categories.filter((category) => filters.categories.includes(category.id)).map((category) => category.name);
+  const visibleCategories = filters.categories.length ? categories.filter((category) => filters.categories.includes(category.id)) : categories;
+  const filterDescription = `${rangeLabels[filters.range]} · ${selectedNames.length ? selectedNames.join(", ") : "All pages"}`;
 
   function updateFilters(next: typeof filters) {
-    if (next.range === filters.range && next.category === filters.category) return;
+    if (next.range === filters.range && next.categories.join(",") === filters.categories.join(",")) return;
     setFilters(next);
     if (window.location.hash.startsWith("#/")) {
       const route = window.location.hash.slice(1).split("?", 1)[0] || "/progress";
-      const params = new URLSearchParams({ range: next.range, category: next.category });
+      const params = new URLSearchParams({ range: next.range });
+      if (next.categories.length) params.set("categories", next.categories.join(","));
       window.location.hash = `${route}?${params}`;
       return;
     }
     const url = new URL(window.location.href);
     url.searchParams.set("range", next.range);
-    url.searchParams.set("category", next.category);
+    url.searchParams.delete("category");
+    if (next.categories.length) url.searchParams.set("categories", next.categories.join(","));
+    else url.searchParams.delete("categories");
     window.history.pushState(null, "", `${url.pathname}${url.search}${url.hash}`);
   }
 
@@ -121,27 +132,27 @@ export function ProgressView(props: ProgressViewProps) {
         <div>
           <h1 className="text-3xl font-semibold tracking-[-0.055em] lg:text-[2.6rem]">Progress</h1>
         </div>
-        <ProgressFilters filters={filters} onChange={updateFilters} />
+        <ProgressFilters filters={filters} categories={categories} onChange={updateFilters} />
       </header>
 
       <p className="sr-only">Showing {filterDescription}</p>
       <Summary data={data} />
 
       {!hasHistory ? (
-        <EmptyProgress category={filters.category} />
+        <EmptyProgress categoryNames={selectedNames} />
       ) : (
         <>
-          <Heatmap data={data} range={filters.range} />
+          <Heatmap data={data} range={filters.range} categories={visibleCategories} />
           <section className="progress-wide-grid">
-            <WorkOverTime periods={periods} grouping={grouping} />
-            <CategoryDistribution counts={data.categoryCounts} />
+            <WorkOverTime periods={periods} grouping={grouping} categories={visibleCategories} />
+            <CategoryDistribution counts={data.categoryCounts} categories={visibleCategories} />
           </section>
           <section className="progress-wide-grid progress-wide-grid-even">
             <ProductiveDays periods={periods} grouping={grouping} />
             <WeekdayDistribution values={data.weekdayDistribution} />
           </section>
           <PlannedVsCompleted periods={periods} grouping={grouping} />
-          <MonthlySummaries periods={monthly} category={filters.category} />
+          <MonthlySummaries periods={monthly} categoryLabel={selectedNames.length ? selectedNames.join(", ") : "All pages"} />
         </>
       )}
     </main>
@@ -150,11 +161,36 @@ export function ProgressView(props: ProgressViewProps) {
 
 function ProgressFilters({
   filters,
+  categories,
   onChange,
 }: {
-  filters: { range: ProgressRangeKey; category: ProgressCategoryFilter };
-  onChange: (filters: { range: ProgressRangeKey; category: ProgressCategoryFilter }) => void;
+  filters: { range: ProgressRangeKey; categories: string[] };
+  categories: PlannerCategory[];
+  onChange: (filters: { range: ProgressRangeKey; categories: string[] }) => void;
 }) {
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [categoryClosing, setCategoryClosing] = useState(false);
+  const allSelected = filters.categories.length === 0;
+  const filterLabel = allSelected ? "All pages" : filters.categories.length === 1 ? categories.find((item) => item.id === filters.categories[0])?.name ?? "1 page" : `${filters.categories.length} pages`;
+  function toggle(id: string) {
+    const next = filters.categories.includes(id) ? filters.categories.filter((value) => value !== id) : [...filters.categories, id];
+    onChange({ ...filters, categories: next });
+  }
+  function closeCategoryPicker() {
+    if (!categoryOpen || categoryClosing) return;
+    setCategoryClosing(true);
+    window.setTimeout(() => { setCategoryOpen(false); setCategoryClosing(false); }, 150);
+  }
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      if (categoryOpen && !pickerRef.current?.contains(event.target as Node)) closeCategoryPicker();
+    }
+    function handleKeyDown(event: KeyboardEvent) { if (event.key === "Escape") closeCategoryPicker(); }
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => { document.removeEventListener("pointerdown", handlePointerDown); document.removeEventListener("keydown", handleKeyDown); };
+  });
   return (
     <div className="progress-filter-stack" aria-label="Progress filters">
       <nav className="progress-filter-group" aria-label="Time range">
@@ -170,19 +206,16 @@ function ProgressFilters({
           </button>
         ))}
       </nav>
-      <nav className="progress-filter-group" aria-label="Category">
-        {(Object.keys(categoryLabels) as ProgressCategoryFilter[]).map((value) => (
-          <button
-            type="button"
-            key={value}
-            aria-pressed={filters.category === value}
-            className={filters.category === value ? "progress-filter-active" : ""}
-            onClick={() => onChange({ ...filters, category: value })}
-          >
-            {categoryLabels[value]}
-          </button>
-        ))}
-      </nav>
+      <div ref={pickerRef} className={`progress-category-picker ${categoryOpen ? "progress-category-picker-open" : ""}`}>
+        <button type="button" className="progress-category-trigger" aria-expanded={categoryOpen} onClick={() => { if (categoryOpen) closeCategoryPicker(); else setCategoryOpen(true); }}><SlidersHorizontal size={14} /> <span>{filterLabel}</span></button>
+        {(categoryOpen || categoryClosing) && <div className={`progress-category-menu ${categoryClosing ? "progress-category-menu-closing" : ""}`} role="group" aria-label="Choose pages">
+          <button type="button" aria-pressed={allSelected} onClick={() => onChange({ ...filters, categories: [] })}><span className="progress-filter-check">{allSelected ? "✓" : ""}</span><strong>All pages</strong></button>
+          {categories.map((category) => {
+            const selected = filters.categories.includes(category.id);
+            return <button type="button" key={category.id} aria-pressed={selected} onClick={() => toggle(category.id)}><span className="progress-filter-check">{selected ? "✓" : ""}</span><strong>{category.name}</strong></button>;
+          })}
+        </div>}
+      </div>
     </div>
   );
 }
@@ -237,10 +270,10 @@ function Panel({
   );
 }
 
-function Heatmap({ data, range }: { data: ProgressData; range: ProgressRangeKey }) {
+function Heatmap({ data, range, categories }: { data: ProgressData; range: ProgressRangeKey; categories: PlannerCategory[] }) {
   const days = buildHeatmap(data);
   if (range === "3m" || range === "6m") {
-    return <CalendarActivity data={data} days={days} range={range} />;
+    return <CalendarActivity data={data} days={days} range={range} categories={categories} />;
   }
   const weeks = Math.ceil(days.length / 7);
   const rangeCopy = range === "all" ? "Latest 53 weeks of all-time history" : rangeLabels[range];
@@ -255,14 +288,13 @@ function Heatmap({ data, range }: { data: ProgressData; range: ProgressRangeKey 
         >
           {days.map((day) => {
             const level = activityLevel(day);
-            const detail = activityDetail(day);
             return (
               <time
                 key={day.date}
                 dateTime={day.date}
                 className={`progress-heat-cell progress-heat-${level} ${day.inRange ? "" : "progress-heat-outside"}`}
-                aria-label={day.inRange ? detail : undefined}
-                title={day.inRange ? detail : undefined}
+                aria-label={day.inRange ? activityDetail(day, categories) : undefined}
+                title={day.inRange ? activityDetail(day, categories) : undefined}
               />
             );
           })}
@@ -273,7 +305,7 @@ function Heatmap({ data, range }: { data: ProgressData; range: ProgressRangeKey 
   );
 }
 
-function CalendarActivity({ data, days, range }: { data: ProgressData; days: HeatmapDay[]; range: "3m" | "6m" }) {
+function CalendarActivity({ data, days, range, categories }: { data: ProgressData; days: HeatmapDay[]; range: "3m" | "6m"; categories: PlannerCategory[] }) {
   const byDate = new Map(days.map((day) => [day.date, day]));
   const months = [...new Set(days.filter((day) => day.inRange).map((day) => day.date.slice(0, 7)))];
   return (
@@ -298,8 +330,8 @@ function CalendarActivity({ data, days, range }: { data: ProgressData; days: Hea
                       key={dateKey}
                       dateTime={dateKey}
                       className={`progress-calendar-day progress-heat-${level} ${inRange ? "" : "progress-calendar-outside"}`}
-                      aria-label={inRange && day ? activityDetail(day) : undefined}
-                      title={inRange && day ? activityDetail(day) : undefined}
+                      aria-label={inRange && day ? activityDetail(day, categories) : undefined}
+                      title={inRange && day ? activityDetail(day, categories) : undefined}
                     >
                       {format(date, "d")}
                     </time>
@@ -323,11 +355,12 @@ function activityLevel(day: HeatmapDay) {
   return day.completed === 0 ? 0 : Math.min(4, day.completed);
 }
 
-function activityDetail(day: HeatmapDay) {
-  return `${format(parseISO(day.date), "MMMM d, yyyy")}: ${day.completed} ${day.completed === 1 ? "task" : "tasks"} completed. Career ${day.categoryCounts.career}, Content ${day.categoryCounts.content}, Personal ${day.categoryCounts.personal}.`;
+function activityDetail(day: HeatmapDay, categories: PlannerCategory[]) {
+  const breakdown = categoryEntries(categories, day.categoryCounts).filter((category) => day.categoryCounts[category.id]).map((category) => `${category.name} ${day.categoryCounts[category.id]}`).join(", ");
+  return `${format(parseISO(day.date), "MMMM d, yyyy")}: ${day.completed} ${day.completed === 1 ? "task" : "tasks"} completed${breakdown ? `. ${breakdown}.` : "."}`;
 }
 
-function WorkOverTime({ periods, grouping }: { periods: ProgressPeriod[]; grouping: "day" | "week" | "month" }) {
+function WorkOverTime({ periods, grouping, categories }: { periods: ProgressPeriod[]; grouping: "day" | "week" | "month"; categories: PlannerCategory[] }) {
   const visible = periods.slice(-24);
   const maximum = Math.max(1, ...visible.map((period) => period.completed));
   const trimmed = periods.length > visible.length;
@@ -343,9 +376,9 @@ function WorkOverTime({ periods, grouping }: { periods: ProgressPeriod[]; groupi
           {visible.map((period, index) => (
             <div className="progress-stacked-column" key={period.key}>
               <div className="progress-stacked-track" title={`${period.label}: ${period.completed} completed`}>
-                {categoryKeys.map((category) => {
-                  const value = period.categoryCounts[category];
-                  return value ? <span key={category} className={`progress-series-${category}`} style={{ height: `${(value / maximum) * 100}%` }} /> : null;
+                {categoryEntries(categories, period.categoryCounts).map((category) => {
+                  const value = period.categoryCounts[category.id];
+                  return value ? <span key={category.id} style={{ height: `${(value / maximum) * 100}%`, background: category.color }} /> : null;
                 })}
               </div>
               <span className="progress-chart-value">{period.completed || ""}</span>
@@ -354,30 +387,32 @@ function WorkOverTime({ periods, grouping }: { periods: ProgressPeriod[]; groupi
           ))}
         </div>
       </div>
-      <CategoryLegend />
+      <CategoryLegend categories={categories} counts={periods.at(-1)?.categoryCounts ?? {}} />
     </Panel>
   );
 }
 
-function CategoryDistribution({ counts }: { counts: ProgressData["categoryCounts"] }) {
-  const total = categoryKeys.reduce((sum, category) => sum + counts[category], 0);
+function CategoryDistribution({ counts, categories }: { counts: ProgressData["categoryCounts"]; categories: PlannerCategory[] }) {
+  const entries = categoryEntries(categories, counts);
+  const total = entries.reduce((sum, category) => sum + (counts[category.id] ?? 0), 0);
   let cursor = 0;
-  const stops = categoryKeys.map((category) => {
+  const stops = entries.map((category) => {
     const start = cursor;
-    cursor += total ? (counts[category] / total) * 100 : 0;
-    return `var(--progress-${category}) ${start}% ${cursor}%`;
+    cursor += total ? ((counts[category.id] ?? 0) / total) * 100 : 0;
+    return `${category.color} ${start}% ${cursor}%`;
   });
   const style = { "--progress-donut": total ? `conic-gradient(${stops.join(",")})` : "var(--muted)" } as CSSProperties;
   return (
     <Panel eyebrow="Distribution" title="Where the work went" description="Completed tasks by category">
       <div className="progress-donut-layout">
-        <div className="progress-donut" style={style} role="img" aria-label={`Career ${counts.career}, Content ${counts.content}, Personal ${counts.personal}`}>
+        <div className="progress-donut" style={style} role="img" aria-label={`${total} completed tasks by category`}>
           <span><strong>{total}</strong><small>completed</small></span>
         </div>
         <div className="progress-category-list">
-          {categoryKeys.map((category) => {
-            const percentage = total ? Math.round((counts[category] / total) * 100) : 0;
-            return <div key={category}><span><i className={`progress-series-${category}`} />{categoryLabels[category]}</span><strong>{counts[category]} <small>{percentage}%</small></strong></div>;
+          {entries.map((category) => {
+            const value = counts[category.id] ?? 0;
+            const percentage = total ? Math.round((value / total) * 100) : 0;
+            return <div key={category.id}><span><i style={{ background: category.color }} />{category.name}</span><strong>{value} <small>{percentage}%</small></strong></div>;
           })}
         </div>
       </div>
@@ -445,10 +480,10 @@ function PlannedVsCompleted({ periods, grouping }: { periods: ProgressPeriod[]; 
   );
 }
 
-function MonthlySummaries({ periods, category }: { periods: ProgressPeriod[]; category: ProgressCategoryFilter }) {
+function MonthlySummaries({ periods, categoryLabel }: { periods: ProgressPeriod[]; categoryLabel: string }) {
   const visible = periods.slice(-12).reverse();
   return (
-    <Panel eyebrow="Monthly history" title="Monthly summaries" description={`${categoryLabels[category]} · latest ${visible.length} months`}>
+    <Panel eyebrow="Monthly history" title="Monthly summaries" description={`${categoryLabel} · latest ${visible.length} months`}>
       <div className="progress-month-table-wrap">
         <table className="progress-month-table">
           <thead><tr><th>Month</th><th>Completed</th><th>Productive days</th><th>Planned</th><th>Completion rate</th></tr></thead>
@@ -461,16 +496,16 @@ function MonthlySummaries({ periods, category }: { periods: ProgressPeriod[]; ca
   );
 }
 
-function CategoryLegend() {
-  return <div className="progress-category-legend" aria-label="Task categories">{categoryKeys.map((category) => <span key={category}><i className={`progress-series-${category}`} />{categoryLabels[category]}</span>)}</div>;
+function CategoryLegend({ categories, counts }: { categories: PlannerCategory[]; counts: Record<string, number> }) {
+  return <div className="progress-category-legend" aria-label="Task categories">{categoryEntries(categories, counts).map((category) => <span key={category.id}><i style={{ background: category.color }} />{category.name}</span>)}</div>;
 }
 
-function EmptyProgress({ category }: { category: ProgressCategoryFilter }) {
+function EmptyProgress({ categoryNames }: { categoryNames: string[] }) {
   return (
     <section className="progress-empty glass-panel">
       <span><CircleGauge size={22} aria-hidden="true" /></span>
       <div>
-        <h2>No {category === "all" ? "progress history" : categoryLabels[category].toLowerCase() + " history"} in this range yet.</h2>
+        <h2>No {categoryNames.length ? categoryNames.join(" + ").toLowerCase() + " history" : "progress history"} in this range yet.</h2>
         <p>Plan tasks, complete them, and this page will turn that real history into a clear record of your progress.</p>
       </div>
       <CalendarRange size={20} aria-hidden="true" />

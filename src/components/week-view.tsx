@@ -44,13 +44,9 @@ import type { PlannerId, TaskCategory, TaskStatus } from "@/src/lib/today";
 import type { WeekData, WeekTask, WeeklyRecurrence } from "@/src/lib/week";
 import { TaskCompletionButton, useDialogContract } from "@/src/components/interaction-primitives";
 import { COMPLETION_FEEDBACK_MS, DIALOG_EXIT_MS } from "@/src/lib/interaction";
+import { useCategories } from "@/src/components/category-context";
+import { categoryName } from "@/src/lib/categories";
 
-const categories: TaskCategory[] = ["career", "content", "other"];
-const categoryLabels: Record<TaskCategory, string> = {
-  career: "Career",
-  content: "Content",
-  other: "Personal",
-};
 const workflow: { status: TaskStatus; label: string }[] = [
   { status: "not_started", label: "Upcoming" },
   { status: "in_progress", label: "Doing" },
@@ -464,7 +460,7 @@ export function TaskComposer({
   pending,
   onSubmit,
   onClose,
-  defaultCategory = "career",
+  defaultCategory,
   lockCategory = false,
 }: {
   weekStart: string;
@@ -475,8 +471,10 @@ export function TaskComposer({
   defaultCategory?: TaskCategory;
   lockCategory?: boolean;
 }) {
+  const categories = useCategories();
+  const initialCategory = defaultCategory ?? categories[0]?.id ?? "";
   const [placement, setPlacement] = useState(`anytime:${weekStart}`);
-  const [category, setCategory] = useState<TaskCategory>(defaultCategory);
+  const [category, setCategory] = useState<TaskCategory>(initialCategory);
   const [recurrenceCount, setRecurrenceCount] = useState("0");
   const [showRoutine, setShowRoutine] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -664,7 +662,7 @@ export function TaskComposer({
           )}
           {lockCategory ? (
             <p className="mt-4 rounded-xl border border-border bg-muted/45 px-3 py-2.5 text-sm text-muted-foreground">
-              Adding to <span className="font-semibold text-foreground">{categoryLabels[category]}</span>
+              Adding to <span className="font-semibold text-foreground">{categoryName(categories, category)}</span>
             </p>
           ) : <>
             <p className="mt-4 mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">
@@ -674,15 +672,15 @@ export function TaskComposer({
               {categories.map((value) => (
                 <button
                   type="button"
-                  key={value}
-                  onClick={() => setCategory(value)}
+                  key={value.id}
+                  onClick={() => setCategory(value.id)}
                   className={
-                    category === value
+                    category === value.id
                       ? "choice-chip choice-chip-active"
                       : "choice-chip"
                   }
                 >
-                  {categoryLabels[value]}
+                  {value.name}
                 </button>
               ))}
             </div>
@@ -706,13 +704,14 @@ export function TaskComposer({
           <input type="hidden" name="priority" value="normal" />
           <input type="hidden" name="description" value="" />
           <input type="hidden" name="estimatedMinutes" value="" />
+          {!categories.length && <p className="mt-4 rounded-xl bg-muted px-3 py-2.5 text-sm text-muted-foreground">Create a category from <strong>Spaces</strong> before adding your first task.</p>}
         </div>
         <div className="task-composer-actions mt-4 flex justify-end gap-2">
           <button type="button" disabled={pending} className={quietButton} onClick={close}>
             Cancel
           </button>
           <button
-            disabled={pending}
+            disabled={pending || !category}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--orange)] px-4 py-2.5 text-sm font-semibold text-white"
           >
             {pending ? <><LoaderCircle size={14} className="animate-spin" /> Adding…</> : "Add task"}
@@ -733,8 +732,9 @@ function InlineTaskComposer({
   pending: string | null;
   run: Runner;
 }) {
+  const categories = useCategories();
   const [open, setOpen] = useState(false);
-  const [category, setCategory] = useState<TaskCategory>("career");
+  const [category, setCategory] = useState<TaskCategory>(categories[0]?.id ?? "");
   const inputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const key = `quick-${date}`;
@@ -779,7 +779,7 @@ function InlineTaskComposer({
           maxLength={200}
         />
         <button
-          disabled={submitting}
+          disabled={submitting || !category}
           className="week-inline-submit"
           aria-label="Add task"
         >
@@ -798,12 +798,12 @@ function InlineTaskComposer({
         {categories.map((value) => (
           <button
             type="button"
-            key={value}
-            onClick={() => setCategory(value)}
-            aria-pressed={category === value}
-            className={category === value ? "week-inline-category-active" : ""}
+            key={value.id}
+            onClick={() => setCategory(value.id)}
+            aria-pressed={category === value.id}
+            className={category === value.id ? "week-inline-category-active" : ""}
           >
-            {categoryLabels[value]}
+            {value.name}
           </button>
         ))}
       </div>
@@ -1199,6 +1199,7 @@ function TaskCard({
   setEditing: (value: PlannerId | null) => void;
   onCompletionChange?: (id: PlannerId, completed: boolean) => void;
 }) {
+  const categories = useCategories();
   const completed = task.status === "completed";
   const [visualCompleted, setVisualCompleted] = useState(completed);
   const [checkAnimation, setCheckAnimation] = useState<
@@ -1244,7 +1245,7 @@ function TaskCard({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium leading-5">{task.title}</p>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            {categoryLabels[task.category]}
+            {categoryName(categories, task.category)}
             {task.recurrenceCount
               ? ` · Weekly routine: ${task.recurrenceCount} ${task.recurrenceCount === 1 ? "check-in" : "check-ins"}`
               : ""}
@@ -1592,6 +1593,7 @@ function AnytimeKanbanTaskCard({
   setEditing: (value: PlannerId | null) => void;
   onCompletionChange: (id: PlannerId, completed: boolean) => void;
 }) {
+  const categories = useCategories();
   const [visualCompleted, setVisualCompleted] = useState(
     task.status === "completed",
   );
@@ -1626,7 +1628,7 @@ function AnytimeKanbanTaskCard({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium leading-5">{task.title}</p>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            {categoryLabels[task.category]} · Flexible this week
+            {categoryName(categories, task.category)} · Flexible this week
           </p>
         </div>
         <button
@@ -1680,6 +1682,7 @@ function KanbanCard({
   setEditing: (value: PlannerId | null) => void;
   mobile?: boolean;
 }) {
+  const categories = useCategories();
   const [menuOpen, setMenuOpen] = useState(false);
   return (
     <article
@@ -1697,7 +1700,7 @@ function KanbanCard({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">{task.title}</p>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            {categoryLabels[task.category]} · {overdue ? "Overdue from " : ""}
+            {categoryName(categories, task.category)} · {overdue ? "Overdue from " : ""}
             {format(parseISO(task.anytimeWeekStart ?? task.date), "MMM d")}
           </p>
         </div>
@@ -1855,6 +1858,7 @@ function EditForm({
   onDelete: (form: FormData) => Promise<void>;
   onClose: () => void;
 }) {
+  const categories = useCategories();
   const requestConfirmation = useContext(ConfirmDialogContext);
   const [recurrenceCount, setRecurrenceCount] = useState(
     String(task.recurrenceCount ?? 0),
@@ -1962,15 +1966,15 @@ function EditForm({
             {categories.map((value) => (
               <button
                 type="button"
-                key={value}
-                onClick={() => setCategory(value)}
+                key={value.id}
+                onClick={() => setCategory(value.id)}
                 className={
-                  category === value
+                  category === value.id
                     ? "choice-chip choice-chip-active"
                     : "choice-chip"
                 }
               >
-                {categoryLabels[value]}
+                {value.name}
               </button>
             ))}
           </div>
