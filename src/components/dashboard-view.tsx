@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Clock3, Flame, Lightbulb, LoaderCircle, Pencil, Plus, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowRight, Check, Clock3, Flame, Lightbulb, LoaderCircle, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { addDays, format, parseISO, startOfWeek } from "date-fns";
 import { createThought, deleteThought, updateThought } from "@/src/app/dashboard-actions";
 import { createTask, deleteTask, toggleTask, updateTask, type ActionResult } from "@/src/app/today/actions";
@@ -146,6 +146,20 @@ export function DashboardView({ data }: { data: DashboardData }) {
       return setError(result.error);
     }
     dismissUndo(item.id);
+    router.refresh();
+  }
+
+  function undoCompletedToday(task: TodayTask) {
+    setDeferredTasks((current) => new Map(current).set(task.id, {
+      task,
+      overdue: false,
+      index: data.active.length,
+    }));
+    void undoCompletion({
+      id: task.id,
+      title: task.title,
+      revision: task.revision ?? 1,
+    });
   }
 
   async function addTask(form: FormData) {
@@ -216,9 +230,9 @@ export function DashboardView({ data }: { data: DashboardData }) {
     <div className="dashboard-shell mx-auto w-full max-w-[1500px] space-y-6 sm:space-y-7">
       <header className="dashboard-hero">
         <div className="dashboard-hero-copy">
-          <div className="dashboard-hero-kicker"><span className="dashboard-hero-kicker-mark"><Sparkles size={12} /></span><span>{greeting}</span><span className="dashboard-hero-kicker-divider" aria-hidden="true" /><span>{format(parseISO(data.date), "EEEE, MMMM d")}</span></div>
+          <div className="dashboard-hero-kicker"><span>{greeting}</span><span className="dashboard-hero-kicker-divider" aria-hidden="true" /><span>{format(parseISO(data.date), "EEEE, MMMM d")}</span></div>
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.055em] sm:text-[2.6rem]">What matters today?</h1>
-          <p className="dashboard-hero-copy-text">A clear view of the next useful thing, with room for everything else.</p>
+          <StreakBanner streak={data.streak} />
         </div>
         <div className="dashboard-hero-action"><span className="dashboard-hero-date">Today <span aria-hidden="true">·</span> {format(parseISO(data.date), "MMM d")}</span><button onClick={() => setComposer(true)} className="premium-primary-button"><Plus size={16} /> Add task</button></div>
       </header>
@@ -233,15 +247,15 @@ export function DashboardView({ data }: { data: DashboardData }) {
             <div>
               <p className="dashboard-eyebrow">Today</p>
               <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h2 className="text-xl font-semibold tracking-[-0.035em]">{progressCounts.completed} of {progressCounts.planned} complete</h2>
-                <span className="text-xs text-muted-foreground">{progressCounts.remaining} remaining</span>
+                <h2 className="text-xl font-semibold tracking-[-0.035em]">{progressCounts.planned === 0 ? "Nothing left today" : `${progressCounts.completed} of ${progressCounts.planned} complete`}</h2>
+                <span className="text-xs text-muted-foreground">{progressCounts.planned === 0 ? "0 tasks planned" : `${progressCounts.remaining} remaining`}</span>
               </div>
             </div>
-            <ProgressDial completed={progressCounts.completed} total={progressCounts.planned} />
+            {progressCounts.planned > 0 && <ProgressDial completed={progressCounts.completed} total={progressCounts.planned} />}
           </div>
           {progressCounts.planned > 0 && <div className="h-1 bg-muted/80"><div className="h-full rounded-r-full bg-[var(--orange)] transition-[width] duration-500" style={{ width: `${(progressCounts.completed / progressCounts.planned) * 100}%` }} /></div>}
           <div className="p-3 sm:p-4">
-            {visibleCounts.remaining === 0 ? <EmptyToday completed={visibleCounts.completed} onAdd={() => setComposer(true)} /> : <div className="space-y-1">
+            {visibleCounts.remaining === 0 ? <EmptyToday completed={visibleCounts.completed} /> : <div className="space-y-1">
               {visibleOverdue.length > 0 && <TaskGroupLabel label="Carried forward" count={visibleOverdue.length} />}
               {visibleOverdue.map((task, index) => <DashboardTask key={task.id} task={task} overdue pending={pendingIds.has(task.id)} finishing={finishingIds.has(task.id)} deferred={deferredTasks.has(task.id) && !restoringIds.has(task.id)} restoring={restoringIds.has(task.id)} undoing={undoingIds.has(task.id)} onComplete={() => complete(task, true, index)} onUndo={() => undoCompletion({ id: task.id, title: task.title, revision: (task.revision ?? 1) + 1 })} onEdit={() => setEditingTask(task)} />)}
               {visibleScheduled.length > 0 && <TaskGroupLabel label="Planned today" count={visibleScheduled.length} />}
@@ -251,7 +265,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
             </div>}
             {visibleCompletedToday.length > 0 && <div className="mt-5 border-t border-border px-1 pt-5">
               <div className="mb-2.5 flex items-center justify-between px-2"><div><p className="dashboard-eyebrow">Completed today</p><p className="mt-1 text-xs text-muted-foreground">Quiet proof of progress.</p></div><span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">{visibleCompletedToday.length}</span></div>
-              <div className="space-y-0.5">{visibleCompletedToday.map((task) => <CompletedTask key={task.id} task={task} onEdit={() => setEditingTask(task)} />)}</div>
+              <div className="space-y-0.5">{visibleCompletedToday.map((task) => <CompletedTask key={task.id} task={task} pending={undoingIds.has(task.id) || restoringIds.has(task.id)} onUndo={() => undoCompletedToday(task)} onEdit={() => setEditingTask(task)} />)}</div>
             </div>}
           </div>
         </section>
@@ -264,8 +278,6 @@ export function DashboardView({ data }: { data: DashboardData }) {
         selectedDate={selectedCompletionDate}
         onSelect={setSelectedCompletionDate}
       />
-
-      <StreakBanner streak={data.streak} />
 
       {undoItems.length > 0 && <div className="completion-toast-stack" aria-label="Recently completed tasks">{undoItems.map((item) => <div key={item.id} role="status" className="completion-toast"><span className="completion-toast-icon"><Check size={15} strokeWidth={3} /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">Task completed</p><p className="truncate text-xs text-muted-foreground">{item.title}</p></div><button onClick={() => undoCompletion(item)} disabled={undoingIds.has(item.id)} className="completion-undo-button"><RotateCcw size={13} /> {undoingIds.has(item.id) ? "Restoring…" : "Undo"}</button><span className="completion-toast-timer" /></div>)}</div>}
     </div>
@@ -330,12 +342,14 @@ function WeekCompletionStrip({
 
 function StreakBanner({ streak }: { streak: DashboardData["streak"] }) {
   const stateCopy = streak.current === 0 ? "Complete one task to begin" : streak.state === "hot" ? "Steady momentum" : streak.state === "cooling" ? "One grace day used" : "Last redemption day";
-  return <section className={`streak-banner streak-${streak.state}`} aria-label={`${streak.current}-day productive streak`}><span className="streak-icon"><Flame size={18} strokeWidth={1.8} /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-baseline gap-x-2"><p className="font-semibold tracking-[-0.025em]">{streak.current}-day streak</p><span className="text-xs text-muted-foreground">{stateCopy}</span></div><p className="mt-0.5 text-[11px] text-muted-foreground">Best · {streak.best} {streak.best === 1 ? "day" : "days"}</p></div><Sparkles size={15} className="shrink-0 text-[var(--orange)] opacity-60" /></section>;
+  return <section className={`streak-banner streak-${streak.state}`} aria-label={`${streak.current}-day productive streak`}><span className="streak-icon"><Flame size={18} strokeWidth={1.8} /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-baseline gap-x-2"><p className="font-semibold tracking-[-0.025em]">{streak.current}-day streak</p><span className="text-xs text-muted-foreground">{stateCopy}</span></div><p className="mt-0.5 text-[11px] text-muted-foreground">Best · {streak.best} {streak.best === 1 ? "day" : "days"}</p></div></section>;
 }
 
 function ProgressDial({ completed, total }: { completed: number; total: number }) {
   const progress = total ? Math.round((completed / total) * 100) : 0;
-  return <div className="dashboard-progress-dial"><svg viewBox="0 0 48 48" aria-hidden="true"><circle className="dashboard-progress-track" cx="24" cy="24" r="19" pathLength="100" /><circle className="dashboard-progress-value" cx="24" cy="24" r="19" pathLength="100" style={{ strokeDashoffset: 100 - progress }} /></svg><span key={progress}>{progress}%</span></div>;
+  const radius = 24;
+  const circumference = 2 * Math.PI * radius;
+  return <div className="progress-ring" aria-label={`${progress}% complete`}><svg className="progress-ring-svg" viewBox="0 0 60 60" aria-hidden="true"><circle className="progress-ring-track" cx="30" cy="30" r={radius} /><circle className="progress-ring-value" cx="30" cy="30" r={radius} strokeDasharray={circumference} strokeDashoffset={circumference - (circumference * progress) / 100} /></svg><div className="progress-ring-label">{progress}%</div></div>;
 }
 
 function TaskGroupLabel({ label, count }: { label: string; count: number }) {
@@ -343,11 +357,11 @@ function TaskGroupLabel({ label, count }: { label: string; count: number }) {
 }
 
 function DashboardTask({ task, overdue = false, pending, finishing, deferred, restoring, undoing, onComplete, onUndo, onEdit }: { task: TodayTask; overdue?: boolean; pending: boolean; finishing: boolean; deferred: boolean; restoring: boolean; undoing: boolean; onComplete: () => void; onUndo: () => void; onEdit: () => void }) {
-  return <article className={`dashboard-task-row group ${finishing ? "dashboard-task-finishing" : ""} ${deferred && !finishing ? "dashboard-task-awaiting" : ""}`}><TaskCompletionButton title={task.title} completed={deferred} pending={pending || undoing || restoring} animating={finishing} onClick={deferred ? onUndo : onComplete} className={`mt-0 ${deferred ? "task-check-undoable" : ""}`} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-medium leading-5">{task.title}</p>{overdue && !deferred && <span className="overdue-pill">From {format(parseISO(task.date), "MMM d")}</span>}</div><p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">{categoryLabels[task.category]}{task.estimatedMinutes ? <><span>·</span><Clock3 size={11} /> {task.estimatedMinutes} min</> : null}{deferred ? <><span>·</span>Completed</> : task.status !== "not_started" ? <><span>·</span>{task.status.replace("_", " ")}</> : null}</p></div><button type="button" onClick={onEdit} aria-label={`Edit ${task.title}`} className="dashboard-task-edit-button"><Pencil size={14} /></button></article>;
+  return <article className={`dashboard-task-row group ${finishing ? "dashboard-task-finishing" : ""} ${deferred && !finishing ? "dashboard-task-awaiting" : ""}`}><TaskCompletionButton title={task.title} completed={deferred} pending={pending || undoing || restoring} pendingContent={undoing || restoring ? null : undefined} animating={finishing} onClick={deferred ? onUndo : onComplete} className={`mt-0 ${deferred ? "task-check-undoable" : ""}`} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-medium leading-5">{task.title}</p>{overdue && !deferred && <span className="overdue-pill">From {format(parseISO(task.date), "MMM d")}</span>}</div><p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">{categoryLabels[task.category]}{task.estimatedMinutes ? <><span>·</span><Clock3 size={11} /> {task.estimatedMinutes} min</> : null}{deferred ? <><span>·</span>Completed</> : task.status !== "not_started" ? <><span>·</span>{task.status.replace("_", " ")}</> : null}</p></div><button type="button" onClick={onEdit} aria-label={`Edit ${task.title}`} className="dashboard-task-edit-button"><Pencil size={14} /></button></article>;
 }
 
-function CompletedTask({ task, onEdit }: { task: TodayTask; onEdit: () => void }) {
-  return <article className="dashboard-completed-task group"><span className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--orange)]/15 text-[var(--orange)]"><Check size={12} strokeWidth={3} /></span><p className="min-w-0 flex-1 truncate text-sm line-through decoration-[var(--orange)]/55">{task.title}</p><span className="shrink-0 text-[10px]">{task.completedAt ? format(new Date(task.completedAt), "HH:mm") : categoryLabels[task.category]}</span>{!task.recurrenceId && <button type="button" onClick={onEdit} className="dashboard-task-edit-button" aria-label={`Edit ${task.title}`}><Pencil size={13} /></button>}</article>;
+function CompletedTask({ task, pending, onUndo, onEdit }: { task: TodayTask; pending: boolean; onUndo: () => void; onEdit: () => void }) {
+  return <article className="dashboard-completed-task group"><TaskCompletionButton title={task.title} completed pending={pending} onClick={onUndo} className="task-check-undoable" /><p className="min-w-0 flex-1 truncate text-sm line-through decoration-[var(--orange)]/55">{task.title}</p><span className="shrink-0 text-[10px]">{task.completedAt ? format(new Date(task.completedAt), "HH:mm") : categoryLabels[task.category]}</span>{!task.recurrenceId && <button type="button" onClick={onEdit} className="dashboard-task-edit-button" aria-label={`Edit ${task.title}`}><Pencil size={13} /></button>}</article>;
 }
 
 function DashboardTaskEditor({ task, pending, deletePending, onSave, onDelete, onClose }: { task: TodayTask; pending: boolean; deletePending: boolean; onSave: (form: FormData) => Promise<boolean>; onDelete: (form: FormData) => Promise<boolean>; onClose: () => void }) {
@@ -386,8 +400,8 @@ function DashboardTaskEditor({ task, pending, deletePending, onSave, onDelete, o
   return createPortal(<div className={`modal-backdrop ${closing ? "modal-closing" : ""}`} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}><form ref={dialogRef} tabIndex={-1} action={submit} aria-busy={pending || saving || deletePending} className="task-composer dashboard-task-editor" role="dialog" aria-modal="true" aria-labelledby="dashboard-edit-title" aria-describedby="dashboard-edit-description"><div className="flex items-start justify-between gap-4"><div><p className="dashboard-eyebrow">Today</p><h2 id="dashboard-edit-title" className="mt-1 text-lg font-semibold">Edit task</h2><p id="dashboard-edit-description" className="mt-1 text-xs text-muted-foreground">Adjust it here without leaving your day.</p></div><button type="button" onClick={close} disabled={pending || saving || deletePending} className="milestone-icon-button" aria-label="Close task editor"><X size={17} /></button></div><input type="hidden" name="id" value={task.id} /><input type="hidden" name="anytimeWeekStart" value={task.anytimeWeekStart ?? ""} /><input type="hidden" name="recurrenceCount" value="0" /><input type="hidden" name="priority" value={task.priority} /><input type="hidden" name="category" value={category} /><input name="title" defaultValue={task.title} required maxLength={200} autoFocus className="focus-input mt-5" /><textarea name="description" defaultValue={task.description ?? ""} maxLength={2000} rows={3} placeholder="Optional details" className="thought-edit-input mt-3" /><div className="mt-4"><p className="mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">When</p><div className="choice-grid">{dates.map((value) => <button type="button" key={value} onClick={() => setDate(value)} className={date === value ? "choice-chip choice-chip-active" : "choice-chip"}>{format(parseISO(value), "EEE d")}</button>)}</div><input type="hidden" name="date" value={date} /></div><div className="mt-4"><p className="mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">Category</p><div className="choice-grid">{taskCategories.map((value) => <button type="button" key={value} onClick={() => setCategory(value)} className={category === value ? "choice-chip choice-chip-active" : "choice-chip"}>{categoryLabels[value]}</button>)}</div></div><label className="mt-4 block text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">Estimate<input name="estimatedMinutes" type="number" min="1" max="1440" defaultValue={task.estimatedMinutes ?? ""} placeholder="Minutes" className="focus-input mt-2 normal-case tracking-normal" /></label>{(pending || saving || deletePending) && <div role="status" className="task-save-status"><LoaderCircle size={14} className="animate-spin" /> {deletePending ? "Deleting task…" : "Saving task…"}</div>}<div className="task-composer-actions mt-5 flex flex-wrap items-center justify-between gap-2"><div>{confirmDelete ? <span role="alert" className="inline-flex items-center gap-2"><span className="text-xs text-muted-foreground">Delete this task?</span><button type="button" onClick={() => setConfirmDelete(false)} disabled={deletePending} className="thought-quiet-button">Keep</button><button type="button" onClick={remove} disabled={deletePending} className="entity-delete-button">{deletePending ? "Deleting…" : "Delete"}</button></span> : <button type="button" onClick={() => setConfirmDelete(true)} disabled={pending || saving} className="thought-quiet-button text-red-600"><Trash2 size={14} /> Delete</button>}</div><div className="flex gap-2"><button type="button" onClick={close} disabled={pending || saving || deletePending} className="thought-quiet-button">Cancel</button><button disabled={pending || saving || deletePending} className="premium-small-button">{pending || saving ? <><LoaderCircle size={13} className="animate-spin" /> Saving…</> : "Save changes"}</button></div></div></form></div>, document.body);
 }
 
-function EmptyToday({ completed, onAdd }: { completed: number; onAdd: () => void }) {
-  return <div className="flex min-h-44 flex-col items-center justify-center px-5 text-center"><span className="grid size-11 place-items-center rounded-2xl bg-accent text-accent-foreground"><Check size={18} /></span><p className="mt-3 font-semibold">{completed ? "Today is clear." : "A clear day, ready when you are."}</p><p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">{completed ? "You finished what was on your plate." : "Add one concrete action when something matters."}</p><button type="button" onClick={onAdd} className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-accent-foreground"><Plus size={13} /> Add task</button></div>;
+function EmptyToday({ completed }: { completed: number }) {
+  return <div className="flex min-h-44 flex-col items-center justify-center px-5 text-center"><span className="grid size-11 place-items-center rounded-2xl bg-accent text-accent-foreground"><Check size={18} /></span><p className="mt-3 font-semibold">{completed ? "Today is clear." : "A clear day, ready when you are."}</p><p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">{completed ? "You finished what was on your plate." : "Use Add task above when something matters."}</p></div>;
 }
 
 function ThoughtsPanel({ recent, all, onError }: { recent: QuickThought[]; all: QuickThought[]; onError: (message: string) => void }) {

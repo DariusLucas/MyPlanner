@@ -107,6 +107,7 @@ export function TaskCompletionButton({
   title,
   completed,
   pending = false,
+  pendingContent,
   animating = false,
   incompleteContent,
   className = "",
@@ -116,6 +117,7 @@ export function TaskCompletionButton({
   title: string;
   completed: boolean;
   pending?: boolean;
+  pendingContent?: ReactNode;
   animating?: boolean;
   incompleteContent?: ReactNode;
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "aria-label">) {
@@ -129,7 +131,7 @@ export function TaskCompletionButton({
       className={`task-check ${completed ? "task-check-completed" : ""} ${animating ? "completion-check-bloom task-check-animate-complete" : ""} ${className}`.trim()}
     >
       <span className="task-check-surface">
-        {completed || animating ? <Check size={12} strokeWidth={3} /> : pending ? <span className="task-check-pending" /> : incompleteContent}
+        {completed || animating ? <Check size={12} strokeWidth={3} /> : pending ? pendingContent !== undefined ? pendingContent : <span className="task-check-pending" /> : incompleteContent}
       </span>
     </button>
   );
