@@ -119,11 +119,7 @@ export function ProgressView(props: ProgressViewProps) {
     <main className="progress-shell mx-auto w-full max-w-[1500px] space-y-6">
       <header className="progress-header flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <p className="dashboard-eyebrow">See progress</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.055em]">Your work, over time</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            A history of planned work, completed tasks, and the days you kept showing up.
-          </p>
+          <h1 className="text-3xl font-semibold tracking-[-0.055em] lg:text-[2.6rem]">Progress</h1>
         </div>
         <ProgressFilters filters={filters} onChange={updateFilters} />
       </header>
@@ -193,10 +189,10 @@ function ProgressFilters({
 
 function Summary({ data }: { data: ProgressData }) {
   const items = [
-    { label: "Current streak", value: data.currentStreak, suffix: "productive days", icon: Flame },
-    { label: "Best streak", value: data.bestStreak, suffix: "productive days", icon: Activity },
     { label: "Tasks completed", value: data.completedTasks, suffix: `${data.overdueCompletions} completed overdue`, icon: CheckCircle2 },
     { label: "Productive days", value: data.productiveDays, suffix: `${data.completionRate}% plan completion`, icon: CalendarCheck2 },
+    { label: "Current streak", value: data.currentStreak, suffix: "productive days", icon: Flame },
+    { label: "Best streak", value: data.bestStreak, suffix: "productive days", icon: Activity },
   ];
   return (
     <section className="progress-summary-grid" aria-label="Progress summary">

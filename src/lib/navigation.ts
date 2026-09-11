@@ -5,7 +5,7 @@ import {
   ChartSpline,
   Clapperboard,
   House,
-  Settings2,
+  UserRound,
 } from "lucide-react";
 
 export type NavigationItem = {
@@ -24,5 +24,5 @@ export const primaryNavigation: NavigationItem[] = [
 ];
 
 export const utilityNavigation: NavigationItem[] = [
-  { label: "Settings", href: "/settings", icon: Settings2 },
+  { label: "Profile", href: "/settings", icon: UserRound },
 ];

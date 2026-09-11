@@ -74,14 +74,14 @@ export function FocusAreaView({ data }: { data: FocusAreaData }) {
   }
   const title = data.category === "career" ? "Career" : "Content";
   return <div className="focus-area-shell mx-auto w-full max-w-[1500px] space-y-6 sm:space-y-7">
-    <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-medium text-muted-foreground">Focused workspace</p><h1 className="mt-1.5 text-3xl font-semibold tracking-[-0.055em] sm:text-[2.6rem]">{title}</h1><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Actions planned in This Week, with finished work kept close for perspective.</p></div><button onClick={() => setComposer(true)} className="premium-primary-button"><Plus size={16} /> Add task</button></header>
+    <header className="flex flex-wrap items-end justify-between gap-4"><h1 className="text-3xl font-semibold tracking-[-0.055em] sm:text-[2.6rem]">{title}</h1><button onClick={() => setComposer(true)} className="premium-primary-button"><Plus size={16} /> Add task</button></header>
     {error && <div role="alert" className="flex items-center justify-between rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm">{error}<button onClick={() => setError(null)} aria-label="Dismiss"><X size={16} /></button></div>}
     {composer && <TaskComposer weekStart={weekStart} days={weekDays} defaultCategory={data.category} lockCategory pending={pending === "create-task"} onSubmit={addFocusTask} onClose={() => setComposer(false)} />}
-    <MilestonesPanel category={data.category} milestones={data.milestones} pending={pending} run={run} />
     <div className="grid items-start gap-6 lg:grid-cols-2">
       <TaskSection title="Active" subtitle="Work still in motion" tasks={data.active} pendingIds={pendingTaskIds} finishingIds={finishingIds} onToggle={toggle} />
       <TaskSection title="Completed" subtitle="Your finished work stays visible" tasks={data.completed} completed pendingIds={pendingTaskIds} finishingIds={finishingIds} onToggle={toggle} />
     </div>
+    <MilestonesPanel category={data.category} milestones={data.milestones} pending={pending} run={run} />
   </div>;
 }
 

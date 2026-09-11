@@ -10,14 +10,14 @@ const themes = [
   { value: "system", label: "System", icon: Laptop },
 ] as const;
 
-export function ThemeToggle({ compact = false }: { compact?: boolean }) {
+export function ThemeToggle({ compact = false, labelled = false }: { compact?: boolean; labelled?: boolean }) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    return <div className={`${compact ? "size-9" : "h-[46px] w-[132px]"} rounded-full bg-muted`} aria-hidden="true" />;
+    return <div className={`${compact ? "size-9" : labelled ? "h-[46px] w-[228px]" : "h-[46px] w-[132px]"} rounded-full bg-muted`} aria-hidden="true" />;
   }
 
   if (compact) {
@@ -33,7 +33,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const selectedIndex = themeIndex >= 0 ? themeIndex : 2;
 
   return (
-    <div className="theme-toggle" data-theme={theme} aria-label="Choose theme" role="group">
+    <div className={`theme-toggle ${labelled ? "theme-toggle-labelled" : ""}`} data-theme={theme} aria-label="Choose theme" role="group">
       <span className="theme-toggle-indicator" style={{ transform: `translateX(${selectedIndex * 100}%)` }} aria-hidden="true" />
       {themes.map(({ value, label, icon: Icon }) => (
         <button
@@ -46,6 +46,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
           className="theme-option-button"
         >
           <Icon size={15} strokeWidth={1.8} />
+          {labelled && <span>{label}</span>}
         </button>
       ))}
     </div>

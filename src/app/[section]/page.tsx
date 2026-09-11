@@ -26,7 +26,7 @@ type SectionSearchParams = {
 
 const sections: Record<string, { title: string; description: string }> = {
   settings: {
-    title: "Settings",
+    title: "Profile",
     description: "Theme controls are available in the sidebar. Additional settings will be introduced only when they support an active workflow.",
   },
 };
@@ -59,14 +59,12 @@ export default async function SectionPage({ params, searchParams }: { params: Pr
   return (
     <section className="settings-shell mx-auto w-full max-w-[760px] space-y-6">
       <header>
-        <p className="dashboard-eyebrow">Your space</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-.055em]">{content.title}</h1>
-        <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Manage your account and planner preferences.</p>
+        <h1 className="text-3xl font-semibold tracking-[-.055em]">{content.title}</h1>
       </header>
       <SettingsAccountCard email={email} signOutAction={signOut} />
       <article className="settings-preference-row">
         <div><h2 className="text-sm font-semibold">Appearance</h2><p className="mt-1 text-xs text-muted-foreground">Use a light, dark, or system-matched theme.</p></div>
-        <ThemeToggle />
+        <ThemeToggle labelled />
       </article>
     </section>
   );
