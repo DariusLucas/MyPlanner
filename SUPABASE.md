@@ -59,6 +59,14 @@ under **Authentication → Emails → SMTP Settings**, then change the template
 body under **Authentication → Emails → Templates → Magic link or OTP** so it
 contains `{{ .Token }}`.
 
+The Android client also supports the existing magic-link template as a fallback.
+Add `com.myplanner.app://auth/callback` to **Authentication → URL Configuration
+→ Redirect URLs** in the Supabase dashboard. The Android app registers that
+custom URL and exchanges the returned session in-app instead of leaving the
+user in Chrome. This is required for magic-link sign-in; it does not change the
+preferred six-digit code flow once the email template is configured with
+`{{ .Token }}`.
+
 After that dashboard configuration, run `npm run test:supabase-auth`. Enter a
 real email address, copy the received code into the prompt, and confirm that
 the script reports that email OTP, the authenticated session, and the

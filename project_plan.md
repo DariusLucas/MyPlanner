@@ -2300,10 +2300,10 @@ Phase U3 — Task Interaction, Modal, and Design Tokens
 COMPLETED
 
 Phase U4 — Planning and Routine Clarity
-PENDING
+COMPLETED
 
 Phase U5 — Final UI/UX Usability Pass
-PENDING
+COMPLETED
 ```
 
 Each phase preserves the approved orange palette, sidebar, typography,

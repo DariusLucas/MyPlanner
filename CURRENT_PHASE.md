@@ -1,74 +1,60 @@
-# Phase U4 — Planning and Routine Clarity
+# UI/UX Roadmap Complete — Awaiting Next Approved Phase
 
-## Objective
+## Status
 
-Make weekly planning feel simpler and make recurring weekly targets immediately
-understandable without expanding MyPlanner into a general habit system.
+The approved UI/UX roadmap is complete through Phase U5.
 
-## Required Behavior
+## Completed Objective
 
-- Keep Checklist as the default This Week view and Kanban as an optional view.
-- Reduce duplicate Add task affordances in empty weekly states so each context
-  has one clear primary action.
-- Keep quick-add fast for one-off tasks, with the minimum choices needed to
-  place an action on a day or keep it flexible for the week.
-- Replace ambiguous “Repeat this week” language with clear weekly routine or
-  weekly target language throughout composers, task cards, and supporting copy.
-- Explain that a weekly target resets on Monday and represents a number of
-  check-ins for the week.
-- Preserve task completion, Reopen, Undo, dialog accessibility, reduced motion,
-  Supabase revisions, Realtime refresh, and web/Android parity from Phase U3.
-- Preserve the approved visual design and the Plan → Do → Complete → See
-  Progress loop.
+MyPlanner now presents the core loop clearly across web and Android:
 
-## Implementation Checklist
+Plan → Do → Complete → See Progress.
 
-- [ ] Inventory weekly empty states, Add task affordances, default-view logic,
-      quick-add fields, and recurring-task language across web and Android.
-- [ ] Remove or demote duplicate Add task actions while retaining one obvious
-      action in each weekly planning context.
-- [ ] Verify Checklist remains the default and Kanban remains an optional,
-      explicitly selected view.
-- [ ] Simplify one-off task creation without removing required placement,
-      category, estimate, or revision behavior.
-- [ ] Rename “Repeat this week” and related ambiguous copy to weekly routine or
-      weekly target language.
-- [ ] Add concise reset and check-in guidance where recurring targets are
-      created and displayed.
-- [ ] Verify the revised planning flow at narrow mobile widths and on Android.
-- [ ] Add source, interaction, responsive, and mobile tests for the clarified
-      defaults, actions, and language.
-- [ ] Run dashboard, week, focus-area, mobile, responsive, interaction,
-      typecheck, lint, web build, and Android build checks.
-- [ ] Update the UI/UX audit and roadmap status documentation.
+Opening the app leads with what remains today, keeps finished work visible,
+makes task creation and completion obvious, explains weekly planning and
+routines in plain language, and keeps Progress directly accessible.
+
+## Verified Behavior
+
+- Today is the canonical landing experience and leads with actionable work.
+- Remaining, completed, daily, and weekly progress are easy to find.
+- Empty, completed, and overdue states use clear, non-punitive language.
+- Task creation, completion, Undo/Reopen, and selected-day quick-add are
+  consistent across the shared web and Android experience.
+- Career and Content put active and completed work before supporting
+  milestones.
+- Progress leads with completed work and retains accessible filters, charts,
+  heatmap labels, and a visible legend.
+- Profile/Settings exposes clearly labelled Light, Dark, and System theme choices.
+- Desktop, narrow mobile, short viewport, light theme, dark theme, realistic,
+  empty, completed, and overdue states were visually checked.
+- All relevant regression tests, type checking, linting, web build, mobile
+  build, Capacitor sync, and Android debug APK build passed.
+
+## Current Implementation Checklist
+
+- [x] Phase U1 — Today-First Landing Experience
+- [x] Phase U2 — Daily Completion Visualization
+- [x] Phase U3 — Task Interaction, Modal, and Design Tokens
+- [x] Phase U4 — Planning and Routine Clarity
+- [x] Phase U5 — Final UI/UX Usability Pass
 
 ## Explicitly Out of Scope
 
-- Do not add a generic habit tracker, streak system, rewards, scoring, or new
-  recurrence semantics.
-- Do not change the database schema, recurrence ownership, Monday reset rules,
-  Supabase conflict handling, or task history.
-- Do not redesign the orange palette, sidebar, typography, spacing, themes,
-  rounded component language, or established task/dialog interactions.
-- Do not perform the final full-product usability and polish pass; that is
-  Phase U5.
+- Do not begin a new product phase until the user approves one.
+- Do not add planner modules, habits, gamification, sharing, teams,
+  notifications, or speculative analytics.
+- Do not change the approved visual language, database schema, ownership,
+  recurrence semantics, conflict handling, or historical completion data.
 
 ## Completion Criteria
 
-Phase U4 is complete when weekly planning presents one clear Add task path per
-context; Checklist is the default and Kanban is an optional choice; one-off
-task creation remains fast; weekly routines clearly communicate their target,
-check-ins, and Monday reset; the clarified behavior is consistent on web and
-Android; existing task data and concurrency behavior remain correct; and all
-relevant checks pass.
+This checkpoint is complete when the repository records U5 as completed, no
+audit-only route remains, and the verified application is ready for the user
+to choose the next product phase.
 
-## Relevant Dependencies from Previous Phases
+## Relevant Dependencies
 
-- U1 establishes Today as the primary landing experience and action hierarchy.
-- U2 provides daily completion feedback that weekly planning must continue to
-  feed accurately.
-- U3 provides shared completion controls, dialog accessibility, semantic
-  tokens, short-viewport behavior, and reduced-motion coverage.
-- Existing weekly recurrence behavior already supplies count-per-week targets,
-  Monday reset semantics, completion history, and optimistic revisions; U4
-  clarifies that behavior rather than replacing it.
+- `project_plan.md` records every approved UI/UX phase as completed.
+- `UI_UX_AUDIT.md` records the final visual walkthrough and verification.
+- `artifacts/MyPlanner-android-debug.apk` is the verified Android build.

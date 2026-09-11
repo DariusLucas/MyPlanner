@@ -13,7 +13,7 @@ approved visual design remains unchanged.
 - Phase B was completed as Phase U1 on 2026-09-06: the landing navigation is
   Today, `/today` resolves to `/`, the active checklist leads the content,
   daily metrics remain visible for empty and populated days, and streak is a
-  compact supporting signal below actionable content.
+  compact supporting signal inside the Today hero instead of a separate panel.
 - Phase C was completed as Phase U2 on 2026-09-06: Today now includes a
   compact Monday-through-Sunday completion strip, selected-day totals,
   current-day identification, non-color fractions, and accessible labels;
@@ -23,7 +23,24 @@ approved visual design remains unchanged.
   Undo stays immediate and revision-safe; dialogs share focus entry, trapping,
   safe Escape, focus return, announcements, and short-viewport behavior; and
   semantic design tokens plus reduced-motion coverage apply to web and Android.
-- Phase E is prepared as Phase U4.
+- Phase E was completed as Phase U4 on 2026-09-09: This Week now states left,
+  done, and planned totals up front; Checklist remains the explained default;
+  empty days stay compact; one selected day owns the contextual quick-add;
+  and weekly routines use explicit check-in and Monday-reset language. The
+  shared web/Android flow was verified at a 390×844 viewport, including the
+  task composer, routine disclosure, day selection, and optional Kanban view.
+- Phase F was completed as Phase U5 on 2026-09-09: a full visual walkthrough
+  covered Today, This Week, Career, Content, Progress, and Profile/Settings with
+  realistic, empty, completed, and overdue data at 390×844, 1440×900, and a
+  1280×600 short viewport in light and dark themes. Today now leads with the
+  actionable checklist and plain empty-day language; redundant zero-progress
+  visuals and duplicate empty-state actions are gone; Career and Content put
+  active and completed tasks before milestones; Progress leads with completed
+  work; and Profile/Settings names Light, Dark, and System beside their icons. The
+  audit used production components with temporary fixture data, removed the
+  audit-only route afterward, and did not mutate planner data. Web and Android
+  builds plus all relevant regression, accessibility, responsive, timezone,
+  recurrence, auth-boundary, type, and lint checks passed.
 
 ## Executive summary
 
