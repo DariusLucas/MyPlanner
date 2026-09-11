@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { isValid, parseISO } from "date-fns";
 import { z } from "zod";
-import { taskCategories, taskPriorities } from "@/src/lib/planner-values";
+import { taskPriorities } from "@/src/lib/planner-values";
 import {
   confirmPlannedTaskCompletion,
   createPlannedTask,
@@ -26,7 +26,7 @@ const dateSchema = z
   .refine((value) => isValid(parseISO(value)), "Choose a valid date.");
 const idSchema = z.string().uuid();
 const revisionSchema = z.coerce.number().int().positive();
-const categorySchema = z.enum(taskCategories);
+const categorySchema = z.string().uuid("Create or choose a category first.");
 const prioritySchema = z.enum(taskPriorities);
 const workflowStatusSchema = z.enum([
   "not_started",
@@ -115,8 +115,7 @@ function resultFromError(error: unknown): ActionResult {
 function refreshPlanner() {
   revalidatePath("/");
   revalidatePath("/week");
-  revalidatePath("/career");
-  revalidatePath("/content");
+  revalidatePath("/category", "layout");
   revalidatePath("/progress");
 }
 

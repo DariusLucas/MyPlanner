@@ -49,9 +49,12 @@ export function normalizeProgressCategory(
   value?: string | string[],
 ): ProgressCategoryFilter {
   const candidate = Array.isArray(value) ? value[0] : value;
-  return ["all", "career", "content", "personal"].includes(candidate ?? "")
-    ? candidate as ProgressCategoryFilter
-    : "all";
+  return ["all", "career", "content", "personal"].includes(candidate ?? "") ? candidate as ProgressCategoryFilter : "all";
+}
+
+export function normalizeProgressCategories(value?: string | string[]) {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return [...new Set((candidate ?? "").split(",").filter(Boolean))];
 }
 
 export function progressRangeStart(range: ProgressRangeKey, today: string) {
@@ -70,8 +73,8 @@ export function progressGrouping(range: ProgressRangeKey): ProgressGrouping {
   return "month";
 }
 
-function emptyCategoryCounts(): Record<ProgressCategory, number> {
-  return { career: 0, content: 0, personal: 0 };
+function emptyCategoryCounts(keys: string[] = []): Record<ProgressCategory, number> {
+  return Object.fromEntries(keys.map((key) => [key, 0]));
 }
 
 export function buildProgressPeriods(
@@ -79,6 +82,7 @@ export function buildProgressPeriods(
   grouping: ProgressGrouping,
 ): ProgressPeriod[] {
   const periods = new Map<string, ProgressPeriod>();
+  const categoryKeys = Object.keys(data.categoryCounts);
 
   const firstDate = data.range.startDate ?? data.daily[0]?.date;
   if (firstDate) {
@@ -109,7 +113,7 @@ export function buildProgressPeriods(
         plannedCompleted: 0,
         completionRate: 0,
         productiveDays: 0,
-        categoryCounts: emptyCategoryCounts(),
+        categoryCounts: emptyCategoryCounts(categoryKeys),
       });
     }
   }
@@ -132,15 +136,15 @@ export function buildProgressPeriods(
       plannedCompleted: 0,
       completionRate: 0,
       productiveDays: 0,
-      categoryCounts: emptyCategoryCounts(),
+      categoryCounts: emptyCategoryCounts(categoryKeys),
     };
     period.completed += day.completed;
     period.planned += day.planned;
     period.plannedCompleted += day.plannedCompleted;
     period.productiveDays += day.productive ? 1 : 0;
-    period.categoryCounts.career += day.categoryCounts.career;
-    period.categoryCounts.content += day.categoryCounts.content;
-    period.categoryCounts.personal += day.categoryCounts.personal;
+    for (const category of categoryKeys) {
+      period.categoryCounts[category] = (period.categoryCounts[category] ?? 0) + (day.categoryCounts[category] ?? 0);
+    }
     periods.set(key, period);
   }
 
@@ -162,6 +166,7 @@ export function buildHeatmap(data: ProgressData, maximumWeeks = 53): HeatmapDay[
   const gridEnd = endOfWeek(end, { weekStartsOn: 1 });
   const byDate = new Map(data.daily.map((day) => [day.date, day]));
   const days: HeatmapDay[] = [];
+  const categoryKeys = Object.keys(data.categoryCounts);
 
   for (let date = gridStart; date <= gridEnd; date = addDays(date, 1)) {
     const key = format(date, "yyyy-MM-dd");
@@ -171,7 +176,7 @@ export function buildHeatmap(data: ProgressData, maximumWeeks = 53): HeatmapDay[
       date: key,
       inRange,
       completed: inRange ? day?.completed ?? 0 : 0,
-      categoryCounts: inRange ? day?.categoryCounts ?? emptyCategoryCounts() : emptyCategoryCounts(),
+      categoryCounts: inRange ? day?.categoryCounts ?? emptyCategoryCounts(categoryKeys) : emptyCategoryCounts(categoryKeys),
     });
   }
 

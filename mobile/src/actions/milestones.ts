@@ -4,7 +4,7 @@ import { MobileAuthError, MobileDataError } from "../supabase";
 import type { ActionResult } from "./tasks";
 
 const idSchema = z.string().uuid();
-const categorySchema = z.enum(["career", "content"]);
+const categorySchema = z.string().uuid();
 const milestoneSchema = z.object({
   label: z.string().trim().min(1, "Add a milestone name.").max(160, "Keep the milestone under 160 characters."),
   type: z.enum(["views", "likes", "followers", "applications", "interviews", "offers", "custom"]),

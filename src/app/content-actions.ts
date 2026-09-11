@@ -12,7 +12,7 @@ import {
   updatePlannerMilestone,
 } from "@/src/lib/supabase/planner";
 
-const categorySchema = z.enum(["career", "content"]);
+const categorySchema = z.string().uuid();
 const targetSchema = z.object({
   id: z.string().uuid(),
   revision: z.coerce.number().int().positive(),
@@ -24,15 +24,7 @@ const milestoneSchema = z.object({
     .trim()
     .min(1, "Add a milestone name.")
     .max(160, "Keep the milestone under 160 characters."),
-  type: z.enum([
-    "views",
-    "likes",
-    "followers",
-    "applications",
-    "interviews",
-    "offers",
-    "custom",
-  ]),
+  type: z.string().trim().min(1, "Add a milestone type.").max(60, "Keep the type under 60 characters."),
   targetValue: z.preprocess(
     (value) => (value === "" || value === undefined ? undefined : Number(value)),
     z.number().int().positive("Use a positive target.").max(1_000_000_000).optional(),
@@ -58,8 +50,8 @@ function fail(error: unknown): ActionResult {
 }
 
 function refresh() {
-  revalidatePath("/career");
-  revalidatePath("/content");
+  revalidatePath("/category", "layout");
+  revalidatePath("/progress");
 }
 
 function parseMilestone(formData: FormData) {

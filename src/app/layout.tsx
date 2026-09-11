@@ -4,6 +4,8 @@ import { AppShell } from "@/src/components/app-shell";
 import { ThemeProvider } from "@/src/components/theme-provider";
 import { signOut } from "@/src/app/auth-actions";
 import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { getPlannerCategories } from "@/src/lib/supabase/planner";
+import { CategoryProvider } from "@/src/components/category-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,12 +17,15 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const client = await createSupabaseServerClient();
   const { data } = await client.auth.getClaims();
   const userEmail = typeof data?.claims.email === "string" ? data.claims.email : undefined;
+  const categories = typeof data?.claims.sub === "string" ? await getPlannerCategories() : [];
 
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AppShell signOutAction={signOut} userEmail={userEmail}>{children}</AppShell>
+          <CategoryProvider categories={categories}>
+            <AppShell signOutAction={signOut} userEmail={userEmail}>{children}</AppShell>
+          </CategoryProvider>
         </ThemeProvider>
       </body>
     </html>

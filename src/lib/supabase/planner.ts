@@ -10,6 +10,7 @@ import {
 } from "./planner-errors";
 import type { DashboardData, QuickThought } from "@/src/lib/dashboard";
 import type { FocusArea, FocusAreaData, FocusMilestone } from "@/src/lib/focus-areas";
+import type { CategoryColorName, CategoryIconName, PlannerCategory } from "@/src/lib/categories";
 import { calculateProductiveStreak, localDateInTimeZone } from "@/src/lib/progress";
 import { buildWeekCompletion } from "@/src/lib/daily-completion";
 import type { ProgressTask } from "@/src/lib/progress";
@@ -28,6 +29,7 @@ type FocusRow = Database["public"]["Tables"]["daily_focus"]["Row"];
 type RecurrenceRow = Database["public"]["Tables"]["task_recurrences"]["Row"];
 type MilestoneRow = Database["public"]["Tables"]["content_milestones"]["Row"];
 type ThoughtRow = Database["public"]["Tables"]["quick_thoughts"]["Row"];
+type CategoryRow = Database["public"]["Tables"]["categories"]["Row"];
 
 export class PlannerAuthError extends Error {
   constructor() {
@@ -83,7 +85,8 @@ function taskFromRow(row: TaskRow): TodayTask {
     id: row.id,
     title: row.title,
     description: row.description,
-    category: row.category as TaskCategory,
+    category: (row.category_id ?? row.category) as TaskCategory,
+    categoryId: row.category_id,
     goalId: row.goal_id,
     sprintId: row.sprint_id,
     sprintWeekId: row.sprint_week_id,
@@ -106,11 +109,26 @@ function taskFromRow(row: TaskRow): TodayTask {
 function milestoneFromRow(row: MilestoneRow): FocusMilestone {
   return {
     id: row.id,
-    category: row.category as FocusArea,
+    category: (row.category_id ?? row.category) as FocusArea,
+    categoryId: row.category_id,
     label: row.label,
     type: row.type as FocusMilestone["type"],
     targetValue: row.target_value,
     achievedAt: row.achieved_at,
+    revision: row.revision,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function categoryFromRow(row: CategoryRow): PlannerCategory {
+  return {
+    id: row.id,
+    name: row.name,
+    icon: row.icon as CategoryIconName,
+    color: (row.color ?? "orange") as CategoryColorName,
+    position: row.position,
+    archivedAt: row.archived_at,
     revision: row.revision,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -157,12 +175,28 @@ function taskInputJson(input: PlannedTaskInput): Json {
   return {
     title: input.title,
     description: input.description ?? "",
-    category: input.category,
+    category: "other",
     priority: input.priority,
     date: input.date,
     estimated_minutes: input.estimatedMinutes?.toString() ?? "",
     anytime_week_start: input.anytimeWeekStart ?? "",
   };
+}
+
+export async function getPlannerCategories({ includeArchived = false } = {}): Promise<PlannerCategory[]> {
+  const { client } = await authenticatedContext();
+  let query = client.from("categories").select("*").order("position").order("created_at").order("id");
+  if (!includeArchived) query = query.is("archived_at", null);
+  const { data, error } = await query;
+  fail(error);
+  return (data ?? []).map(categoryFromRow);
+}
+
+export async function getPlannerCategory(id: string): Promise<PlannerCategory | null> {
+  const { client } = await authenticatedContext();
+  const { data, error } = await client.from("categories").select("*").eq("id", id).is("archived_at", null).maybeSingle();
+  fail(error);
+  return data ? categoryFromRow(data) : null;
 }
 
 async function plannerTimeZone(client: PlannerClient, userId: string) {
@@ -398,12 +432,12 @@ export async function getWeekData(weekStart: string): Promise<WeekData> {
   };
 }
 
-export async function getFocusAreaData(category: FocusArea): Promise<FocusAreaData> {
+export async function getFocusAreaData(category: PlannerCategory): Promise<FocusAreaData> {
   const { client } = await authenticatedContext();
   const [{ data: taskRows, error: taskError }, { data: milestoneRows, error: milestoneError }] =
     await Promise.all([
-      client.from("tasks").select("*").eq("category", category).order("date").order("position").order("id"),
-      client.from("content_milestones").select("*").eq("category", category).order("created_at").order("id"),
+      client.from("tasks").select("*").eq("category_id", category.id).order("date").order("position").order("id"),
+      client.from("content_milestones").select("*").eq("category_id", category.id).order("created_at").order("id"),
     ]);
   fail(taskError);
   fail(milestoneError);
@@ -454,7 +488,7 @@ export async function createPlannedTask(
       p_input: {
         title: input.title,
         description: input.description ?? "",
-        category: input.category,
+        category: "other",
         priority: input.priority,
         estimated_minutes: input.estimatedMinutes?.toString() ?? "",
         count_per_week: recurrenceCount,
@@ -463,7 +497,13 @@ export async function createPlannedTask(
       },
       p_client_recurrence_id: recurrenceId,
     });
-    rpcResult<{ recurrence: RecurrenceRow }>(data, error);
+    const created = rpcResult<{ recurrence: RecurrenceRow }>(data, error);
+    const { data: categoryData, error: categoryError } = await client.rpc("assign_recurrence_category", {
+      p_recurrence_id: created.recurrence.id,
+      p_expected_revision: created.recurrence.revision,
+      p_category_id: input.category,
+    });
+    rpcResult<{ recurrence: RecurrenceRow }>(categoryData, categoryError);
     await ensureRecurringInstances(client, input.anytimeWeekStart!);
     return;
   }
@@ -472,7 +512,13 @@ export async function createPlannedTask(
     p_input: taskInputJson(input),
     p_client_task_id: crypto.randomUUID(),
   });
-  rpcResult<{ task: TaskRow }>(data, error);
+  const created = rpcResult<{ task: TaskRow }>(data, error);
+  const { data: categoryData, error: categoryError } = await client.rpc("assign_task_category", {
+    p_task_id: created.task.id,
+    p_expected_revision: created.task.revision,
+    p_category_id: input.category,
+  });
+  rpcResult<{ task: TaskRow }>(categoryData, categoryError);
 }
 
 export async function updatePlannedTask(
@@ -488,7 +534,13 @@ export async function updatePlannedTask(
     p_input: taskInputJson(input),
     p_recurrence_count: recurrenceCount,
   });
-  rpcResult<{ task: TaskRow; recurrence?: RecurrenceRow }>(data, error);
+  const updated = rpcResult<{ task: TaskRow; recurrence?: RecurrenceRow }>(data, error);
+  const { data: categoryData, error: categoryError } = await client.rpc("assign_task_category", {
+    p_task_id: updated.task.id,
+    p_expected_revision: updated.task.revision,
+    p_category_id: input.category,
+  });
+  rpcResult<{ task: TaskRow }>(categoryData, categoryError);
   if (recurrenceCount && input.anytimeWeekStart) {
     await ensureRecurringInstances(client, input.anytimeWeekStart);
   }
@@ -639,7 +691,8 @@ export async function createPlannerMilestone(category: FocusArea, values: Milest
   const { error } = await client.from("content_milestones").insert({
     id: crypto.randomUUID(),
     user_id: userId,
-    category,
+    category: "content",
+    category_id: category,
     label: values.label,
     type: values.type,
     target_value: values.targetValue ?? null,
@@ -662,7 +715,7 @@ export async function updatePlannerMilestone(
       target_value: values.targetValue ?? null,
     })
     .eq("id", id)
-    .eq("category", category)
+    .eq("category_id", category)
     .eq("revision", revision)
     .select("id")
     .maybeSingle();
@@ -681,7 +734,7 @@ export async function setPlannerMilestoneAchieved(
     .from("content_milestones")
     .update({ achieved_at: achieved ? new Date().toISOString() : null })
     .eq("id", id)
-    .eq("category", category)
+    .eq("category_id", category)
     .eq("revision", revision)
     .select("id")
     .maybeSingle();
@@ -699,10 +752,97 @@ export async function deletePlannerMilestone(
     .from("content_milestones")
     .delete()
     .eq("id", id)
-    .eq("category", category)
+    .eq("category_id", category)
     .eq("revision", revision)
     .select("id")
     .maybeSingle();
   fail(error);
   if (!data) await optimisticMiss(client, "content_milestones", id);
+}
+
+export async function createPlannerCategory(name: string, icon: CategoryIconName, color: CategoryColorName) {
+  const { client, userId } = await authenticatedContext();
+  const { data: last, error: positionError } = await client
+    .from("categories")
+    .select("position")
+    .is("archived_at", null)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  fail(positionError);
+  const { data, error } = await client.from("categories").insert({
+    id: crypto.randomUUID(),
+    user_id: userId,
+    name,
+    icon,
+    color,
+    position: (last?.position ?? -1) + 1,
+  }).select("*").single();
+  if (error?.code === "23505") throw new PlannerDataError("You already have a category with that name.");
+  fail(error);
+  return categoryFromRow(data!);
+}
+
+export async function updatePlannerCategory(
+  id: string,
+  revision: number,
+  name: string,
+  icon: CategoryIconName,
+  color: CategoryColorName,
+) {
+  const { client } = await authenticatedContext();
+  const { data, error } = await client.from("categories")
+    .update({ name, icon, color })
+    .eq("id", id)
+    .eq("revision", revision)
+    .is("archived_at", null)
+    .select("*")
+    .maybeSingle();
+  if (error?.code === "23505") throw new PlannerDataError("You already have a category with that name.");
+  fail(error);
+  if (!data) throw new PlannerDataError("This category changed in another session. Refresh and try again.");
+  return categoryFromRow(data);
+}
+
+export async function archivePlannerCategory(id: string, revision: number) {
+  const { client } = await authenticatedContext();
+  const { data, error } = await client.from("categories")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("revision", revision)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle();
+  fail(error);
+  if (!data) throw new PlannerDataError("This category changed in another session. Refresh and try again.");
+}
+
+export async function restorePlannerCategory(id: string, revision: number) {
+  const { client } = await authenticatedContext();
+  const { data, error } = await client.from("categories")
+    .update({ archived_at: null })
+    .eq("id", id)
+    .eq("revision", revision)
+    .not("archived_at", "is", null)
+    .select("id")
+    .maybeSingle();
+  if (error?.code === "23505") throw new PlannerDataError("An active category already has this name.");
+  fail(error);
+  if (!data) throw new PlannerDataError("This category changed in another session. Refresh and try again.");
+}
+
+export async function deletePlannerCategoryPermanently(id: string, revision: number) {
+  const { client } = await authenticatedContext();
+  const [tasks, recurrences, milestones] = await Promise.all([
+    client.from("tasks").select("id", { count: "exact", head: true }).eq("category_id", id),
+    client.from("task_recurrences").select("id", { count: "exact", head: true }).eq("category_id", id),
+    client.from("content_milestones").select("id", { count: "exact", head: true }).eq("category_id", id),
+  ]);
+  fail(tasks.error); fail(recurrences.error); fail(milestones.error);
+  if ((tasks.count ?? 0) + (recurrences.count ?? 0) + (milestones.count ?? 0) > 0) {
+    throw new PlannerDataError("This category contains planner history, so it can only be archived.");
+  }
+  const { data, error } = await client.from("categories").delete().eq("id", id).eq("revision", revision).select("id").maybeSingle();
+  fail(error);
+  if (!data) throw new PlannerDataError("This category changed in another session. Refresh and try again.");
 }

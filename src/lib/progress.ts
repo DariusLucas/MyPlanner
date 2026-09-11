@@ -1,7 +1,6 @@
-import type { PlannerId, TaskCategory, TaskStatus } from "@/src/lib/today";
+import type { PlannerId, TaskStatus } from "@/src/lib/today";
 
-export const progressCategoryKeys = ["career", "content", "personal"] as const;
-export type ProgressCategory = (typeof progressCategoryKeys)[number];
+export type ProgressCategory = string;
 
 export const weekdayKeys = [
   "monday",
@@ -16,7 +15,7 @@ export type WeekdayKey = (typeof weekdayKeys)[number];
 
 export type ProgressTask = {
   id?: PlannerId;
-  category: TaskCategory;
+  category: string;
   date: string;
   anytimeWeekStart: string | null;
   recurrenceId?: PlannerId | null;
@@ -35,6 +34,8 @@ export type ProgressOptions = {
   timeZone?: string;
   /** Optional Progress-facing category filter. */
   category?: ProgressCategory;
+  /** Optional multi-category filter. */
+  categories?: ProgressCategory[];
 };
 
 export type DailyProgress = {
@@ -140,8 +141,8 @@ export function calculateProductiveStreak(completionDates: string[], today: stri
   };
 }
 
-function emptyCategories(): Record<ProgressCategory, number> {
-  return { career: 0, content: 0, personal: 0 };
+function emptyCategories(keys: ProgressCategory[]): Record<ProgressCategory, number> {
+  return Object.fromEntries(keys.map((key) => [key, 0]));
 }
 
 function emptyWeekdays(): Record<WeekdayKey, number> {
@@ -156,7 +157,7 @@ function emptyWeekdays(): Record<WeekdayKey, number> {
   };
 }
 
-function progressCategory(category: TaskCategory): ProgressCategory {
+function progressCategory(category: string): ProgressCategory {
   return category === "other" ? "personal" : category;
 }
 
@@ -189,14 +190,16 @@ export function calculateProgress(
   const requestedEnd = validDate(options.endDate) ? options.endDate : today;
   const endDate = requestedEnd < today ? requestedEnd : today;
   const effectiveStart = startDate;
-  const categoryCounts = emptyCategories();
+  const categoryKeys = [...new Set(["career", "content", "personal", ...taskHistory.map((task) => progressCategory(task.category))])];
+  const categoryCounts = emptyCategories(categoryKeys);
   const weekdayDistribution = emptyWeekdays();
   const completionDates: Record<string, number> = {};
   const daily = new Map<string, DailyProgress>();
   const allCompletionDates: string[] = [];
   let overdueCompletions = 0;
-  const selectedHistory = options.category
-    ? taskHistory.filter((task) => progressCategory(task.category) === options.category)
+  const selectedCategories = options.categories ?? (options.category ? [options.category] : []);
+  const selectedHistory = selectedCategories.length
+    ? taskHistory.filter((task) => selectedCategories.includes(progressCategory(task.category)))
     : taskHistory;
 
   function day(date: string) {
@@ -209,7 +212,7 @@ export function calculateProgress(
       planned: 0,
       plannedCompleted: 0,
       completionRate: 0,
-      categoryCounts: emptyCategories(),
+      categoryCounts: emptyCategories(categoryKeys),
     };
     daily.set(date, point);
     return point;
@@ -229,13 +232,13 @@ export function calculateProgress(
 
   for (const { task, completedDate } of rangedCompletions) {
     const category = progressCategory(task.category);
-    categoryCounts[category] += 1;
+    categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
     weekdayDistribution[weekday(completedDate)] += 1;
     completionDates[completedDate] = (completionDates[completedDate] ?? 0) + 1;
     const dailyPoint = day(completedDate);
     dailyPoint.completed += 1;
     dailyPoint.productive = true;
-    dailyPoint.categoryCounts[category] += 1;
+    dailyPoint.categoryCounts[category] = (dailyPoint.categoryCounts[category] ?? 0) + 1;
 
     if (validDate(task.date)) {
       const deadline = task.anytimeWeekStart && validDate(task.anytimeWeekStart)

@@ -3,11 +3,10 @@ import { format, isValid, parseISO } from "date-fns";
 import { db } from "@/src/db/client";
 import { dailyFocus, tasks } from "@/src/db/schema";
 
-export const taskCategories = ["career", "content", "other"] as const;
 export const taskPriorities = ["high", "normal", "low"] as const;
 export const taskStatuses = ["not_started", "in_progress", "on_hold", "done", "completed", "skipped"] as const;
 
-export type TaskCategory = (typeof taskCategories)[number];
+export type TaskCategory = string;
 export type TaskPriority = (typeof taskPriorities)[number];
 export type TaskStatus = (typeof taskStatuses)[number];
 export type PlannerId = string | number;
@@ -17,13 +16,15 @@ type SqliteDailyFocus = typeof dailyFocus.$inferSelect;
 
 export type TodayTask = Omit<
   SqliteTask,
-  "id" | "goalId" | "sprintId" | "sprintWeekId" | "recurrenceId"
+  "id" | "goalId" | "sprintId" | "sprintWeekId" | "recurrenceId" | "category" | "categoryId"
 > & {
   id: PlannerId;
   goalId: PlannerId | null;
   sprintId: PlannerId | null;
   sprintWeekId: PlannerId | null;
   recurrenceId: PlannerId | null;
+  category: TaskCategory;
+  categoryId?: string | null;
   revision?: number;
 };
 
@@ -36,7 +37,7 @@ export type TodayData = {
   date: string;
   focus: DailyFocus | undefined;
   tasks: TodayTask[];
-  categories: Record<TaskCategory, { total: number; completed: number }>;
+  categories: Record<string, { total: number; completed: number }>;
   total: number;
   completed: number;
 };
@@ -64,15 +65,16 @@ export function getTodayData(date: string): TodayData {
     .orderBy(asc(tasks.position), asc(tasks.id))
     .all();
 
+  const categoryKeys = [...new Set(todayTasks.map((task) => task.categoryId ?? task.category))];
   const categories = Object.fromEntries(
-    taskCategories.map((category) => {
-      const categoryTasks = todayTasks.filter((task) => task.category === category);
+    categoryKeys.map((category) => {
+      const categoryTasks = todayTasks.filter((task) => (task.categoryId ?? task.category) === category);
       return [category, {
         total: categoryTasks.length,
         completed: categoryTasks.filter((task) => task.status === "completed").length,
       }];
     }),
-  ) as Record<TaskCategory, { total: number; completed: number }>;
+  );
 
   return {
     date,

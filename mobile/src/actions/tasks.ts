@@ -1,6 +1,6 @@
 import { isValid, parseISO } from "date-fns";
 import { z } from "zod";
-import { taskCategories, taskPriorities } from "@/src/lib/planner-values";
+import { taskPriorities } from "@/src/lib/planner-values";
 import {
   confirmPlannedTaskCompletion,
   createPlannedTask,
@@ -26,7 +26,7 @@ const optionalText = (max: number) => z.preprocess(
 const taskSchema = z.object({
   title: z.string().trim().min(1, "Add a task title.").max(200, "Keep the title under 200 characters."),
   description: optionalText(2000),
-  category: z.enum(taskCategories),
+  category: z.string().uuid("Create or choose a category first."),
   priority: z.enum(taskPriorities),
   date: dateSchema,
   estimatedMinutes: z.preprocess((entry) => entry === "" || entry === undefined ? undefined : Number(entry), z.number().int().min(1).max(1440).optional()),

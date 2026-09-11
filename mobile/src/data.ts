@@ -6,6 +6,8 @@ import { buildWeekCompletion } from "@/src/lib/daily-completion";
 import type { FocusArea, FocusAreaData, FocusMilestone } from "@/src/lib/focus-areas";
 import { calculateProductiveStreak, calculateProgress, localDateInTimeZone, type ProgressCategory } from "@/src/lib/progress";
 import type { TaskCategory, TaskPriority, TaskStatus, TodayTask } from "@/src/lib/today";
+import type { PlannerCategory } from "@/src/lib/categories";
+import type { CategoryIconName } from "@/src/lib/categories";
 import type { WeekData, WeekTask, WeeklyRecurrence } from "@/src/lib/week";
 import { ensureRecurringInstances } from "./repository";
 import { MobileAuthError, MobileDataError, mobileSupabase, requireMobileSession } from "./supabase";
@@ -14,6 +16,7 @@ type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
 type RecurrenceRow = Database["public"]["Tables"]["task_recurrences"]["Row"];
 type MilestoneRow = Database["public"]["Tables"]["content_milestones"]["Row"];
 type ThoughtRow = Database["public"]["Tables"]["quick_thoughts"]["Row"];
+type CategoryRow = Database["public"]["Tables"]["categories"]["Row"];
 
 function fail(error: PostgrestError | null) {
   if (!error) return;
@@ -24,7 +27,7 @@ function fail(error: PostgrestError | null) {
 function taskFromRow(row: TaskRow): TodayTask {
   return {
     id: row.id, title: row.title, description: row.description,
-    category: row.category as TaskCategory, goalId: row.goal_id,
+    category: (row.category_id ?? row.category) as TaskCategory, categoryId: row.category_id, goalId: row.goal_id,
     sprintId: row.sprint_id, sprintWeekId: row.sprint_week_id,
     date: row.date, anytimeWeekStart: row.anytime_week_start,
     recurrenceId: row.recurrence_id, recurrenceWeekStart: row.recurrence_week_start,
@@ -41,11 +44,22 @@ function thoughtFromRow(row: ThoughtRow): QuickThought {
 
 function milestoneFromRow(row: MilestoneRow): FocusMilestone {
   return {
-    id: row.id, category: row.category as FocusArea, label: row.label,
+    id: row.id, category: (row.category_id ?? row.category) as FocusArea, categoryId: row.category_id, label: row.label,
     type: row.type as FocusMilestone["type"], targetValue: row.target_value,
     achievedAt: row.achieved_at, revision: row.revision,
     createdAt: row.created_at, updatedAt: row.updated_at,
   };
+}
+
+function categoryFromRow(row: CategoryRow): PlannerCategory {
+  return { id: row.id, name: row.name, icon: row.icon as CategoryIconName, color: (row.color ?? "orange") as PlannerCategory["color"], position: row.position, archivedAt: row.archived_at, revision: row.revision, createdAt: row.created_at, updatedAt: row.updated_at };
+}
+
+export async function getPlannerCategories() {
+  await requireMobileSession();
+  const { data, error } = await mobileSupabase.from("categories").select("*").is("archived_at", null).order("position").order("created_at").order("id");
+  fail(error);
+  return (data ?? []).map(categoryFromRow);
 }
 
 function compareTasks(left: TodayTask, right: TodayTask) {
@@ -109,15 +123,18 @@ export async function getDashboardData(): Promise<DashboardData> {
 
 export async function getFocusAreaData(category: FocusArea): Promise<FocusAreaData> {
   await requireMobileSession();
-  const [taskResult, milestoneResult] = await Promise.all([
-    mobileSupabase.from("tasks").select("*").eq("category", category).order("date").order("position").order("id"),
-    mobileSupabase.from("content_milestones").select("*").eq("category", category).order("created_at").order("id"),
+  const [categoryResult, taskResult, milestoneResult] = await Promise.all([
+    mobileSupabase.from("categories").select("*").eq("id", category).is("archived_at", null).maybeSingle(),
+    mobileSupabase.from("tasks").select("*").eq("category_id", category).order("date").order("position").order("id"),
+    mobileSupabase.from("content_milestones").select("*").eq("category_id", category).order("created_at").order("id"),
   ]);
-  fail(taskResult.error); fail(milestoneResult.error);
+  fail(categoryResult.error); fail(taskResult.error); fail(milestoneResult.error);
+  if (!categoryResult.data) throw new MobileDataError("That category no longer exists.");
   const tasks = (taskResult.data ?? []).map(taskFromRow);
   const milestones = (milestoneResult.data ?? []).map(milestoneFromRow);
+  const categoryRecord = categoryFromRow(categoryResult.data);
   return {
-    category,
+    category: categoryRecord,
     active: tasks.filter((task) => task.status !== "completed" && task.status !== "skipped"),
     completed: tasks.filter((task) => task.status === "completed").sort((left, right) => (right.completedAt ?? "").localeCompare(left.completedAt ?? "") || String(right.id).localeCompare(String(left.id))),
     milestones: {
@@ -167,9 +184,9 @@ export async function getWeekData(weekStart: string): Promise<WeekData> {
   };
 }
 
-export async function getProgressData(startDate: string | undefined, category: ProgressCategory | undefined) {
+export async function getProgressData(startDate: string | undefined, categories: ProgressCategory[] = []) {
   const { timeZone } = await plannerContext();
-  return calculateProgress(await allTasks(), { startDate, category, timeZone });
+  return calculateProgress(await allTasks(), { startDate, categories, timeZone });
 }
 
 export function currentWeekStart() {

@@ -33,13 +33,14 @@ export function persistPlannedTask(
   taskData: PlannedTaskInput,
   recurrenceCount?: number,
 ) {
+  const legacyCategory = taskData.category === "career" || taskData.category === "content" || taskData.category === "other" ? taskData.category : "other";
   if (recurrenceCount) {
     const recurrence = db
       .insert(taskRecurrences)
       .values({
         title: taskData.title,
         description: taskData.description,
-        category: taskData.category,
+        category: legacyCategory,
         priority: taskData.priority,
         estimatedMinutes: taskData.estimatedMinutes,
         countPerWeek: recurrenceCount,
@@ -55,6 +56,7 @@ export function persistPlannedTask(
     .insert(tasks)
     .values({
       ...taskData,
+      category: legacyCategory,
       position: nextPosition(taskData.date),
     })
     .returning({ id: tasks.id })

@@ -4,6 +4,7 @@ import { App } from "@capacitor/app";
 import { ArrowLeft, Cloud, KeyRound, LogOut, Mail, Plane, RefreshCw, RotateCcw, ShieldCheck, Wifi } from "lucide-react";
 import { format } from "date-fns";
 import { AppShell } from "@/src/components/app-shell";
+import { CategoryProvider } from "@/src/components/category-context";
 import { DashboardView } from "@/src/components/dashboard-view";
 import { FocusAreaView } from "@/src/components/focus-area-view";
 import { ProgressView } from "@/src/components/progress-view";
@@ -13,10 +14,11 @@ import { ThemeToggle } from "@/src/components/theme-toggle";
 import type { DashboardData } from "@/src/lib/dashboard";
 import type { FocusAreaData } from "@/src/lib/focus-areas";
 import type { ProgressData } from "@/src/lib/progress";
-import { normalizeProgressCategory, normalizeProgressRange, progressRangeStart, type ProgressCategoryFilter, type ProgressRangeKey } from "@/src/lib/progress-visuals";
+import { normalizeProgressCategories, normalizeProgressRange, progressRangeStart, type ProgressRangeKey } from "@/src/lib/progress-visuals";
+import type { PlannerCategory } from "@/src/lib/categories";
 import type { WeekData } from "@/src/lib/week";
 import { minimumPasswordLength, requestPasswordReset, signInWithEmailPassword, signUpWithEmailPassword, updatePassword } from "@/src/lib/supabase/auth";
-import { currentWeekStart, getDashboardData, getFocusAreaData, getProgressData, getWeekData } from "./data";
+import { currentWeekStart, getDashboardData, getFocusAreaData, getPlannerCategories, getProgressData, getWeekData } from "./data";
 import { closeMobileAuthBrowser, handleMobileAuthUrl, initializeMobilePlanner, mobileAuthRedirectTo, mobilePasswordResetRedirectTo, MobileAuthError, mobileSupabase, openMobileGoogleSignIn, signOutMobilePlanner } from "./supabase";
 import { useMobileRouter } from "./router";
 
@@ -24,7 +26,7 @@ type Screen =
   | { kind: "dashboard"; data: DashboardData }
   | { kind: "focus"; data: FocusAreaData }
   | { kind: "week"; data: WeekData }
-  | { kind: "progress"; data: ProgressData; range: ProgressRangeKey; category: ProgressCategoryFilter }
+  | { kind: "progress"; data: ProgressData; range: ProgressRangeKey; categories: string[] }
   | { kind: "settings" };
 type LoadedScreen = { href: string; ownerId: string; value: Screen };
 type SyncState = "connecting" | "live" | "disconnected";
@@ -37,14 +39,14 @@ function normalizeWeek(value: string | null) {
 async function loadScreen(pathname: string, search: URLSearchParams): Promise<Screen> {
   if (pathname === "/" || pathname === "/today") return { kind: "dashboard", data: await getDashboardData() };
   if (pathname === "/week") return { kind: "week", data: await getWeekData(normalizeWeek(search.get("week"))) };
-  if (pathname === "/career" || pathname === "/content") return { kind: "focus", data: await getFocusAreaData(pathname.slice(1) as "career" | "content") };
+  if (pathname.startsWith("/category/")) return { kind: "focus", data: await getFocusAreaData(pathname.slice("/category/".length)) };
   if (pathname === "/progress") {
     const range = normalizeProgressRange(search.get("range") ?? undefined);
-    const category = normalizeProgressCategory(search.get("category") ?? undefined);
+    const categories = normalizeProgressCategories(search.get("categories") ?? search.get("category") ?? undefined);
     const today = format(new Date(), "yyyy-MM-dd");
     return {
-      kind: "progress", range, category,
-      data: await getProgressData(progressRangeStart(range, today), category === "all" ? undefined : category),
+      kind: "progress", range, categories,
+      data: await getProgressData(progressRangeStart(range, today), categories),
     };
   }
   return { kind: "settings" };
@@ -207,11 +209,11 @@ function RuntimeState({ error, retry }: { error: string; retry: () => void }) {
   return <div className="mobile-runtime-state"><div className="mobile-runtime-card"><h1 className="text-base font-semibold">Planner could not refresh</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">{error}</p><button type="button" onClick={retry} className="premium-primary-button mt-5"><RotateCcw size={15} /> Try again</button></div></div>;
 }
 
-function renderScreen(screen: Screen, session: Session, syncState: SyncState): ReactNode {
+function renderScreen(screen: Screen, session: Session, syncState: SyncState, categories: PlannerCategory[]): ReactNode {
   if (screen.kind === "dashboard") return <DashboardView data={screen.data} />;
   if (screen.kind === "focus") return <FocusAreaView data={screen.data} />;
   if (screen.kind === "week") return <WeekView data={screen.data} />;
-  if (screen.kind === "progress") return <ProgressView data={screen.data} range={screen.range} category={screen.category} />;
+  if (screen.kind === "progress") return <ProgressView data={screen.data} range={screen.range} selectedCategories={screen.categories} categories={categories} />;
   return <Settings session={session} syncState={syncState} />;
 }
 
@@ -223,6 +225,7 @@ export function MobileApp() {
   const [retry, setRetry] = useState(0);
   const [remoteRevision, setRemoteRevision] = useState(0);
   const [syncState, setSyncState] = useState<SyncState>("connecting");
+  const [categories, setCategories] = useState<PlannerCategory[]>([]);
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
 
@@ -286,8 +289,8 @@ export function MobileApp() {
     const requestedHref = route.href;
     const ownerId = session.user.id;
     initializeMobilePlanner()
-      .then(() => loadScreen(route.pathname, route.searchParams))
-      .then((next) => { if (active) setScreen({ href: requestedHref, ownerId, value: next }); })
+      .then(() => Promise.all([loadScreen(route.pathname, route.searchParams), getPlannerCategories()]))
+      .then(([next, nextCategories]) => { if (active) { setCategories(nextCategories); setScreen({ href: requestedHref, ownerId, value: next }); } })
       .catch((reason: unknown) => {
         console.error(reason);
         if (!active) return;
@@ -305,5 +308,5 @@ export function MobileApp() {
   if (!session) return <MobileLogin message={authMessage} />;
   if (passwordRecovery) return <MobilePasswordReset onComplete={() => setPasswordRecovery(false)} />;
   const visibleScreen = screen?.href === route.href && screen.ownerId === session.user.id ? screen.value : null;
-  return <AppShell userEmail={session.user.email} signOutAction={signOutMobilePlanner}>{error ? <RuntimeState error={error} retry={() => setRetry((value) => value + 1)} /> : visibleScreen ? renderScreen(visibleScreen, session, syncState) : <MobilePageSkeleton pathname={route.pathname} />}</AppShell>;
+  return <CategoryProvider categories={categories}><AppShell userEmail={session.user.email} signOutAction={signOutMobilePlanner}>{error ? <RuntimeState error={error} retry={() => setRetry((value) => value + 1)} /> : visibleScreen ? renderScreen(visibleScreen, session, syncState, categories) : <MobilePageSkeleton pathname={route.pathname} />}</AppShell></CategoryProvider>;
 }

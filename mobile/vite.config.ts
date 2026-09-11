@@ -33,6 +33,10 @@ export default defineConfig({
         find: "@/src/app/content-actions",
         replacement: fileURLToPath(new URL("./src/actions/milestones.ts", import.meta.url)),
       },
+      {
+        find: "@/src/app/category-actions",
+        replacement: fileURLToPath(new URL("./src/actions/categories.ts", import.meta.url)),
+      },
       { find: "@", replacement: root },
     ],
   },

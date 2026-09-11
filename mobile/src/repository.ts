@@ -52,7 +52,7 @@ function taskInputJson(input: PlannedTaskInput): Json {
   return {
     title: input.title,
     description: input.description ?? "",
-    category: input.category,
+    category: "other",
     priority: input.priority,
     date: input.date,
     estimated_minutes: input.estimatedMinutes?.toString() ?? "",
@@ -78,7 +78,7 @@ export async function createPlannedTask(
       p_input: {
         title: input.title,
         description: input.description ?? "",
-        category: input.category,
+        category: "other",
         priority: input.priority,
         estimated_minutes: input.estimatedMinutes?.toString() ?? "",
         count_per_week: recurrenceCount,
@@ -87,7 +87,13 @@ export async function createPlannedTask(
       },
       p_client_recurrence_id: crypto.randomUUID(),
     });
-    rpcResult<{ recurrence: RecurrenceRow }>(data, error);
+    const created = rpcResult<{ recurrence: RecurrenceRow }>(data, error);
+    const { data: categoryData, error: categoryError } = await mobileSupabase.rpc("assign_recurrence_category", {
+      p_recurrence_id: created.recurrence.id,
+      p_expected_revision: created.recurrence.revision,
+      p_category_id: input.category,
+    });
+    rpcResult<{ recurrence: RecurrenceRow }>(categoryData, categoryError);
     await ensureRecurringInstances(input.anytimeWeekStart!);
     return;
   }
@@ -95,7 +101,13 @@ export async function createPlannedTask(
     p_input: taskInputJson(input),
     p_client_task_id: crypto.randomUUID(),
   });
-  rpcResult<{ task: TaskRow }>(data, error);
+  const created = rpcResult<{ task: TaskRow }>(data, error);
+  const { data: categoryData, error: categoryError } = await mobileSupabase.rpc("assign_task_category", {
+    p_task_id: created.task.id,
+    p_expected_revision: created.task.revision,
+    p_category_id: input.category,
+  });
+  rpcResult<{ task: TaskRow }>(categoryData, categoryError);
 }
 
 export async function updatePlannedTask(
@@ -111,7 +123,13 @@ export async function updatePlannedTask(
     p_input: taskInputJson(input),
     p_recurrence_count: recurrenceCount,
   });
-  rpcResult<{ task: TaskRow; recurrence?: RecurrenceRow }>(data, error);
+  const updated = rpcResult<{ task: TaskRow; recurrence?: RecurrenceRow }>(data, error);
+  const { data: categoryData, error: categoryError } = await mobileSupabase.rpc("assign_task_category", {
+    p_task_id: updated.task.id,
+    p_expected_revision: updated.task.revision,
+    p_category_id: input.category,
+  });
+  rpcResult<{ task: TaskRow }>(categoryData, categoryError);
   if (recurrenceCount && input.anytimeWeekStart) {
     await ensureRecurringInstances(input.anytimeWeekStart);
   }
@@ -253,7 +271,8 @@ export async function createPlannerMilestone(category: FocusArea, values: Milest
   const { error } = await mobileSupabase.from("content_milestones").insert({
     id: crypto.randomUUID(),
     user_id: session.user.id,
-    category,
+    category: "content",
+    category_id: category,
     label: values.label,
     type: values.type,
     target_value: values.targetValue ?? null,
@@ -276,7 +295,7 @@ export async function updatePlannerMilestone(
       target_value: values.targetValue ?? null,
     })
     .eq("id", id)
-    .eq("category", category)
+    .eq("category_id", category)
     .eq("revision", revision)
     .select("id")
     .maybeSingle();
@@ -295,7 +314,7 @@ export async function setPlannerMilestoneAchieved(
     .from("content_milestones")
     .update({ achieved_at: achieved ? new Date().toISOString() : null })
     .eq("id", id)
-    .eq("category", category)
+    .eq("category_id", category)
     .eq("revision", revision)
     .select("id")
     .maybeSingle();
@@ -313,7 +332,7 @@ export async function deletePlannerMilestone(
     .from("content_milestones")
     .delete()
     .eq("id", id)
-    .eq("category", category)
+    .eq("category_id", category)
     .eq("revision", revision)
     .select("id")
     .maybeSingle();
