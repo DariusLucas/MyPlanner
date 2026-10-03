@@ -24,15 +24,17 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await client.auth.getUser();
   const loginRoute = request.nextUrl.pathname === "/login";
-  const publicAuthRoute = loginRoute
-    || request.nextUrl.pathname === "/forgot-password"
-    || request.nextUrl.pathname === "/auth/callback";
+  const publicRoute = loginRoute
+    || request.nextUrl.pathname === "/auth/callback"
+    || request.nextUrl.pathname === "/privacy"
+    || request.nextUrl.pathname === "/delete-account";
   const pageNavigation = request.method === "GET" || request.method === "HEAD";
 
-  if (!user && !publicAuthRoute && pageNavigation) {
+  if (!user && !publicRoute && pageNavigation) {
     const target = request.nextUrl.clone();
     target.pathname = "/login";
     target.search = "";
+    target.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
     const redirect = NextResponse.redirect(target);
     for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);
     return redirect;

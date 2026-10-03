@@ -2312,14 +2312,13 @@ Plan → Do → Complete → See Progress.
 
 ## Approved Authentication Transition — 2026-09-11
 
-The user approved replacing the user-facing email magic-link/one-time-code flow
-with email/password plus Google sign-in on web and Android. Existing Supabase
-users and planner ownership must be preserved through password recovery and
-verified-email identity linking.
+The user approved Google as the only user-facing sign-in method on web and
+Android. Email/password sign-in, password recovery, and account-recovery checks
+are out of scope. Existing planner records and ownership must remain intact.
 
 ```text
-Phase A1 — Email/Password and Google Authentication
-IN PROGRESS — application and hosted provider setup verified; live account checks pending
+Phase A1 — Google-Only Authentication
+IN PROGRESS — application implementation and hosted Google provider setup verification pending
 ```
 
 ## Approved Category Generalization — 2026-09-11

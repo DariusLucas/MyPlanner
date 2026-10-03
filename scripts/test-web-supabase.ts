@@ -38,17 +38,16 @@ assert.match(planner, /p_expected_revision/, "planner mutations pass optimistic 
 assert.match(planner, /changed in another session/, "stale writes produce a visible conflict message");
 
 const login = read("src/app/login/login-form.tsx");
-assert.match(login, /signInWithEmailPassword/, "login accepts email and password");
-assert.match(login, /signUpWithEmailPassword/, "login supports password account creation");
 assert.match(login, /signInWithGoogle/, "login supports Google OAuth");
-assert.match(login, /forgot-password/, "existing passwordless users can create a password");
+assert.doesNotMatch(login, /password|type="email"|type="password"/i, "login exposes no email or password flow");
+assert.doesNotMatch(middleware, /forgot-password/, "password-recovery routes are not public auth pages");
 
 const authCallback = read("src/app/auth/callback/route.ts");
 assert.match(authCallback, /exchangeCodeForSession/, "OAuth and email callbacks exchange their PKCE code");
 assert.match(authCallback, /app_settings/, "newly authenticated accounts initialize planner settings");
 
-const resetPassword = read("src/app/reset-password/reset-password-form.tsx");
-assert.match(resetPassword, /updatePassword/, "password recovery finishes with a new password");
+assert.throws(() => read("src/app/forgot-password/page.tsx"), "password-recovery route is removed");
+assert.throws(() => read("src/app/reset-password/page.tsx"), "password-reset route is removed");
 
 const shell = read("src/components/app-shell.tsx");
 assert.match(shell, /aria-labelledby="sign-out-title"/, "sign out uses an app-native confirmation dialog");
@@ -78,7 +77,7 @@ assert.match(todayLanding, /aria-current=\{day\.date === today \? "date" : undef
 const progressView = read("src/components/progress-view.tsx");
 assert.ok(progressView.indexOf('{ label: "Tasks completed"') < progressView.indexOf('{ label: "Current streak"'), "Progress leads with finished work before supporting streaks");
 assert.match(progressView, /<ActivityLegend \/>/, "Progress retains a visible activity legend");
-assert.match(progressView, /aria-label=\{day\.inRange \? detail : undefined\}/, "Progress heatmap cells retain accessible labels");
+assert.match(progressView, /aria-label=\{day\.inRange \? activityDetail\(day, categories\) : undefined\}/, "Progress heatmap cells retain accessible labels");
 
 const styles = read("src/app/globals.css");
 const focusArea = read("src/components/focus-area-view.tsx");
