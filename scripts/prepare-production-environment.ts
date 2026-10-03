@@ -14,6 +14,9 @@ NEXT_PUBLIC_SUPABASE_URL=replace-with-production-project-url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=replace-with-production-publishable-key
 VITE_SUPABASE_URL=replace-with-production-project-url
 VITE_SUPABASE_PUBLISHABLE_KEY=replace-with-production-publishable-key
+NEXT_PUBLIC_SITE_URL=https://replace-with-public-site-domain
+NEXT_PUBLIC_PUBLISHER_NAME=replace-with-publisher-name
+NEXT_PUBLIC_SUPPORT_EMAIL=replace-with-monitored-support-email
 
 SUPABASE_SERVICE_ROLE_KEY=replace-with-production-service-role-key
 SUPABASE_DB_URL=replace-with-production-session-pooler-url

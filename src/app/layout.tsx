@@ -9,8 +9,8 @@ import { CategoryProvider } from "@/src/components/category-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Planner",
-  description: "A private personal progress system.",
+  title: "MyPlanner",
+  description: "A private planner for your tasks and progress.",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

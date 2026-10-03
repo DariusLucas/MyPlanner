@@ -50,37 +50,33 @@ and Android. A personal access token is not required for the current direct
 database workflow. The service-role key remains unconfigured until the
 server-only import/verification phase needs it.
 
-## Email/password and Google Auth
+## Google-only authentication
 
-MyPlanner uses email/password as its dependable default and Google as an
-optional convenience method. The previous magic-link/one-time-code UI is no
-longer used. Existing passwordless users keep the same account and planner data:
-choose **Forgot or need to create a password?**, open the recovery email, and
-set a password. Do not create a second account with another email address.
+MyPlanner exposes Google sign-in on web and Android. Email/password sign-in and
+password recovery are not part of the app flow. Existing planner records and
+ownership remain in place; a Google session must resolve to the same Supabase
+user to access those records.
 
-In each Supabase project, open **Authentication → Sign In / Providers → Email**:
-
-- Keep email sign-up enabled.
-- Decide whether new accounts must confirm their email; production should keep
-  confirmation enabled.
-- Set the minimum password length to at least 8 characters.
-- If the plan supports it, enable leaked-password protection.
+In each hosted Supabase project, open **Authentication → Sign In / Providers**
+and disable Email as a sign-in provider when ready to enforce Google-only auth
+at the service level. The app code alone cannot change hosted provider settings.
 
 Under **Authentication → URL Configuration**, set the production Site URL and
-add every callback the app is allowed to use. Development needs:
+allow the web and Android OAuth callbacks. Development needs:
 
 ```text
 http://127.0.0.1:3000/auth/callback
-http://127.0.0.1:3000/auth/callback?next=/reset-password
 http://localhost:3000/auth/callback
-http://localhost:3000/auth/callback?next=/reset-password
 com.myplanner.app://auth/callback
-com.myplanner.app://auth/callback?next=reset-password
 ```
 
 Add the equivalent exact HTTPS callback URLs for the deployed web app. The
-Android callback is already registered in `AndroidManifest.xml`; OAuth and
-password recovery return through the same encrypted-session flow.
+Android callback is already registered in `AndroidManifest.xml`; Google OAuth
+returns through the encrypted-session flow.
+
+For the public web app's return-to-page flow, also allow the production
+`https://<site-domain>/auth/callback**` redirect pattern. The application
+validates the `next` target as a same-site path before redirecting.
 
 ### Google provider setup
 
@@ -104,41 +100,6 @@ settings. A public or multi-environment deployment can split these into distinct
 clients later for stronger isolation. Google automatically links to an existing
 Supabase user when it returns the same verified email, so the planner `user_id`
 and its data remain unchanged.
-
-### Resend SMTP values
-
-Both hosted projects currently have custom SMTP enabled, but the development
-project has no sender address and neither project shows a usable SMTP username
-or password. For Resend, use these exact values in **Authentication → Emails →
-SMTP Settings**:
-
-```text
-Host: smtp.resend.com
-Port: 465
-Username: resend
-Password: a Resend API key with sending permission
-Sender email: an address on a verified Resend domain
-Sender name: MyPlanner
-```
-
-`onboarding@resend.dev` is suitable only for initial testing to the Resend
-account owner. For real users, verify a domain in Resend and use a dedicated
-authentication sender such as `no-reply@auth.example.com`. Create the API key
-in Resend and enter it directly in Supabase; never commit it to this repository
-or paste it into source files. After saving, send one password-reset email and
-check Supabase Auth logs before changing the app's email flow further.
-
-### Auth verification
-
-Store a dedicated existing test account only in the local environment:
-
-```text
-PLANNER_AUTH_TEST_EMAIL=...
-PLANNER_AUTH_TEST_PASSWORD=...
-```
-
-Then run `npm run test:supabase-auth`. It signs in with email/password and checks
-the authenticated per-user RLS boundary without printing either credential.
 
 ## Required remote dashboard values
 
@@ -201,6 +162,38 @@ Supabase project or the legacy SQLite database while rollback is still needed.
 The backup UI and client integration were intentionally removed from the active
 web and Android product scope. The already-applied migration remains in schema
 history so deployed environments are not modified destructively.
+
+## Account deletion
+
+The web and Android account settings call the `delete-account` Edge Function.
+It requires a valid signed-in user JWT, verifies that JWT with Supabase Auth,
+and deletes only that authenticated user's Auth account. Planner tables reference
+`auth.users` with `ON DELETE CASCADE`, so the user's planner rows are removed in
+the database deletion. The function is configured with JWT verification enabled
+and uses the platform-provided service-role secret only inside the function
+runtime. Never put that key in either client bundle.
+
+Deploy the function to the intended project explicitly after reviewing the
+target project and its current Auth/database configuration:
+
+```powershell
+npx supabase functions deploy delete-account --project-ref <project-ref>
+```
+
+The public `/delete-account` page requires the owner to sign in with the Google
+account linked to the planner before confirming deletion. The same action is
+available in web and Android account settings.
+
+## Free-plan cost boundary
+
+MyPlanner uses Supabase Auth and the Data API. The account-deletion function
+uses the included Edge Functions service. Keep both projects on the Free plan
+and do not enable paid add-ons, custom domains, larger compute, or paid
+point-in-time recovery without reviewing the cost first. Free-plan usage limits
+can restrict service instead of generating overage charges. Free projects may
+pause after a week of low activity, and the Free plan does not provide
+downloadable managed database backups. An independent backup process is needed
+if recovery of user data is required.
 
 ## Android secure session storage decision
 

@@ -14,6 +14,8 @@ import { createSupabaseServerClient } from "@/src/lib/supabase/server";
 import { signOut } from "@/src/app/auth-actions";
 import { ThemeToggle } from "@/src/components/theme-toggle";
 import { SettingsAccountCard } from "@/src/components/settings-account-card";
+import { DeleteAccountControl } from "@/src/components/delete-account-control";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -70,8 +72,10 @@ export default async function SectionPage({ params, searchParams }: { params: Pr
         <h1 className="text-3xl font-semibold tracking-[-.055em]">{content.title}</h1>
       </header>
       <SettingsAccountCard email={email} signOutAction={signOut} />
+      <article className="settings-preference-row"><div><h2 className="text-sm font-semibold">Privacy</h2></div><Link className="settings-sign-out-button" href="/privacy">Privacy policy</Link></article>
+      <article className="settings-danger-zone"><div><h2 className="text-sm font-semibold">Delete account and planner data</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">Permanently remove this account and all associated planner data.</p></div><DeleteAccountControl /></article>
       <article className="settings-preference-row">
-        <div><h2 className="text-sm font-semibold">Appearance</h2><p className="mt-1 text-xs text-muted-foreground">Use a light, dark, or system-matched theme.</p></div>
+        <div><h2 className="text-sm font-semibold">Appearance</h2></div>
         <ThemeToggle labelled />
       </article>
       <ArchivedCategories categories={archivedCategories.filter((category) => category.archivedAt)} />

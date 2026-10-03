@@ -38,7 +38,6 @@ export const mobileSupabase = createClient<Database>(
 );
 
 export const mobileAuthRedirectTo = "com.myplanner.app://auth/callback";
-export const mobilePasswordResetRedirectTo = `${mobileAuthRedirectTo}?next=reset-password`;
 
 function authParamsFromUrl(url: string) {
   const parsed = new URL(url);
@@ -47,18 +46,17 @@ function authParamsFromUrl(url: string) {
     code: parsed.searchParams.get("code"),
     accessToken: hash.get("access_token") ?? parsed.searchParams.get("access_token"),
     refreshToken: hash.get("refresh_token") ?? parsed.searchParams.get("refresh_token"),
-    next: parsed.searchParams.get("next"),
   };
 }
 
 export async function handleMobileAuthUrl(url: string) {
   if (!url.startsWith(mobileAuthRedirectTo)) return false;
 
-  const { code, accessToken, refreshToken, next } = authParamsFromUrl(url);
+  const { code, accessToken, refreshToken } = authParamsFromUrl(url);
   if (code) {
     const { error } = await mobileSupabase.auth.exchangeCodeForSession(code);
     if (error) throw error;
-    return next === "reset-password" ? "password-recovery" : "signed-in";
+    return "signed-in";
   }
   if (accessToken && refreshToken) {
     const { error } = await mobileSupabase.auth.setSession({
@@ -66,9 +64,9 @@ export async function handleMobileAuthUrl(url: string) {
       refresh_token: refreshToken,
     });
     if (error) throw error;
-    return next === "reset-password" ? "password-recovery" : "signed-in";
+    return "signed-in";
   }
-  throw new Error("The sign-in link was incomplete. Request a new email and try again.");
+  throw new Error("The Google sign-in response was incomplete. Please try again.");
 }
 
 export async function openMobileGoogleSignIn() {
@@ -122,4 +120,14 @@ export async function initializeMobilePlanner() {
 export async function signOutMobilePlanner() {
   const { error } = await mobileSupabase.auth.signOut();
   if (error) throw new MobileDataError(error.message);
+}
+
+export async function deleteMobilePlannerAccount() {
+  await requireMobileSession();
+  const { error } = await mobileSupabase.functions.invoke("delete-account", {
+    body: { confirm: true },
+  });
+  if (error) throw new MobileDataError("The account could not be deleted. Please try again.");
+  const { error: signOutError } = await mobileSupabase.auth.signOut({ scope: "local" });
+  if (signOutError) throw new MobileDataError("The account was deleted, but this device could not clear its session. Remove the app session from Android settings.");
 }
