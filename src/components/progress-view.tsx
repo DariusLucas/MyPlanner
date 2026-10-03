@@ -309,7 +309,7 @@ function CalendarActivity({ data, days, range, categories }: { data: ProgressDat
   const byDate = new Map(days.map((day) => [day.date, day]));
   const months = [...new Set(days.filter((day) => day.inRange).map((day) => day.date.slice(0, 7)))];
   return (
-    <Panel eyebrow="Consistency" title="Activity" description={`${rangeLabels[range]} calendar · every task counts equally`}>
+    <Panel eyebrow="Consistency" title="Activity">
       <div className={`progress-calendar-months progress-calendar-${range}`} role="group" aria-label={`${data.completedTasks} tasks completed across ${data.productiveDays} productive days`}>
         {months.map((month) => {
           const monthStart = parseISO(`${month}-01`);

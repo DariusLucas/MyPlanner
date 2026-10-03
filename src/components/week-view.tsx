@@ -62,6 +62,7 @@ type Runner = (
   action: (form: FormData) => Promise<ActionResult>,
   form: FormData,
   success?: () => void,
+  failure?: () => void,
 ) => Promise<void>;
 type OptimisticCompletions = Record<string, boolean>;
 type AnytimeProgress = { completed: number; total: number; value: number };
@@ -217,6 +218,7 @@ export function WeekView({ data }: { data: WeekData }) {
     action: (form: FormData) => Promise<ActionResult>,
     form: FormData,
     success?: () => void,
+    failure?: () => void,
   ) {
     setPending(key);
     setMessage(null);
@@ -226,6 +228,7 @@ export function WeekView({ data }: { data: WeekData }) {
       success?.();
       return;
     }
+    failure?.();
     setMessage(result.error);
   }
 
@@ -335,11 +338,6 @@ export function WeekView({ data }: { data: WeekData }) {
               Kanban
             </button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {view === "checklist"
-              ? "Simple view: see what is left and check off what you finish."
-              : "Optional workflow view: move scheduled tasks through stages."}
-          </p>
         </div>
         <div key={view} className="week-view-switch">
           {view === "checklist" ? (
@@ -870,10 +868,7 @@ function Checklist({
       <section className="week-anytime-card">
         <div className="week-anytime-header flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-sm font-semibold">Anytime this week</h2>
-            <p className="text-xs text-muted-foreground">
-              Flexible tasks and weekly routines can be done on any day.
-            </p>
+            <h2 className="text-base font-semibold">Anytime this week</h2>
           </div>
           {anytimeProgress.total > 0 && <div className="flex items-center gap-3">
               <span className="text-xs text-muted-foreground">
@@ -909,7 +904,7 @@ function Checklist({
             </div>
           </div>
         )}
-        <div className="mt-3 grid items-start gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-2 grid items-start gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
           {data.anytime.length ? (
             data.anytime.map((task) => (
               <TaskCard
@@ -998,7 +993,9 @@ function RecurringTaskCard({
               return (
                 <form
                   key={instance.id}
-                  action={(form) => {
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const form = new FormData(event.currentTarget);
                     const nextCompleted = !instanceCompleted;
                     form.set("revision", String(instance.revision ?? 1));
                     form.set("completed", String(nextCompleted));
@@ -1008,7 +1005,10 @@ function RecurringTaskCard({
                       window.setTimeout(() => setCelebratingId((current) => current === instance.id ? null : current), COMPLETION_FEEDBACK_MS);
                     }
                     onCompletionChange?.(instance.id, !instanceCompleted);
-                    return run(`toggle-${instance.id}`, toggleTask, form);
+                    void run(`toggle-${instance.id}`, toggleTask, form, undefined, () => {
+                      setVisualStates((current) => ({ ...current, [instance.id]: instanceCompleted }));
+                      onCompletionChange?.(instance.id, instanceCompleted);
+                    });
                   }}
                 >
                   <input type="hidden" name="id" value={instance.id} />
@@ -1017,6 +1017,7 @@ function RecurringTaskCard({
                     title={`check-in ${index + 1} for ${task.title}`}
                     completed={instanceCompleted}
                     pending={pending === `toggle-${instance.id}`}
+                    pendingContent={index + 1}
                     animating={celebratingId === instance.id}
                     incompleteContent={index + 1}
                   />
@@ -1218,7 +1219,11 @@ function TaskCard({
     setVisualCompleted(nextCompleted);
     setCheckAnimation(nextCompleted ? "complete" : "reopen");
     onCompletionChange?.(task.id, nextCompleted);
-    run(`toggle-${task.id}`, toggleTask, form);
+    run(`toggle-${task.id}`, toggleTask, form, undefined, () => {
+      setVisualCompleted(completed);
+      setCheckAnimation(null);
+      onCompletionChange?.(task.id, completed);
+    });
   }
   const animationClass = checkAnimation
     ? `week-task-checking-${checkAnimation}`
@@ -1231,13 +1236,19 @@ function TaskCard({
       className={`week-task-card ${visualCompleted ? "week-task-completed" : ""} ${animationClass}`}
     >
       <div className="flex gap-3">
-        <form action={toggle}>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            toggle(new FormData(event.currentTarget));
+          }}
+        >
           <input type="hidden" name="id" value={task.id} />
           <TaskCompletionButton
             type="submit"
             title={task.title}
             completed={visualCompleted}
             pending={pending === `toggle-${task.id}`}
+            pendingContent={null}
             animating={checkAnimation === "complete"}
             className={checkAnimationClass}
           />
@@ -1390,9 +1401,6 @@ function Board({
         <div className="kanban-anytime-header">
           <div>
             <h2 className="text-sm font-semibold">Anytime this week</h2>
-            <p className="text-xs text-muted-foreground">
-              Flexible tasks and weekly routines can be done on any day.
-            </p>
           </div>
           <ProgressRing
             value={anytimeProgress.value}
@@ -1447,9 +1455,6 @@ function Board({
       <section className="kanban-mobile-board" aria-label="Task workflow">
         <div className="kanban-mobile-heading">
           <h2 className="text-sm font-semibold">Task workflow</h2>
-          <p className="text-xs text-muted-foreground">
-            Pick a stage, then move tasks with the control on each card.
-          </p>
         </div>
         <div
           className="kanban-mobile-stages"
@@ -1608,20 +1613,30 @@ function AnytimeKanbanTaskCard({
       window.setTimeout(() => setCelebrating(false), COMPLETION_FEEDBACK_MS);
     }
     onCompletionChange(task.id, nextCompleted);
-    return run(`toggle-${task.id}`, toggleTask, form);
+    return run(`toggle-${task.id}`, toggleTask, form, undefined, () => {
+      setVisualCompleted(task.status === "completed");
+      onCompletionChange(task.id, task.status === "completed");
+      setCelebrating(false);
+    });
   }
   return (
     <article
       className={`week-task-card anytime-kanban-task-card ${visualCompleted ? "week-task-completed" : ""} ${celebrating ? "week-task-checking-complete" : ""}`}
     >
       <div className="flex items-start gap-3">
-        <form action={toggle}>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            toggle(new FormData(event.currentTarget));
+          }}
+        >
           <input type="hidden" name="id" value={task.id} />
           <TaskCompletionButton
             type="submit"
             title={task.title}
             completed={visualCompleted}
             pending={pending === `toggle-${task.id}`}
+            pendingContent={null}
             animating={celebrating}
           />
         </form>

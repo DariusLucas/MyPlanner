@@ -16,8 +16,10 @@ const css = read("src/app/globals.css");
 for (const [name, source] of Object.entries({ dashboard, week, focus, today })) {
   assert.match(source, /TaskCompletionButton/, `${name} uses the shared task completion control`);
 }
-assert.match(interaction, /COMPLETION_UNDO_MS = 5_000/, "Undo has one documented five-second duration");
-assert.match(dashboard, /COMPLETION_UNDO_MS/, "Today completion feedback uses the shared Undo duration");
+assert.doesNotMatch(interaction, /COMPLETION_UNDO_MS/, "completion no longer has a timed Undo window");
+assert.doesNotMatch(dashboard, /completion-toast|completion-undo-button/, "Today has no floating completion Undo popup");
+assert.doesNotMatch(primitives, /completion-check-bloom/, "task completion has no halo pseudo-element animation that can stall");
+assert.doesNotMatch(css, /achievement-ring|achievement-sparks|completion-check-bloom/, "completion halo and spark animations are removed");
 assert.doesNotMatch(today, /`Undo \$\{task\.title\}`/, "completed task language is Reopen rather than Undo outside the timed toast");
 
 assert.match(primitives, /event\.key === "Escape"/, "dialog contract handles Escape");
@@ -31,7 +33,7 @@ assert.match(mobile, /ConfirmationDialog/, "Android sign-out uses the shared con
 assert.match(settingsAccount, /ConfirmationDialog/, "mobile web Settings confirms before signing out");
 assert.match(settingsAccount, /Are you sure you want to sign out of this planner\?/, "mobile web sign-out explains the pending action");
 
-for (const token of ["--radius-dialog", "--motion-standard", "--color-modal-scrim", "--z-dialog", "--z-toast"]) {
+for (const token of ["--radius-dialog", "--motion-standard", "--color-modal-scrim", "--z-dialog"]) {
   assert.ok(css.includes(token), `${token} semantic token is defined`);
 }
 assert.match(css, /\.task-composer\s*>\s*:last-child[\s\S]*position:\s*sticky/, "dialog actions stay visible on short viewports");

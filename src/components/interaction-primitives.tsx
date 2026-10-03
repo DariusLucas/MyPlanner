@@ -25,7 +25,7 @@ const focusableSelector = [
 export function useDialogContract<T extends HTMLElement = HTMLElement>({
   active = true,
   blocked = false,
-  dismissOnHistoryBack = false,
+  dismissOnHistoryBack = true,
   lockScroll = true,
   onClose,
 }: {
@@ -178,7 +178,7 @@ export function TaskCompletionButton({
       disabled={pending || props.disabled}
       aria-label={completionLabel(title, completed)}
       aria-busy={pending || undefined}
-      className={`task-check ${completed ? "task-check-completed" : ""} ${animating ? "completion-check-bloom task-check-animate-complete" : ""} ${className}`.trim()}
+      className={`task-check ${completed ? "task-check-completed" : ""} ${animating ? "task-check-animate-complete" : ""} ${className}`.trim()}
     >
       <span className="task-check-surface">
         {completed || animating ? <Check size={12} strokeWidth={3} /> : pending ? pendingContent !== undefined ? pendingContent : <span className="task-check-pending" /> : incompleteContent}
