@@ -6,6 +6,7 @@
   --background: #f3f0e9;
   --foreground: #20201e;
   --card: rgba(255, 254, 250, 0.78);
+  --modal-surface: #fffefa;
   --muted: #ebe7dd;
   --muted-foreground: #77736b;
   --border: rgba(42, 40, 35, 0.12);
@@ -40,6 +41,7 @@
   --background: #211f1c;
   --foreground: #f5f0e7;
   --card: rgba(47, 43, 38, 0.82);
+  --modal-surface: #2f2b26;
   --muted: #37322d;
   --muted-foreground: #b8afa3;
   --border: rgba(248, 239, 225, 0.13);
@@ -1212,9 +1214,9 @@ body:has(.modal-backdrop, .thought-dialog-backdrop) .workspace-frame {
   position: sticky;
   z-index: 1;
   bottom: -1.55rem;
-  padding-block: .75rem;
+  padding: 1.5rem 0 .75rem;
   border-radius: 18px;
-  background: transparent;
+  background: linear-gradient(to bottom, transparent 0%, var(--modal-surface) 3rem);
 }
 .task-composer-add {
   display: flex;
@@ -1233,7 +1235,7 @@ body:has(.modal-backdrop, .thought-dialog-backdrop) .workspace-frame {
 }
 .task-composer-add > .task-composer-actions {
   position: static;
-  padding-block: 0;
+  padding: 1.5rem 0 .75rem;
 }
 .confirm-dialog .dialog-actions {
   position: static;
@@ -1250,7 +1252,7 @@ body:has(.modal-backdrop, .thought-dialog-backdrop) .workspace-frame {
 @media (max-width: 640px) {
   .dashboard-task-editor > .task-composer-actions {
     bottom: 0;
-    padding: .65rem 0;
+    padding: 1.5rem 0 .65rem;
   }
 }
 .modal-closing {
@@ -2310,9 +2312,8 @@ body:has(.modal-backdrop, .thought-dialog-backdrop) .workspace-frame {
 .category-nav-row:not(.category-nav-row-active):hover { background: var(--muted); color: var(--foreground); }
 .category-nav-row-active { color: #b94c20; border: 1px solid color-mix(in srgb, var(--orange) 24%, transparent); background: color-mix(in srgb, var(--orange) 14%, var(--card)); }
 .dark .category-nav-row-active { color: #fff8f3; border-color: color-mix(in srgb, var(--orange) 76%, transparent); background: color-mix(in srgb, var(--orange) 62%, var(--card)); }
-.category-nav-menu-button { display: grid; width: 28px; height: 32px; flex: 0 0 auto; place-items: center; border-radius: 9px; color: var(--muted-foreground); opacity: 0; transition: opacity 140ms ease, background-color 140ms ease, color 140ms ease; }
+.category-nav-menu-button { display: grid; width: 28px; height: 32px; flex: 0 0 auto; place-items: center; border-radius: 9px; color: var(--muted-foreground); cursor: pointer; opacity: 0; transition: opacity 140ms ease; }
 .category-nav-row:hover .category-nav-menu-button, .category-nav-menu-button:focus-visible { opacity: 1; }
-.category-nav-menu-button:hover { background: var(--muted); color: var(--foreground); }
 .workspace-frame[data-sidebar-collapsed="true"] .category-nav-menu-button { display: none; }
 .sidebar-category-add-icon {
   display: grid;
@@ -2385,6 +2386,19 @@ body:has(.category-dialog) { overflow-x: hidden; }
 @keyframes category-delete-confirm-in { from { opacity: 0; transform: translateY(5px) scale(.97); } to { opacity: 1; transform: none; } }
 .category-delete-state-enter { animation: category-delete-state-in 180ms cubic-bezier(.16,1,.3,1) both; }
 @keyframes category-delete-state-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+.category-dialog-action-row { margin-top: 1.25rem; }
+.category-dialog-action-row-has-danger { display: flex; align-items: center; justify-content: space-between; gap: .75rem; border-top: 1px solid var(--border); padding-top: .85rem; }
+.category-dialog-danger-zone { min-width: 0; }
+.category-dialog-danger-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.category-dialog-danger-actions .thought-quiet-button { min-height: 40px; border: 1px solid color-mix(in srgb, #b94b43 28%, var(--border)); border-radius: 11px; padding: .5rem .75rem; color: #b94b43; font-weight: 650; }
+.category-dialog-danger-actions .thought-quiet-button:hover { border-color: color-mix(in srgb, #b94b43 48%, var(--border)); background: color-mix(in srgb, #b94b43 8%, transparent); color: #b94b43; }
+.dark .category-dialog-danger-actions .thought-quiet-button { border-color: color-mix(in srgb, #ef9a92 32%, var(--border)); color: #ef9a92; }
+.dark .category-dialog-danger-actions .thought-quiet-button:hover { border-color: color-mix(in srgb, #ef9a92 52%, var(--border)); background: color-mix(in srgb, #ef9a92 9%, transparent); color: #ef9a92; }
+.category-delete-confirmation { display: flex; min-height: 40px; align-items: center; justify-content: space-between; gap: .75rem; }
+.category-delete-confirmation > div { display: flex; flex: 0 0 auto; align-items: center; gap: .4rem; }
+.category-delete-prompt { color: var(--muted-foreground); font-size: .75rem; }
+.category-dialog-footer { display: flex; justify-content: flex-end; gap: .55rem; }
+.category-dialog-footer > button { min-height: 42px; }
 .category-icon-grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: .45rem; }
 .category-icon-option {
   display: grid;
@@ -2479,8 +2493,16 @@ body:has(.category-dialog) { overflow-x: hidden; }
 .progress-filter-check { display: grid; width: 20px; height: 20px; flex: none; place-items: center; border: 1px solid var(--border); border-radius: 7px; color: var(--orange); font-size: .72rem; }
 
 @media (max-width: 560px) {
+  .category-modal-backdrop { place-items: center; padding: max(.75rem, env(safe-area-inset-top)) .75rem max(.75rem, env(safe-area-inset-bottom)); }
   .category-icon-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .category-dialog { width: 100%; max-width: 100%; max-height: calc(100dvh - 1rem); border-radius: 24px; padding: 1rem; }
+  .category-dialog { width: 100%; max-width: 100%; max-height: calc(100dvh - max(1.5rem, env(safe-area-inset-top)) - max(1.5rem, env(safe-area-inset-bottom))); border-radius: 24px; padding: 1rem; }
+  .category-dialog-action-row-has-danger { align-items: stretch; flex-direction: column; gap: .75rem; }
+  .category-dialog-danger-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .category-dialog-danger-actions .thought-quiet-button { min-width: 0; padding-inline: .4rem; font-size: .7rem; }
+  .category-delete-confirmation { align-items: stretch; flex-direction: column; gap: .45rem; }
+  .category-delete-confirmation > div { justify-content: flex-end; }
+  .category-dialog-footer { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); }
+  .category-dialog-footer > button { width: 100%; }
   .progress-category-picker { width: 100%; }
   .progress-category-trigger { width: 100%; justify-content: center; }
   .progress-category-menu { right: auto; left: 0; width: 100%; }

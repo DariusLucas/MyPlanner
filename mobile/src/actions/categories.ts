@@ -45,3 +45,30 @@ export async function deleteCategory(form: FormData): Promise<ActionResult> {
     return { ok: true };
   } catch (error) { return failure(error); }
 }
+
+export async function permanentlyDeleteCategory(form: FormData): Promise<ActionResult> {
+  const target = targetSchema.safeParse({ id: value(form, "id"), revision: value(form, "revision") });
+  if (!target.success) return { ok: false, error: "Refresh and try again." };
+  try {
+    await requireMobileSession();
+    const [tasks, recurrences, milestones] = await Promise.all([
+      mobileSupabase.from("tasks").select("id", { count: "exact", head: true }).eq("category_id", target.data.id),
+      mobileSupabase.from("task_recurrences").select("id", { count: "exact", head: true }).eq("category_id", target.data.id),
+      mobileSupabase.from("content_milestones").select("id", { count: "exact", head: true }).eq("category_id", target.data.id),
+    ]);
+    if (tasks.error) throw tasks.error;
+    if (recurrences.error) throw recurrences.error;
+    if (milestones.error) throw milestones.error;
+    if ((tasks.count ?? 0) + (recurrences.count ?? 0) + (milestones.count ?? 0) > 0) {
+      throw new Error("This category contains planner history, so it can only be archived.");
+    }
+    const { data, error } = await mobileSupabase.from("categories").delete()
+      .eq("id", target.data.id)
+      .eq("revision", target.data.revision)
+      .select("id")
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) throw new Error("This category changed in another session. Refresh and try again.");
+    return { ok: true };
+  } catch (error) { return failure(error); }
+}
