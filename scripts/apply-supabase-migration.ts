@@ -4,6 +4,15 @@ import { Client } from "pg";
 import { getLocalSupabaseEnvironment } from "./supabase-env";
 
 async function main() {
+  // npm consumes options such as --env-file when forwarding arguments to tsx,
+  // leaving the environment filename as a positional argument. Normalize it
+  // before resolving the database target so production migrations cannot
+  // silently fall back to .env.local.
+  const positionalEnvFile = process.argv.slice(2).find((argument) => argument.endsWith(".local"));
+  if (positionalEnvFile && !process.argv.some((argument) => argument.startsWith("--env-file"))) {
+    process.argv.push(`--env-file=${positionalEnvFile}`);
+  }
+
   const migrationsDirectory = path.join(process.cwd(), "supabase", "migrations");
   const requested = process.argv.find((argument) => /^\d{14}_[a-z0-9_]+\.sql$/.test(argument));
   const requestedFiles = process.argv.includes("--all")
@@ -16,7 +25,11 @@ async function main() {
   }
 
   const { databaseUrl, isDevelopment, projectRef } = getLocalSupabaseEnvironment();
-  if (!isDevelopment && !process.argv.includes("--confirm-production")) {
+  if (
+    !isDevelopment &&
+    !process.argv.includes("--confirm-production") &&
+    process.env.SUPABASE_CONFIRM_PRODUCTION !== "1"
+  ) {
     throw new Error(
       `Refusing to migrate non-development project ${projectRef} without --confirm-production.`,
     );

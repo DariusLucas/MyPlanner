@@ -833,16 +833,9 @@ export async function restorePlannerCategory(id: string, revision: number) {
 
 export async function deletePlannerCategoryPermanently(id: string, revision: number) {
   const { client } = await authenticatedContext();
-  const [tasks, recurrences, milestones] = await Promise.all([
-    client.from("tasks").select("id", { count: "exact", head: true }).eq("category_id", id),
-    client.from("task_recurrences").select("id", { count: "exact", head: true }).eq("category_id", id),
-    client.from("content_milestones").select("id", { count: "exact", head: true }).eq("category_id", id),
-  ]);
-  fail(tasks.error); fail(recurrences.error); fail(milestones.error);
-  if ((tasks.count ?? 0) + (recurrences.count ?? 0) + (milestones.count ?? 0) > 0) {
-    throw new PlannerDataError("This category contains planner history, so it can only be archived.");
-  }
-  const { data, error } = await client.from("categories").delete().eq("id", id).eq("revision", revision).select("id").maybeSingle();
-  fail(error);
-  if (!data) throw new PlannerDataError("This category changed in another session. Refresh and try again.");
+  const { data, error } = await client.rpc("delete_planner_category", {
+    p_category_id: id,
+    p_expected_revision: revision,
+  });
+  rpcResult<{ ok: true }>(data, error);
 }

@@ -51,24 +51,14 @@ export async function permanentlyDeleteCategory(form: FormData): Promise<ActionR
   if (!target.success) return { ok: false, error: "Refresh and try again." };
   try {
     await requireMobileSession();
-    const [tasks, recurrences, milestones] = await Promise.all([
-      mobileSupabase.from("tasks").select("id", { count: "exact", head: true }).eq("category_id", target.data.id),
-      mobileSupabase.from("task_recurrences").select("id", { count: "exact", head: true }).eq("category_id", target.data.id),
-      mobileSupabase.from("content_milestones").select("id", { count: "exact", head: true }).eq("category_id", target.data.id),
-    ]);
-    if (tasks.error) throw tasks.error;
-    if (recurrences.error) throw recurrences.error;
-    if (milestones.error) throw milestones.error;
-    if ((tasks.count ?? 0) + (recurrences.count ?? 0) + (milestones.count ?? 0) > 0) {
-      throw new Error("This category contains planner history, so it can only be archived.");
-    }
-    const { data, error } = await mobileSupabase.from("categories").delete()
-      .eq("id", target.data.id)
-      .eq("revision", target.data.revision)
-      .select("id")
-      .maybeSingle();
+    const { data, error } = await mobileSupabase.rpc("delete_planner_category", {
+      p_category_id: target.data.id,
+      p_expected_revision: target.data.revision,
+    });
     if (error) throw error;
-    if (!data) throw new Error("This category changed in another session. Refresh and try again.");
+    if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("The planner returned an invalid response.");
+    const result = data as { ok?: boolean; code?: string; message?: string };
+    if (result.ok !== true) throw new Error(result.message ?? (result.code === "stale" ? "This category changed in another session. Refresh and try again." : "This category could not be deleted."));
     return { ok: true };
   } catch (error) { return failure(error); }
 }

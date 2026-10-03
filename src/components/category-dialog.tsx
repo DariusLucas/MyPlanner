@@ -3,7 +3,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { LoaderCircle, Trash2, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createCategory, deleteCategory, permanentlyDeleteCategory, updateCategory } from "@/src/app/category-actions";
 import {
   categoryIconLabels,
@@ -24,6 +24,7 @@ export function CategoryDialog({ open, category, onClose, onDeleted }: {
   onDeleted?: () => void;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [icon, setIcon] = useState<CategoryIconName>(category?.icon ?? "target");
   const [color, setColor] = useState<CategoryColorName>(category?.color ?? "orange");
   const [pending, setPending] = useState(false);
@@ -73,6 +74,7 @@ export function CategoryDialog({ open, category, onClose, onDeleted }: {
     if (!result.ok) return setError(result.error);
     closeAnimated();
     onDeleted?.();
+    if (pathname === `/category/${category.id}`) router.push("/");
     router.refresh();
   }
 
@@ -90,7 +92,7 @@ export function CategoryDialog({ open, category, onClose, onDeleted }: {
         {category ? <><input type="hidden" name="id" value={category.id} /><input type="hidden" name="revision" value={category.revision} /></> : null}
         <label className="mt-5 block">
           <span className="mb-2 block text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">Name</span>
-          <input autoFocus name="name" defaultValue={category?.name ?? ""} maxLength={40} required placeholder="Gym, University, Family…" className="focus-input" />
+          <input name="name" defaultValue={category?.name ?? ""} maxLength={40} required placeholder="Gym, University, Family…" className="focus-input" />
         </label>
         <fieldset className="mt-5">
           <legend className="mb-2 text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground">Choose an icon</legend>
@@ -111,7 +113,6 @@ export function CategoryDialog({ open, category, onClose, onDeleted }: {
           </div> : null}
           <div className="category-dialog-footer"><button type="button" className="thought-quiet-button" disabled={pending} onClick={closeAnimated}>Cancel</button><button className="premium-small-button" disabled={pending}>{pending ? <><LoaderCircle size={14} className="animate-spin" /> Saving…</> : category ? "Save changes" : "Create category"}</button></div>
         </div>
-        {category ? <p className="mt-4 border-t border-border pt-4 text-xs leading-5 text-muted-foreground">Archive hides this category while keeping its history. Permanent deletion is only allowed when it has no tasks, recurring tasks, or milestones.</p> : null}
       </form>
     </div>
   );

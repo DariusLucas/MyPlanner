@@ -11,9 +11,16 @@ const expectedMigrationVersions = [
   "20260825120000",
   "20260826120000",
   "20260906120000",
+  "20260911120000",
+  "20260911121000",
+  "20260911130000",
+  "20260911140000",
+  "20260911150000",
+  "20261003120000",
 ];
 
 const plannerTables = [
+  "categories",
   "app_settings",
   "goals",
   "sprints",
@@ -29,9 +36,11 @@ const plannerTables = [
 
 async function main() {
   const { databaseUrl } = getLocalSupabaseEnvironment();
+  const databaseHost = new URL(databaseUrl).hostname;
+  const isLocalDatabase = ["localhost", "127.0.0.1", "::1"].includes(databaseHost);
   const client = new Client({
     connectionString: databaseUrl,
-    ssl: { rejectUnauthorized: false },
+    ssl: isLocalDatabase ? false : { rejectUnauthorized: false },
   });
   await client.connect();
 

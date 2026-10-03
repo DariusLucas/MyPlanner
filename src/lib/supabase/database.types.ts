@@ -581,6 +581,13 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_planner_category: {
+        Args: {
+          p_category_id: string
+          p_expected_revision: number
+        }
+        Returns: Json
+      }
       complete_task: {
         Args: {
           p_task_id: string
