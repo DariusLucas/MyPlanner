@@ -21,10 +21,12 @@
     "supabase:apply-all": "tsx scripts/apply-supabase-migration.ts --all",
     "supabase:prepare-production": "tsx scripts/prepare-production-environment.ts",
     "supabase:types": "tsx scripts/generate-supabase-types.ts",
+    "supabase:audit:readonly": "tsx scripts/audit-supabase-readonly.ts",
     "test:recurrence": "tsx scripts/test-recurrence.ts",
     "test:dashboard": "tsx scripts/test-dashboard.ts",
     "test:focus-areas": "tsx scripts/test-focus-areas.ts",
     "test:categories": "tsx scripts/test-categories.ts",
+    "test:account-deletion": "tsx scripts/test-account-deletion.ts",
     "test:progress": "tsx scripts/test-progress.ts",
     "test:week-planning": "tsx scripts/test-week-planning.ts",
     "test:responsive": "tsx scripts/test-responsive.ts",
@@ -33,7 +35,6 @@
     "test:supabase": "tsx scripts/test-supabase.ts",
     "test:fresh-supabase": "tsx scripts/test-fresh-supabase.ts",
     "supabase:reset-dev-planner": "tsx scripts/reset-fresh-supabase.ts",
-    "test:supabase-auth": "tsx scripts/test-supabase-auth.ts",
     "test:web-supabase": "tsx scripts/test-web-supabase.ts",
     "mobile:dev": "vite --config mobile/vite.config.ts",
     "mobile:build": "vite build --config mobile/vite.config.ts",
@@ -41,6 +42,7 @@
     "android:build": "node scripts/build-android.mjs",
     "android:build:dev": "node scripts/build-android.mjs --mode development",
     "android:build:prod": "node scripts/build-android.mjs --mode production",
+    "android:bundle:prod": "node scripts/build-android.mjs --mode production --release",
     "android:open": "cap open android"
   },
   "dependencies": {

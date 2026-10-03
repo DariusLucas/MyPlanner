@@ -11,12 +11,10 @@ offers an honest retry state rather than claiming that a change was saved.
 
 ## Sign in
 
-Open the app and use the same email/password or Google account used on web.
-Existing one-time-code users can choose **Forgot or need to create a password?**
-to set their first password without losing planner data. Google opens in the
-system browser and returns to MyPlanner through its registered deep link. The
-resulting Supabase session is encrypted at rest using the Android Keystore
-through `@aparajita/capacitor-secure-storage`.
+Open the app and choose **Continue with Google**, using the same Google account
+as web. Google opens in the system browser and returns to MyPlanner through its
+registered deep link. The resulting Supabase session is encrypted at rest using
+the Android Keystore through `@aparajita/capacitor-secure-storage`.
 
 Only the public Supabase URL and publishable key are bundled in the APK. Never
 put the service-role key, database password, access token, or pooler URL in a
@@ -51,7 +49,7 @@ npm run android:build:dev
 
 Use `npm run android:build:dev` when testing against the local desktop app; it
 uses `.env.local` and the development Supabase project. Use
-`npm run android:build:prod` for a production release; it uses the distinct
+`npm run android:build:prod` for a production-configured debug APK; it uses the distinct
 ignored `.env.production.local` values when that file exists. Before installing
 a production APK, verify that its public Supabase project URL is the production
 project and keep the last development APK as the rollback artifact.
@@ -59,6 +57,30 @@ project and keep the last development APK as the rollback artifact.
 The generic `npm run android:build` command defaults to production mode. The
 explicit commands prevent accidentally installing an APK connected to a
 different Supabase environment than the web app being tested.
+
+### Play Store bundle
+
+The debug APK is not the Play Store upload. Build a signed Android App Bundle
+with `npm run android:bundle:prod`. Configure these variables in a local secret
+manager or CI secrets before running it:
+
+```text
+MYPLANNER_UPLOAD_STORE_FILE
+MYPLANNER_UPLOAD_STORE_PASSWORD
+MYPLANNER_UPLOAD_KEY_ALIAS
+MYPLANNER_UPLOAD_KEY_PASSWORD
+```
+
+Do not commit or share the keystore or passwords. Enable Play App Signing and
+keep an encrypted backup of the upload keystore. Set `MYPLANNER_VERSION_CODE`
+to a new increasing integer for every release and `MYPLANNER_VERSION_NAME` to
+the user-facing version. The release command stops if signing is not configured.
+Production bundles load the public Supabase values from
+`.env.production.local`; `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_PUBLISHER_NAME`,
+and `NEXT_PUBLIC_SUPPORT_EMAIL` must be real values before publishing.
+
+The bundle still needs Play Console review, a completed Data safety form, and
+working public Privacy Policy and account-deletion URLs.
 
 The build helper compiles the Vite mobile runtime, synchronizes Capacitor,
 registers the secure-storage plugin, finds the Android Studio JDK and SDK, and

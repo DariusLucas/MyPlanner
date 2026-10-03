@@ -19,10 +19,32 @@ const defaultSdk =
 const androidSdk = process.env.ANDROID_HOME ?? process.env.ANDROID_SDK_ROOT ?? defaultSdk;
 const modeIndex = process.argv.indexOf("--mode");
 const mode = modeIndex >= 0 ? process.argv[modeIndex + 1] : "production";
+const releaseBundle = process.argv.includes("--release");
 
 if (mode !== "development" && mode !== "production") {
   console.error(`Unsupported Android build mode: ${mode}. Use development or production.`);
   process.exit(1);
+}
+
+if (releaseBundle) {
+  const signingValues = [
+    process.env.MYPLANNER_UPLOAD_STORE_FILE,
+    process.env.MYPLANNER_UPLOAD_STORE_PASSWORD,
+    process.env.MYPLANNER_UPLOAD_KEY_ALIAS,
+    process.env.MYPLANNER_UPLOAD_KEY_PASSWORD,
+  ];
+  if (signingValues.some((value) => !value)) {
+    console.error("Release bundle requires the four MYPLANNER_UPLOAD_* signing variables. Store them in a local secret manager; do not commit them.");
+    process.exit(1);
+  }
+  if (!existsSync(process.env.MYPLANNER_UPLOAD_STORE_FILE)) {
+    console.error("The configured Android upload keystore file was not found.");
+    process.exit(1);
+  }
+  if (mode !== "production") {
+    console.error("A Play Store bundle must use --mode production.");
+    process.exit(1);
+  }
 }
 
 if (!javaHome) {
@@ -51,19 +73,21 @@ function run(command, args, cwd = workspace) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-run(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "mobile:build", "--", "--mode", mode]);
+run(process.platform === "win32" ? "npx.cmd" : "npx", ["vite", "build", "--config", "mobile/vite.config.ts", `--mode=${mode}`]);
 run(process.platform === "win32" ? "npx.cmd" : "npx", ["cap", "sync", "android"]);
-run(process.platform === "win32" ? "gradlew.bat" : "./gradlew", ["assembleDebug"], android);
+run(process.platform === "win32" ? "gradlew.bat" : "./gradlew", [releaseBundle ? "bundleRelease" : "assembleDebug"], android);
 
-const builtApk = path.join(android, "app", "build", "outputs", "apk", "debug", "app-debug.apk");
+const builtArtifact = releaseBundle
+  ? path.join(android, "app", "build", "outputs", "bundle", "release", "app-release.aab")
+  : path.join(android, "app", "build", "outputs", "apk", "debug", "app-debug.apk");
 const artifacts = path.join(workspace, "artifacts");
-const installableApk = path.join(artifacts, "MyPlanner-android-debug.apk");
+const installableArtifact = path.join(artifacts, releaseBundle ? "MyPlanner-release.aab" : "MyPlanner-android-debug.apk");
 
-if (!existsSync(builtApk)) {
-  console.error(`Android build completed without producing ${builtApk}.`);
+if (!existsSync(builtArtifact)) {
+  console.error(`Android build completed without producing ${builtArtifact}.`);
   process.exit(1);
 }
 
 mkdirSync(artifacts, { recursive: true });
-copyFileSync(builtApk, installableApk);
-console.log(`Installable APK: ${installableApk}`);
+copyFileSync(builtArtifact, installableArtifact);
+console.log(`Android artifact: ${installableArtifact}`);

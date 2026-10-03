@@ -12,6 +12,10 @@ supabase/.branches/
 supabase/.temp/
 
 artifacts/*.apk
+artifacts/*.aab
+android/**/*.jks
+android/**/*.keystore
+android/.myplanner-upload-key.env
 
 data/*.db
 data/*.db-shm
