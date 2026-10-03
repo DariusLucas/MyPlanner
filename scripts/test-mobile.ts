@@ -41,9 +41,8 @@ for (const route of ["/", "/week", "/today", "/category/", "/progress"]) {
 assert.match(app, /kind:\s*["']settings["']/);
 assert.match(app, /pathname === ["']\/["'] \|\| pathname === ["']\/today["']/, "Mobile /today compatibility route must load Today");
 assert.doesNotMatch(app, /pathname === ["']\/week["'] \|\| pathname === ["']\/today["']/, "Mobile /today must not load This Week");
-assert.match(app, /signInWithEmailPassword/, "Android accepts email and password");
 assert.match(app, /openMobileGoogleSignIn/, "Android supports Google OAuth");
-assert.match(app, /requestPasswordReset/, "Android lets existing passwordless users create a password");
+assert.doesNotMatch(app, /signInWithEmailPassword|signUpWithEmailPassword|requestPasswordReset|updatePassword|PASSWORD_RECOVERY/, "Android exposes no email/password or recovery flow");
 assert.match(app, /postgres_changes/);
 assert.doesNotMatch(app, /initializeDatabase/);
 assert.match(app, /userEmail=\{session\.user\.email\}/, "Mobile sidebar must show the authenticated account");
@@ -96,7 +95,8 @@ assert.match(read("mobile/src/supabase.ts"), /setSession/);
 assert.match(read("mobile/src/supabase.ts"), /@capacitor\/browser/);
 assert.match(read("mobile/src/supabase.ts"), /skipBrowserRedirect|automaticRedirect/);
 assert.match(app, /appUrlOpen/);
-assert.match(app, /emailRedirectTo|mobileAuthRedirectTo/);
+assert.match(read("mobile/src/supabase.ts"), /mobileAuthRedirectTo/);
+assert.doesNotMatch(read("mobile/src/supabase.ts"), /PasswordReset|reset-password|password-recovery/, "Android has no password-recovery redirect");
 
 assert.match(sharedWeek, /dismissOnHistoryBack:\s*true/, "Android back must dismiss the add-task dialog before navigating");
 assert.match(sharedWeek, /\(max-width: 1023px\) and \(pointer: coarse\)/, "Opening add task must not summon the keyboard on a phone");
