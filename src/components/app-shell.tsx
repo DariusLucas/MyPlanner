@@ -54,6 +54,7 @@ export function AppShell({ children, signOutAction, userEmail }: { children: Rea
   const [spacesOpen, setSpacesOpen] = useState(false);
   const [spacesClosing, setSpacesClosing] = useState(false);
   const spacesCloseTimerRef = useRef<number | null>(null);
+  const spacesNavigatingRef = useRef(false);
   const signOutDialogRef = useDialogContract<HTMLElement>({ active: signOutOpen, onClose: () => setSignOutOpen(false) });
   const closeSpacesAnimated = () => {
     if (!spacesOpen || spacesClosing) return;
@@ -69,10 +70,11 @@ export function AppShell({ children, signOutAction, userEmail }: { children: Rea
       window.clearTimeout(spacesCloseTimerRef.current);
       spacesCloseTimerRef.current = null;
     }
+    spacesNavigatingRef.current = false;
     setSpacesClosing(false);
     setSpacesOpen(true);
   };
-  const spacesDialogRef = useDialogContract<HTMLElement>({ active: spacesOpen, onClose: closeSpacesAnimated });
+  const spacesDialogRef = useDialogContract<HTMLElement>({ active: spacesOpen, onClose: closeSpacesAnimated, preserveHistoryOnClose: () => spacesNavigatingRef.current });
 
   useEffect(() => {
     setPendingHref(null);
@@ -209,7 +211,7 @@ export function AppShell({ children, signOutAction, userEmail }: { children: Rea
           <section ref={spacesDialogRef} tabIndex={-1} className={`mobile-spaces-sheet ${spacesClosing ? "mobile-spaces-sheet-closing" : ""}`} role="dialog" aria-modal="true" aria-labelledby="spaces-title">
             <div className="flex items-center justify-between gap-3"><div><p className="dashboard-eyebrow">Navigate</p><h2 id="spaces-title" className="mt-1 text-xl font-semibold">Pages</h2></div><button type="button" className="milestone-icon-button" onClick={closeSpacesAnimated} aria-label="Close Pages"><X size={17} /></button></div>
             <div className="mobile-spaces-list">
-              {categories.length ? categories.map((category) => { const Icon = categoryIcon(category.icon); const active = category.id === activeCategory?.id; return <Link key={category.id} href={`/category/${category.id}` as Route} className="mobile-space-row" data-active={active} onClick={() => { closeSpacesAnimated(); navigate(`/category/${category.id}`); }}><span><Icon size={19} /></span><strong>{category.name}</strong></Link>; }) : <div className="mobile-spaces-empty"><Shapes size={22} /><p>No categories yet.</p><small>Create one for any part of life you want to move forward.</small></div>}
+              {categories.length ? categories.map((category) => { const Icon = categoryIcon(category.icon); const active = category.id === activeCategory?.id; return <Link key={category.id} href={`/category/${category.id}` as Route} prefetch className="mobile-space-row" data-active={active} onClick={() => { spacesNavigatingRef.current = true; closeSpacesAnimated(); navigate(`/category/${category.id}`); }}><span><Icon size={19} /></span><strong>{category.name}</strong></Link>; }) : <div className="mobile-spaces-empty"><Shapes size={22} /><p>No categories yet.</p><small>Create one for any part of life you want to move forward.</small></div>}
             </div>
             <button type="button" className="premium-primary-button w-full justify-center" onClick={() => { closeSpacesAnimated(); setCategoryDialogOpen(true); }}><Plus size={16} /> New category</button>
           </section>
