@@ -15,7 +15,7 @@ import {
   type CategoryIconName,
   type PlannerCategory,
 } from "@/src/lib/categories";
-import { useDialogContract } from "@/src/components/interaction-primitives";
+import { ConfirmationDialog, useDialogContract } from "@/src/components/interaction-primitives";
 
 export function CategoryDialog({ open, category, onClose, onDeleted }: {
   open: boolean;
@@ -28,8 +28,7 @@ export function CategoryDialog({ open, category, onClose, onDeleted }: {
   const [icon, setIcon] = useState<CategoryIconName>(category?.icon ?? "target");
   const [color, setColor] = useState<CategoryColorName>(category?.color ?? "orange");
   const [pending, setPending] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [confirmPermanentDelete, setConfirmPermanentDelete] = useState(false);
+  const [confirmation, setConfirmation] = useState<"archive" | "permanent-delete" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
   const dialogRef = useDialogContract<HTMLFormElement>({ active: open, blocked: pending, onClose });
@@ -39,8 +38,7 @@ export function CategoryDialog({ open, category, onClose, onDeleted }: {
     setClosing(false);
     setIcon(category?.icon ?? "target");
     setColor(category?.color ?? "orange");
-    setConfirmDelete(false);
-    setConfirmPermanentDelete(false);
+    setConfirmation(null);
     setError(null);
   }, [category, open]);
 
@@ -108,12 +106,21 @@ export function CategoryDialog({ open, category, onClose, onDeleted }: {
         <input type="hidden" name="color" value={color} />
         {error ? <p className="mt-4 text-sm text-red-600" role="alert">{error}</p> : null}
         <div className={`category-dialog-action-row ${category ? "category-dialog-action-row-has-danger" : ""}`}>
-          {category ? <div className="category-dialog-danger-zone">
-            {confirmDelete ? <div key="archive-confirm" className="category-delete-state-enter category-delete-confirmation"><span className="category-delete-prompt">Archive this category?</span><div><button type="button" className="thought-quiet-button" disabled={pending} onClick={() => setConfirmDelete(false)}>Keep</button><button type="button" className="entity-delete-button" disabled={pending} onClick={() => void remove()}>{pending ? "Archiving…" : "Archive"}</button></div></div> : confirmPermanentDelete ? <div key="permanent-confirm" className="category-delete-state-enter category-delete-confirmation"><span className="category-delete-prompt">Delete forever? Empty only.</span><div><button type="button" className="thought-quiet-button" disabled={pending} onClick={() => setConfirmPermanentDelete(false)}>Keep</button><button type="button" className="entity-delete-button" disabled={pending} onClick={() => void remove(true)}>{pending ? "Deleting…" : "Delete forever"}</button></div></div> : <div key="delete-actions" className="category-delete-state-enter category-dialog-danger-actions"><button type="button" className="thought-quiet-button text-red-600" disabled={pending} onClick={() => setConfirmDelete(true)}>Archive category</button><button type="button" className="thought-quiet-button text-red-600" disabled={pending} onClick={() => setConfirmPermanentDelete(true)}><Trash2 size={14} /> Delete permanently</button></div>}
-          </div> : null}
+          {category ? <div className="category-dialog-danger-zone"><div className="category-dialog-danger-actions"><button type="button" className="thought-quiet-button text-red-600" disabled={pending} onClick={() => setConfirmation("archive")}>Archive category</button><button type="button" className="thought-quiet-button text-red-600" disabled={pending} onClick={() => setConfirmation("permanent-delete")}><Trash2 size={14} /> Delete permanently</button></div></div> : null}
           <div className="category-dialog-footer"><button type="button" className="thought-quiet-button" disabled={pending} onClick={closeAnimated}>Cancel</button><button className="premium-small-button" disabled={pending}>{pending ? <><LoaderCircle size={14} className="animate-spin" /> Saving…</> : category ? "Save changes" : "Create category"}</button></div>
         </div>
       </form>
+      <ConfirmationDialog
+        open={confirmation !== null}
+        title={confirmation === "archive" ? `Archive “${category?.name ?? "category"}”?` : `Delete “${category?.name ?? "category"}” forever?`}
+        description={confirmation === "archive"
+          ? "This category will be hidden from your planner. Its tasks and progress will be kept, and you can restore it later."
+          : "This permanently removes an empty category. Categories with tasks, recurrences, or milestones cannot be deleted."}
+        confirmLabel={confirmation === "archive" ? "Archive category" : "Delete permanently"}
+        pending={pending}
+        onCancel={() => setConfirmation(null)}
+        onConfirm={() => { const permanent = confirmation === "permanent-delete"; setConfirmation(null); return remove(permanent); }}
+      />
     </div>
   );
 

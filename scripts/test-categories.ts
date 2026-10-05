@@ -20,8 +20,10 @@ assert.match(backup, /'schemaVersion', 2/, "backups must include the generalized
 assert.match(backup, /'categories'/, "backups must preserve category records");
 assert.match(shell, /sidebar-category-scroll/, "desktop categories must stay bounded");
 assert.match(shell, /mobile-spaces-sheet/, "mobile categories must use the Spaces launcher");
+assert.match(shell, /href=\{`\/category\/\$\{category\.id\}` as Route\} prefetch className="mobile-space-row"/, "mobile category navigation prefetches routes before selection");
 assert.match(categoryDialog, /categoryIconNames\.map/, "category creation must expose the curated icon list");
-assert.match(categoryDialog, /Archive hides this category while keeping its history/, "archiving must explain history preservation");
+assert.match(categoryDialog, /tasks and progress will be kept, and you can restore it later/, "archiving must explain history preservation");
+assert.match(categoryDialog, /<ConfirmationDialog[\s\S]*confirmLabel=\{confirmation === "archive" \? "Archive category" : "Delete permanently"\}/, "category archive and permanent deletion use a confirmation modal");
 assert.match(taskActions, /z\.string\(\)\.uuid\("Create or choose a category first\."\)/, "task creation must require a user-owned category id");
 assert.match(deletion, /for update/i, "permanent deletion must lock the category row while checking references");
 assert.match(deletion, /public\.tasks[\s\S]*public\.task_recurrences[\s\S]*public\.content_milestones/, "permanent deletion must preserve task, recurrence, and milestone history");

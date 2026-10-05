@@ -22,17 +22,38 @@ const focusableSelector = [
   "[tabindex]:not([tabindex='-1'])",
 ].join(",");
 
+const bodyScrollLocks = new Set<symbol>();
+let bodyOverflowBeforeLock: string | null = null;
+
+function acquireBodyScrollLock() {
+  const lock = Symbol("dialog-scroll-lock");
+  if (bodyScrollLocks.size === 0) {
+    bodyOverflowBeforeLock = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+  }
+  bodyScrollLocks.add(lock);
+  return () => {
+    bodyScrollLocks.delete(lock);
+    if (bodyScrollLocks.size === 0 && bodyOverflowBeforeLock !== null) {
+      document.body.style.overflow = bodyOverflowBeforeLock;
+      bodyOverflowBeforeLock = null;
+    }
+  };
+}
+
 export function useDialogContract<T extends HTMLElement = HTMLElement>({
   active = true,
   blocked = false,
   dismissOnHistoryBack = true,
   lockScroll = true,
+  preserveHistoryOnClose,
   onClose,
 }: {
   active?: boolean;
   blocked?: boolean;
   dismissOnHistoryBack?: boolean;
   lockScroll?: boolean;
+  preserveHistoryOnClose?: () => boolean;
   onClose: () => void;
 }): RefObject<T | null> {
   const dialogRef = useRef<T | null>(null);
@@ -40,11 +61,13 @@ export function useDialogContract<T extends HTMLElement = HTMLElement>({
   const wasActiveRef = useRef(false);
   const blockedRef = useRef(blocked);
   const closeRef = useRef(onClose);
+  const preserveHistoryOnCloseRef = useRef(preserveHistoryOnClose);
   const historyMarkerRef = useRef<string | null>(null);
   const historyCleanupTimerRef = useRef<number | null>(null);
 
   blockedRef.current = blocked;
   closeRef.current = onClose;
+  preserveHistoryOnCloseRef.current = preserveHistoryOnClose;
   if (active && !wasActiveRef.current && typeof document !== "undefined") {
     openerRef.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
@@ -63,15 +86,17 @@ export function useDialogContract<T extends HTMLElement = HTMLElement>({
     }
     const historyMarker = dismissOnHistoryBack ? historyMarkerRef.current : null;
     let ownsHistoryEntry = false;
+    let previousHistoryState: unknown;
+    let previousHistoryUrl: string | null = null;
     const currentDialog = () => dialogRef.current ?? [...document.querySelectorAll<HTMLElement>("[role='dialog'][aria-modal='true']")].at(-1) ?? null;
-    const previousOverflow = document.body.style.overflow;
-    if (lockScroll) document.body.style.overflow = "hidden";
+    const releaseScrollLock = lockScroll ? acquireBodyScrollLock() : null;
 
     if (historyMarker) {
-      const previousState = window.history.state;
-      if (previousState?.__myPlannerDialog !== historyMarker) {
-        const state = previousState && typeof previousState === "object"
-          ? previousState
+      previousHistoryState = window.history.state;
+      previousHistoryUrl = window.location.href;
+      if ((previousHistoryState as { __myPlannerDialog?: string } | null)?.__myPlannerDialog !== historyMarker) {
+        const state = previousHistoryState && typeof previousHistoryState === "object"
+          ? previousHistoryState as Record<string, unknown>
           : {};
         window.history.pushState(
           { ...state, __myPlannerDialog: historyMarker },
@@ -91,7 +116,8 @@ export function useDialogContract<T extends HTMLElement = HTMLElement>({
 
     function handleKeyDown(event: KeyboardEvent) {
       const dialog = currentDialog();
-      if (!dialog) return;
+      const topDialog = [...document.querySelectorAll<HTMLElement>("[role='dialog'][aria-modal='true']")].at(-1);
+      if (!dialog || (topDialog && topDialog !== dialog)) return;
       if (event.key === "Escape") {
         if (!blockedRef.current) {
           event.preventDefault();
@@ -137,14 +163,18 @@ export function useDialogContract<T extends HTMLElement = HTMLElement>({
       if (historyMarker) window.removeEventListener("popstate", handlePopState);
       if (historyMarker && ownsHistoryEntry && window.history.state?.__myPlannerDialog === historyMarker) {
         ownsHistoryEntry = false;
-        historyCleanupTimerRef.current = window.setTimeout(() => {
-          historyCleanupTimerRef.current = null;
-          if (window.history.state?.__myPlannerDialog === historyMarker) {
-            window.history.back();
-          }
-        }, 0);
+        if (preserveHistoryOnCloseRef.current?.() && previousHistoryUrl) {
+          window.history.replaceState(previousHistoryState, "", previousHistoryUrl);
+        } else {
+          historyCleanupTimerRef.current = window.setTimeout(() => {
+            historyCleanupTimerRef.current = null;
+            if (window.history.state?.__myPlannerDialog === historyMarker) {
+              window.history.back();
+            }
+          }, 0);
+        }
       }
-      if (lockScroll) document.body.style.overflow = previousOverflow;
+      releaseScrollLock?.();
       const opener = openerRef.current;
       window.requestAnimationFrame(() => opener?.isConnected && opener.focus());
     };

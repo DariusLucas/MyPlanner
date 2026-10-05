@@ -23,6 +23,10 @@ assert.doesNotMatch(css, /achievement-ring|achievement-sparks|completion-check-b
 assert.doesNotMatch(today, /`Undo \$\{task\.title\}`/, "completed task language is Reopen rather than Undo outside the timed toast");
 
 assert.match(primitives, /event\.key === "Escape"/, "dialog contract handles Escape");
+assert.match(primitives, /bodyScrollLocks = new Set<symbol>/, "nested dialogs share a reference-counted body scroll lock");
+assert.match(primitives, /releaseScrollLock\?\.\(\)/, "closing a dialog releases only its own scroll lock");
+assert.match(primitives, /topDialog && topDialog !== dialog/, "only the topmost open dialog handles keyboard controls");
+assert.match(primitives, /preserveHistoryOnCloseRef\.current\?\.\(\)[\s\S]*history\.replaceState/, "route navigation closing a dialog removes its marker without popping the destination");
 assert.match(primitives, /event\.key !== "Tab"/, "dialog contract traps Tab navigation");
 assert.match(primitives, /opener[\s\S]*\.focus\(\)/, "dialog contract returns focus to its opener");
 assert.match(primitives, /pushState[\s\S]*addEventListener\("popstate", handlePopState\)/, "dialog contract can consume browser and Android back navigation");
@@ -37,10 +41,11 @@ for (const token of ["--radius-dialog", "--motion-standard", "--color-modal-scri
   assert.ok(css.includes(token), `${token} semantic token is defined`);
 }
 assert.match(css, /\.task-composer\s*>\s*:last-child[\s\S]*position:\s*sticky/, "dialog actions stay visible on short viewports");
-assert.match(css, /\.task-composer\s*>\s*:last-child\s*\{[^}]*border-radius:\s*18px;[^}]*background:\s*transparent/, "task action rows cannot create sharp tinted inner corners");
+assert.match(css, /\.task-composer\s*>\s*:last-child\s*\{[^}]*border-radius:\s*16px 16px 0 0;[^}]*background:\s*var\(--modal-surface\)/, "task action rows follow the rounded modal surface");
 assert.match(css, /\.confirm-dialog \.dialog-actions\s*\{[^}]*position:\s*static;[^}]*padding:\s*0;[^}]*border:\s*0;[^}]*background:\s*none;[^}]*box-shadow:\s*none/, "confirmation actions remain plain without a footer layer");
 assert.match(css, /@media \(max-height: 600px\)/, "short viewport and Android keyboard layout is covered");
 assert.match(css, /\.task-composer-add \.task-composer-fields\s*\{[^}]*overflow-y:\s*auto/, "mobile keyboard resizing scrolls fields without overlapping dialog actions");
+assert.match(css, /\.category-dialog\s*\{[^}]*overflow-y:\s*auto/, "category editor contents scroll within the modal");
 assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\*::before[\s\S]*animation-duration:\s*0\.01ms/, "reduced motion covers all component animation layers");
 assert.match(week, /role="group" aria-label="Week view"/, "the Checklist and Kanban choice has an accessible group label");
 assert.match(week, /aria-pressed=\{view === "checklist"\}/, "the default week view exposes its selected state");
